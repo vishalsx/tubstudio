@@ -1,11 +1,7 @@
 {
   "compilerOptions": {
     "target": "es5",
-    "lib": [
-      "dom",
-      "dom.iterable",
-      "esnext"
-    ],
+    "lib": ["dom", "dom.iterable", "esnext"],
     "allowJs": true,
     "skipLibCheck": true,
     "esModuleInterop": true,
@@ -19,13 +15,11 @@
     "isolatedModules": true,
     "noEmit": true,
     "jsx": "react-jsx",
-    
-    
     "baseUrl": "src",
-    "paths": {
-      "@/*": ["*"]
-    }
+    "paths": { "@/*": ["*"] },
+    "types": ["react", "react-dom", "node"]           // ✅ add this line
   },
-  "include": ["src"],   // ✅ ensures TS checks only inside src/
+  "include": ["src"],
   "exclude": ["node_modules"]
 }
+
