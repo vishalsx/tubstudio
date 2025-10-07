@@ -8,6 +8,7 @@ interface RightPanelProps {
   activeTab: string;
   isEditing: { [key: string]: boolean };
   languageResults: { [key: string]: LanguageResult };
+  commonDataMode: 'shared' | 'per-tab'; // NEW: Mode prop
   permissions: {
     canSwitchToEditMode: PermissionCheck;
   };
@@ -20,41 +21,65 @@ export const RightPanel: React.FC<RightPanelProps> = ({
   activeTab,
   isEditing,
   languageResults,
+  commonDataMode, // NEW: Use mode prop
   permissions,
   onUpdateCommonData
 }) => {
   const hasResults = Object.keys(languageResults).length > 0;
   const isLoading = Object.values(languageResults).some(result => result?.isLoading);
 
+  // NEW: Determine edit conditions based on mode
+  const getEditCondition = () => {
+    if (commonDataMode === 'shared') {
+      // Shared mode: Only editable in English tab
+      return isEditing['English'] && activeTab === 'English' && permissions.canSwitchToEditMode.metadata;
+    } else {
+      // Per-tab mode: Editable in any tab if user has permission
+      return isEditing[activeTab] && permissions.canSwitchToEditMode.metadata;
+    }
+  };
+
+  const canEdit = getEditCondition();
+
+  // NEW: Get appropriate edit restriction message
+  const getEditRestrictionMessage = () => {
+    if (commonDataMode === 'shared' && activeTab !== 'English') {
+      return "(Editable in English tab only)";
+    } else if (commonDataMode === 'per-tab' && !permissions.canSwitchToEditMode.metadata) {
+      return "(Read-only)";
+    }
+    return null;
+  };
+
+  const editRestrictionMessage = getEditRestrictionMessage();
+
   return (
     <div className="w-full md:w-1/3 bg-white rounded-lg shadow p-4 flex flex-col">
-      <h2 className="text-lg font-semibold mb-4">Image Metadata</h2>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-lg font-semibold">Image Metadata</h2>
+        {/* NEW: Optional mode indicator */}
+        {commonDataMode === 'shared' && (
+          <span className="text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded">
+            Shared
+          </span>
+        )}
+      </div>
       
-      {/* {hasResults && !Object.values(languageResults).every(result => result?.isLoading) ? (
+      {Object.keys(languageResults).length > 0 ? (
         <div className="flex-1 overflow-y-auto">
-          {isLoading ? (
+          {Object.values(languageResults).every(result => result?.isLoading) ? (
             <div className="flex items-center justify-center py-8">
               <div className="flex items-center space-x-2">
                 <div className="w-5 h-5 border-2 border-gray-300 border-t-[#00AEEF] rounded-full animate-spin"></div>
-                <span className="text-gray-600">Loading Image Properties...</span>
+                <span className="text-gray-600">Loading Image Data...</span>
               </div>
             </div>
-          )  */}
-          {Object.keys(languageResults).length > 0 ? (
-          <div className="flex-1 overflow-y-auto">
-            {Object.values(languageResults).every(result => result?.isLoading) ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="flex items-center space-x-2">
-                  <div className="w-5 h-5 border-2 border-gray-300 border-t-[#00AEEF] rounded-full animate-spin"></div>
-                  <span className="text-gray-600">Loading Image Data...</span>
-                </div>
-              </div>
-            ) : (
+          ) : (
             <div className="space-y-4">
               {/* Object Category */}
               <div className="bg-gray-50 p-3 rounded-lg">
                 <h3 className="font-medium text-gray-700 mb-1">Object Category</h3>
-                {isEditing['English'] && activeTab === 'English' && permissions.canSwitchToEditMode.metadata ? (
+                {canEdit ? (
                   <input
                     type="text"
                     value={currentCommonData.object_category || ''}
@@ -64,8 +89,8 @@ export const RightPanel: React.FC<RightPanelProps> = ({
                 ) : (
                   <div>
                     <p className="text-gray-900">{currentCommonData.object_category || '-'}</p>
-                    {activeTab !== 'English' && (
-                      <span className="text-xs text-gray-500">(Editable in English tab only)</span>
+                    {editRestrictionMessage && (
+                      <span className="text-xs text-gray-500">{editRestrictionMessage}</span>
                     )}
                   </div>
                 )}
@@ -74,7 +99,7 @@ export const RightPanel: React.FC<RightPanelProps> = ({
               {/* Tags */}
               <div className="bg-gray-50 p-3 rounded-lg">
                 <h3 className="font-medium text-gray-700 mb-1">Tags</h3>
-                {isEditing['English'] && activeTab === 'English' && permissions.canSwitchToEditMode.metadata ? (
+                {canEdit ? (
                   <input
                     type="text"
                     value={currentCommonData.tags ? currentCommonData.tags.join(', ') : ''}
@@ -91,8 +116,8 @@ export const RightPanel: React.FC<RightPanelProps> = ({
                         </span>
                       )) || <span className="text-gray-500">-</span>}
                     </div>
-                    {activeTab !== 'English' && (
-                      <span className="text-xs text-gray-500">(Editable in English tab only)</span>
+                    {editRestrictionMessage && (
+                      <span className="text-xs text-gray-500">{editRestrictionMessage}</span>
                     )}
                   </div>
                 )}
@@ -101,7 +126,7 @@ export const RightPanel: React.FC<RightPanelProps> = ({
               {/* Field of Study */}
               <div className="bg-gray-50 p-3 rounded-lg">
                 <h3 className="font-medium text-gray-700 mb-1">Field of Study</h3>
-                {isEditing['English'] && activeTab === 'English' && permissions.canSwitchToEditMode.metadata ? (
+                {canEdit ? (
                   <input
                     type="text"
                     value={currentCommonData.field_of_study || ''}
@@ -111,8 +136,8 @@ export const RightPanel: React.FC<RightPanelProps> = ({
                 ) : (
                   <div>
                     <p className="text-gray-900">{currentCommonData.field_of_study || '-'}</p>
-                    {activeTab !== 'English' && (
-                      <span className="text-xs text-gray-500">(Editable in English tab only)</span>
+                    {editRestrictionMessage && (
+                      <span className="text-xs text-gray-500">{editRestrictionMessage}</span>
                     )}
                   </div>
                 )}
@@ -121,7 +146,7 @@ export const RightPanel: React.FC<RightPanelProps> = ({
               {/* Age Appropriate */}
               <div className="bg-gray-50 p-3 rounded-lg">
                 <h3 className="font-medium text-gray-700 mb-1">Age Appropriate</h3>
-                {isEditing['English'] && activeTab === 'English' && permissions.canSwitchToEditMode.metadata ? (
+                {canEdit ? (
                   <input
                     type="text"
                     value={currentCommonData.age_appropriate || ''}
@@ -131,8 +156,8 @@ export const RightPanel: React.FC<RightPanelProps> = ({
                 ) : (
                   <div>
                     <p className="text-gray-900">{currentCommonData.age_appropriate || '-'}</p>
-                    {activeTab !== 'English' && (
-                      <span className="text-xs text-gray-500">(Editable in English tab only)</span>
+                    {editRestrictionMessage && (
+                      <span className="text-xs text-gray-500">{editRestrictionMessage}</span>
                     )}
                   </div>
                 )}
@@ -173,6 +198,15 @@ export const RightPanel: React.FC<RightPanelProps> = ({
                   <p className="text-gray-900 break-words">{currentFileInfo.updated_at ? new Date(currentFileInfo.updated_at).toLocaleDateString() : 'N/A'}</p>
                 </div>
               </div>
+
+              {/* NEW: Debug info (remove in production) */}
+              {process.env.NODE_ENV === 'development' && (
+                <div className="bg-yellow-50 p-2 rounded text-xs">
+                  <strong>Mode:</strong> {commonDataMode} | 
+                  <strong> Active Tab:</strong> {activeTab} | 
+                  <strong> Can Edit:</strong> {canEdit ? 'Yes' : 'No'}
+                </div>
+              )}
             </div>
           )}
         </div>

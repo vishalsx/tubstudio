@@ -6,11 +6,8 @@ import { LanguageResult, CommonData, FileInfo, SaveStatus } from '../types';
 import { DEFAULT_COMMON_DATA, DEFAULT_FILE_INFO, UI_MESSAGES } from '../utils/constants';
 import { RETURN_PERMISSION_ACTION } from '../utils/permissions/hasPermissions';
 
-
-
 export const useLanguageResults = () => {
   const [selectedLanguages, setSelectedLanguages] = useState<string[]>([]);
-
   const [activeTab, setActiveTab] = useState<string>('');
   const [availableTabs, setAvailableTabs] = useState<string[]>([]);
 
@@ -35,144 +32,164 @@ export const useLanguageResults = () => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isDatabaseView, setIsDatabaseView] = useState<{ [key: string]: boolean }>({});
 
+  // NEW: Track the current data mode
+  const [commonDataMode, setCommonDataMode] = useState<'shared' | 'per-tab'>('shared');
 
-    // Update active tab when perLanguageCommonData changes
-    useEffect(() => {
-      if (activeTab && perLanguageCommonData[activeTab]) {
+  // NEW: Update current data only in per-tab mode when tab changes
+  useEffect(() => {
+    if (commonDataMode === 'per-tab' && activeTab) {
+      if (perLanguageCommonData[activeTab]) {
         setCurrentCommonData(perLanguageCommonData[activeTab]);
       }
       
-      if (activeTab && perLanguageFileInfo[activeTab]) {
+      if (perLanguageFileInfo[activeTab]) {
         setCurrentFileInfo(perLanguageFileInfo[activeTab]);
-      } else if (activeTab) {
+      } else {
         setCurrentFileInfo(DEFAULT_FILE_INFO);
       }
-    }, [activeTab, perLanguageCommonData, perLanguageFileInfo]);
-  
-    // Set active tab when languages change
-    useEffect(() => {
-      if (selectedLanguages.length > 0 && (!activeTab || !selectedLanguages.includes(activeTab))) {
-        setActiveTab(selectedLanguages[0]);
-      } else if (selectedLanguages.length === 0) {
-        setActiveTab('');
-      }
-    }, [selectedLanguages, activeTab]);
-  
-    const updateLanguageResult = useCallback(<K extends keyof LanguageResult>(
-      language: string,
-      key: K,
-      value: LanguageResult[K]
-    ) => {
-      setLanguageResults(prev => ({
+    }
+    // In shared mode, don't update currentCommonData when tab changes
+  }, [activeTab, commonDataMode, perLanguageCommonData, perLanguageFileInfo]);
+
+  // Set active tab when languages change
+  useEffect(() => {
+    if (selectedLanguages.length > 0 && (!activeTab || !selectedLanguages.includes(activeTab))) {
+      setActiveTab(selectedLanguages[0]);
+    } else if (selectedLanguages.length === 0) {
+      setActiveTab('');
+    }
+  }, [selectedLanguages, activeTab]);
+
+  const updateLanguageResult = useCallback(<K extends keyof LanguageResult>(
+    language: string,
+    key: K,
+    value: LanguageResult[K]
+  ) => {
+    setLanguageResults(prev => ({
+      ...prev,
+      [language]: {
+        ...prev[language],
+        [key]: value,
+      },
+    }));
+  }, []);
+
+  const updateCommonData = useCallback((key: keyof CommonData, value: any) => {
+    setCurrentCommonData(prev => ({
+      ...prev,
+      [key]: value,
+    }));
+
+    // NEW: In per-tab mode, also update the per-language data
+    if (commonDataMode === 'per-tab' && activeTab) {
+      setPerLanguageCommonData(prev => ({
         ...prev,
-        [language]: {
-          ...prev[language],
+        [activeTab]: {
+          ...prev[activeTab],
           [key]: value,
         },
       }));
-    }, []);
-  
-    const updateCommonData = useCallback((key: keyof CommonData, value: any) => {
-      setCurrentCommonData(prev => ({
-        ...prev,
-        [key]: value,
-      }));
-    }, []);
-  
-    const handleLanguageToggle = useCallback((language: string) => {
-      setSelectedLanguages(prev => {
-        if (prev.includes(language)) {
-          // Language is being removed
-          const newLanguages = prev.filter(lang => lang !== language);
-          
-          // If removing the currently active tab, switch to another tab
-          if (activeTab === language) {
-            if (newLanguages.length > 0) {
-              setActiveTab(newLanguages[0]);
-            } else {
-              setActiveTab('');
-            }
-          }
-          
-          // Clean up related states
-          setLanguageResults(prevResults => {
-            const newResults = { ...prevResults };
-            delete newResults[language];
-            return newResults;
-          });
-          
-          setOriginalResults(prevOriginal => {
-            const newOriginal = { ...prevOriginal };
-            delete newOriginal[language];
-            return newOriginal;
-          });
-          
-          setSaveStatus(prevStatus => {
-            const newStatus = { ...prevStatus };
-            delete newStatus[language];
-            return newStatus;
-          });
-          
-          setSaveMessages(prevMessages => {
-            const newMessages = { ...prevMessages };
-            delete newMessages[language];
-            return newMessages;
-          });
-          
-          return newLanguages;
-        } else {
-          // Language is being added
-          const newLanguages = [...prev, language];
-          
-          // If this is the first language being added, make it active
-          if (prev.length === 0) {
-            setActiveTab(language);
-          }
-          
-          return newLanguages;
-        }
-      });
-    }, [activeTab]);
-  
-    const removeLanguageTab = useCallback((language: string) => {
-      // Clean up all related states
-      setSaveStatus(prev => {
-        const newStatus = { ...prev };
-        delete newStatus[language];
-        return newStatus;
-      });
-  
-      setLanguageResults(prev => {
-        const newResults = { ...prev };
-        delete newResults[language];
-        return newResults;
-      });
-  
-      setPerLanguageCommonData(prev => {
-        const newCommon = { ...prev };
-        delete newCommon[language];
-        return newCommon;
-      });
-  
-      setPerLanguageFileInfo(prev => {
-        const newFileInfo = { ...prev };
-        delete newFileInfo[language];
-        return newFileInfo;
-      });
-  
-      // Remove from available tabs
-      setAvailableTabs(prev => {
-        const remaining = prev.filter(tab => tab !== language);
-        // If the removed tab was active, switch to another one
+    }
+  }, [commonDataMode, activeTab]);
+
+  const handleLanguageToggle = useCallback((language: string) => {
+    setSelectedLanguages(prev => {
+      if (prev.includes(language)) {
+        const newLanguages = prev.filter(lang => lang !== language);
+        
         if (activeTab === language) {
-          setActiveTab(remaining.length > 0 ? remaining[0] : '');
+          if (newLanguages.length > 0) {
+            setActiveTab(newLanguages[0]);
+          } else {
+            setActiveTab('');
+          }
         }
-        return remaining;
-      });
-  
-      // Also update selectedLanguages
-      handleLanguageToggle(language);
-    }, [activeTab, handleLanguageToggle]);
+        
+        setLanguageResults(prevResults => {
+          const newResults = { ...prevResults };
+          delete newResults[language];
+          return newResults;
+        });
+        
+        setOriginalResults(prevOriginal => {
+          const newOriginal = { ...prevOriginal };
+          delete newOriginal[language];
+          return newOriginal;
+        });
+        
+        setSaveStatus(prevStatus => {
+          const newStatus = { ...prevStatus };
+          delete newStatus[language];
+          return newStatus;
+        });
+        
+        setSaveMessages(prevMessages => {
+          const newMessages = { ...prevMessages };
+          delete newMessages[language];
+          return newMessages;
+        });
+
+        // NEW: Clean up per-language data
+        setPerLanguageCommonData(prev => {
+          const newData = { ...prev };
+          delete newData[language];
+          return newData;
+        });
+
+        setPerLanguageFileInfo(prev => {
+          const newData = { ...prev };
+          delete newData[language];
+          return newData;
+        });
+        
+        return newLanguages;
+      } else {
+        const newLanguages = [...prev, language];
+        
+        if (prev.length === 0) {
+          setActiveTab(language);
+        }
+        
+        return newLanguages;
+      }
+    });
+  }, [activeTab]);
+
+  const removeLanguageTab = useCallback((language: string) => {
+    setSaveStatus(prev => {
+      const newStatus = { ...prev };
+      delete newStatus[language];
+      return newStatus;
+    });
+
+    setLanguageResults(prev => {
+      const newResults = { ...prev };
+      delete newResults[language];
+      return newResults;
+    });
+
+    setPerLanguageCommonData(prev => {
+      const newCommon = { ...prev };
+      delete newCommon[language];
+      return newCommon;
+    });
+
+    setPerLanguageFileInfo(prev => {
+      const newFileInfo = { ...prev };
+      delete newFileInfo[language];
+      return newFileInfo;
+    });
+
+    setAvailableTabs(prev => {
+      const remaining = prev.filter(tab => tab !== language);
+      if (activeTab === language) {
+        setActiveTab(remaining.length > 0 ? remaining[0] : '');
+      }
+      return remaining;
+    });
+
+    handleLanguageToggle(language);
+  }, [activeTab, handleLanguageToggle]);
 
   const handleQuickSave = useCallback(async (ui_action: string, file?: File, username?: string) => {
     const currentTab = activeTab;
@@ -181,10 +198,7 @@ export const useLanguageResults = () => {
       return;
     }
 
-    // Force React to flush all pending state updates
-    flushSync(() => {
-      // This forces React to complete any pending state updates immediately
-    });
+    flushSync(() => {});
 
     setIsSaving(true);
     setSaveMessages(prev => ({ ...prev, [currentTab]: null }));
@@ -193,7 +207,11 @@ export const useLanguageResults = () => {
     let languageAttributes: any[] = [];
 
     try {
-      const tabCommonData = currentCommonData || perLanguageCommonData[currentTab];
+      // NEW: Get common data based on mode
+      const tabCommonData = commonDataMode === 'shared' 
+        ? currentCommonData 
+        : (perLanguageCommonData[currentTab] || currentCommonData);
+
       commonAttributes = {
         object_name_en: tabCommonData.object_name_en || "",
         object_category: tabCommonData.object_category || "",
@@ -231,7 +249,6 @@ export const useLanguageResults = () => {
 
       console.log("Data returned after QuickSave:", returned_data[0]?.translation_id);
 
-      // Update state with new ids before refreshing
       setLanguageResults(prev => ({
         ...prev,
         [currentTab]: {
@@ -245,12 +262,10 @@ export const useLanguageResults = () => {
         object_id: returned_data[0]?.object_id || prev.object_id,
       }));
 
-      // Refresh from backend if translation_id exists
       if (returned_data[0]?.translation_id) {
         await refreshActiveTab(currentTab, returned_data[0]?.translation_id);
       }
 
-      // Update states after successful save
       setOriginalCommonData(currentCommonData);
       setOriginalResults(prev => ({
         ...prev,
@@ -271,7 +286,7 @@ export const useLanguageResults = () => {
     } finally {
       setIsSaving(false);
     }
-  }, [activeTab, languageResults, currentCommonData, perLanguageCommonData]);
+  }, [activeTab, languageResults, currentCommonData, perLanguageCommonData, commonDataMode]);
 
   const refreshActiveTab = useCallback(async (tab: string, translationIdOverride?: string) => {
     try {
@@ -291,8 +306,7 @@ export const useLanguageResults = () => {
       const data = await translationService.getTranslationById(translationId);
       console.log("Refresh response for", tab, data);
 
-      // Update current common data (global state)
-      setCurrentCommonData({
+      const refreshedCommonData = {
         object_name_en: data.common_data?.object_name_en || "",
         object_category: data.common_data?.metadata?.object_category || "",
         tags: data.common_data?.metadata?.tags || [],
@@ -302,26 +316,9 @@ export const useLanguageResults = () => {
         object_id: data.common_data?._id || "",
         image_base64: data.common_data?.image_base64 || "",
         flag_object: data.common_data?.flag_object || "",
-      });
+      };
 
-      // Update per-language common data for this specific tab
-      setPerLanguageCommonData((prev) => ({
-        ...prev,
-        [tab]: {
-          object_name_en: data.common_data?.object_name_en || "",
-          object_category: data.common_data?.metadata?.object_category || "",
-          tags: data.common_data?.metadata?.tags || [],
-          field_of_study: data.common_data?.metadata?.field_of_study || "",
-          age_appropriate: data.common_data?.metadata?.age_appropriate || "",
-          image_status: data.common_data?.image_status || "",
-          object_id: data.common_data?._id || "",
-          image_base64: data.common_data?.image_base64 || "",
-          flag_object: data.common_data?.flag_object || "",
-        },
-      }));
-
-      // Update file info
-      const fileInfoData = {
+      const refreshedFileInfo = {
         filename: data.file_info?.filename || "",
         size: data.file_info?.size || "",
         mimeType: data.file_info?.mime_type || "",
@@ -332,16 +329,31 @@ export const useLanguageResults = () => {
         updated_at: data.file_info?.updated_at || "",
       };
 
-      setPerLanguageFileInfo((prev) => ({
-        ...prev,
-        [tab]: fileInfoData,
-      }));
+      // NEW: Update based on mode
+      if (commonDataMode === 'shared') {
+        // Shared mode: Update global current data only
+        setCurrentCommonData(refreshedCommonData);
+        setCurrentFileInfo(refreshedFileInfo);
+      } else {
+        // Per-tab mode: Update per-language data
+        setPerLanguageCommonData((prev) => ({
+          ...prev,
+          [tab]: refreshedCommonData,
+        }));
 
-      if (tab === activeTab) {
-        setCurrentFileInfo(fileInfoData);
+        setPerLanguageFileInfo((prev) => ({
+          ...prev,
+          [tab]: refreshedFileInfo,
+        }));
+
+        // Also update current data if this is the active tab
+        if (tab === activeTab) {
+          setCurrentCommonData(refreshedCommonData);
+          setCurrentFileInfo(refreshedFileInfo);
+        }
       }
 
-      // Update the specific tab's language results with fresh data
+      // Update language-specific results (always needed)
       setLanguageResults((prev) => ({
         ...prev,
         [tab]: {
@@ -374,7 +386,7 @@ export const useLanguageResults = () => {
         },
       }));
     }
-  }, [activeTab, languageResults]);
+  }, [activeTab, languageResults, commonDataMode]);
 
   const clearResults = useCallback(() => {
     setLanguageResults({});
@@ -410,6 +422,7 @@ export const useLanguageResults = () => {
     isSaving,
     isLoading,
     isDatabaseView,
+    commonDataMode,
     
     // Setters
     setSelectedLanguages,
@@ -428,6 +441,7 @@ export const useLanguageResults = () => {
     setIsSaving,
     setIsLoading,
     setIsDatabaseView,
+    setCommonDataMode,
     
     // Actions
     updateLanguageResult,
@@ -438,6 +452,4 @@ export const useLanguageResults = () => {
     refreshActiveTab,
     clearResults
   };
-}; 
-
-
+};
