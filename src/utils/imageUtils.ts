@@ -16,13 +16,16 @@ export const base64ToFile = (base64: string, filename: string): File => {
     uint8Array[i] = byteString.charCodeAt(i);
   }
 
-  // Get file extension and determine MIME type
-  const ext = filename.split('.').pop()?.toLowerCase() || 'jpeg';
+  // FIX: Ensure filename is a string and provide a fallback to prevent crash.
+  const safeFilename = (typeof filename === 'string' && filename) ? filename : 'image.jpeg';
+
+  // Get file extension and determine MIME type from the safe filename
+  const ext = safeFilename.split('.').pop()?.toLowerCase() || 'jpeg';
   
   // Handle the jpg exception, otherwise use image/extension format
   const mimeType = ext === 'jpg' ? 'image/jpeg' : `image/${ext}`;
 
-  return new File([arrayBuffer], filename, { type: mimeType });
+  return new File([arrayBuffer], safeFilename, { type: mimeType });
 };
 
 export const resizeImage = (file: File, maxWidth: number = 800): Promise<File> => {

@@ -7,6 +7,23 @@ export const getAuthHeaders = (): Record<string, string> => {
   return token ? { Authorization: `Bearer ${token}` } : {};
 };
 
+// Centralized error handler to catch and manage API response errors.
+const handleResponseError = async (response: Response) => {
+  // If the error is a 401 Unauthorized, it means the token is invalid or expired.
+  if (response.status === 401) {
+    // Lazy import the authService to prevent circular dependencies.
+    const { authService } = await import('./auth.services');
+    // Call the logout function, which will clear session data and redirect to the login page.
+    authService.logout();
+    // Throw an error to stop the current promise chain. The redirect will happen shortly after.
+    throw new Error('401: Invalid authentication token. Session expired.');
+  }
+  
+  // For any other error, parse the response and throw a generic error.
+  const errorData = await response.json().catch(() => ({}));
+  throw new Error(`HTTP Error (${response.status}): ${errorData.detail || response.statusText}`);
+};
+
 class ApiClient {
   private baseUrl: string;
 
@@ -25,8 +42,8 @@ class ApiClient {
     });
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(`HTTP Error (${response.status}): ${errorData.detail || response.statusText}`);
+      // Use the centralized error handler.
+      await handleResponseError(response);
     }
 
     return response.json();
@@ -48,8 +65,8 @@ class ApiClient {
     });
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(`HTTP Error (${response.status}): ${errorData.detail || response.statusText}`);
+      // Use the centralized error handler.
+      await handleResponseError(response);
     }
 
     return response.json();
@@ -69,8 +86,8 @@ class ApiClient {
     });
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(`HTTP Error (${response.status}): ${errorData.detail || response.statusText}`);
+      // Use the centralized error handler.
+      await handleResponseError(response);
     }
 
     return response.json();
@@ -88,8 +105,8 @@ class ApiClient {
     });
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(`HTTP Error (${response.status}): ${errorData.detail || response.statusText}`);
+      // Use the centralized error handler.
+      await handleResponseError(response);
     }
 
     return response.json();

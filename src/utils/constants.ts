@@ -1,5 +1,5 @@
 // utils/constants.ts
-export const API_URL = process.env.REACT_APP_FASTAPI_URL || 'http://localhost:8000/';
+export const API_URL = (import.meta.env && import.meta.env.VITE_FASTAPI_URL) || 'http://localhost:8000/';
 
 export const VALID_IMAGE_TYPES = [
   'image/jpeg', 

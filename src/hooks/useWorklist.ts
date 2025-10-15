@@ -247,6 +247,22 @@ export const useWorklist = () => {
       });
     });
 
+    // Update available tabs to remove those with no worklist items
+    setAvailableTabs((prevTabs: string[]) => {
+      const newTabs = prevTabs.filter(tab => !languagesToFetch.includes(tab));
+      
+      // After filtering tabs, update the active tab based on what's left
+      setActiveTab((prevActiveTab: string) => {
+        // If the active tab was one of the ones removed, pick a new one
+        if (!newTabs.includes(prevActiveTab)) {
+          return newTabs.length > 0 ? newTabs[0] : '';
+        }
+        return prevActiveTab;
+      });
+
+      return newTabs;
+    });
+
     if (!isFullRefresh) {
       setError(`${UI_MESSAGES.ERRORS.NO_WORKLIST_DATA} ${language}`);
     } else {

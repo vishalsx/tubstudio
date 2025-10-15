@@ -200,13 +200,13 @@ export const RightPanel: React.FC<RightPanelProps> = ({
               </div>
 
               {/* NEW: Debug info (remove in production) */}
-              {process.env.NODE_ENV === 'development' && (
+              {/* {process.env.NODE_ENV === 'development' && (
                 <div className="bg-yellow-50 p-2 rounded text-xs">
                   <strong>Mode:</strong> {commonDataMode} | 
                   <strong> Active Tab:</strong> {activeTab} | 
                   <strong> Can Edit:</strong> {canEdit ? 'Yes' : 'No'}
                 </div>
-              )}
+              )} */}
             </div>
           )}
         </div>

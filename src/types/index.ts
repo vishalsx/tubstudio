@@ -86,6 +86,20 @@ export interface RecentTranslation {
   };
 }
 
+export interface DatabaseImage {
+  object: {
+    thumbnail: string;
+    image_base64: string;
+    image_hash: string;
+  };
+  file_info: FileInfo;
+  common_data: CommonData;
+  popularity_stars?: number;
+  total_vote_count?: string;
+  translated_languages?: string[];
+  untranslated_languages?: string[];
+}
+
 export type SaveStatus = 'unsaved' | 'saved';
 export type CheckType = "metadata" | "language";
 

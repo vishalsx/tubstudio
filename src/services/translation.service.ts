@@ -54,6 +54,19 @@ export class TranslationService {
     formData.append("username", username);
     return apiClient.post('thumbnail', formData);
   }
+
+  async fetchPopularImages(searchQuery?: string): Promise<any> {
+    let endpoint = 'pool/recommendations';
+
+    // The backend expects `search_query` as a URL query parameter for this POST request.
+    if (searchQuery && searchQuery.trim() !== '') {
+      endpoint += `?search_query=${encodeURIComponent(searchQuery)}`;
+    }
+
+    // The body can be empty as the search parameter is in the URL.
+    // Passing `null` as the body to the apiClient.
+    return apiClient.post(endpoint, null);
+  }
 }
 
 export const translationService = new TranslationService();

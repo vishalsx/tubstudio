@@ -10,12 +10,14 @@ import { useLanguageResults } from '../hooks/useLanguageResults';
 import { useWorklist } from '../hooks/useWorklist';
 import { translationService } from '../services/translation.service';
 import { canPerformUiAction, METADATA, LANGUAGE, RETURN_PERMISSION_ACTION } from '../utils/permissions/hasPermissions';
-import { PermissionCheck, UserContext } from '../types';
-import { UI_MESSAGES } from '../utils/constants';
+import { PermissionCheck, UserContext, DatabaseImage } from '../types';
+import { formatFileSize } from '../utils/imageUtils';
+// FIX: Import DEFAULT_FILE_INFO to use as a fallback.
+import { UI_MESSAGES, DEFAULT_FILE_INFO, DEFAULT_COMMON_DATA } from '../utils/constants';
 
 interface MainAppProps {
   authData: {
-    isLoggedIn: boolean;
+    isLoggedIn: boolean | null;
     userContext: UserContext | null;
     loginError: string | null;
     languageOptions: string[];
@@ -45,6 +47,15 @@ export const MainApp: React.FC<MainAppProps> = ({ authData }) => {
 
   const [isLanguageDropdownOpen, setIsLanguageDropdownOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 640);
+  const languageDropdownRef = useRef<HTMLDivElement>(null);
+  
+  // New states for Database View
+  const [leftPanelView, setLeftPanelView] = useState<'upload' | 'database'>('upload');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [databaseImages, setDatabaseImages] = useState<DatabaseImage[]>([]);
+  const [isPopularImagesLoading, setIsPopularImagesLoading] = useState(false);
+  const [isSearchLoading, setIsSearchLoading] = useState(false);
+  const [languagesForNextIdentify, setLanguagesForNextIdentify] = useState<string[] | undefined>(undefined);
 
   // Permission checks
   const currentMetadataState = languageResults.currentCommonData?.image_status || "";
@@ -111,7 +122,8 @@ useEffect(() => {
     if (commonDataMode === 'shared') {
       return languageResults.currentFileInfo;
     } else {
-      return languageResults.perLanguageFileInfo?.[activeTab] || {};
+      // FIX: Return a default FileInfo object instead of an empty one to match the FileInfo type.
+      return languageResults.perLanguageFileInfo?.[activeTab] || DEFAULT_FILE_INFO;
     }
   };
 
@@ -134,13 +146,142 @@ useEffect(() => {
   useEffect(() => {
     if (imageUpload.file && imageUpload.isThumbnailUpdate) {
       console.log('useEffect: Thumbnail update detected, calling handleIdentify');
-      handleIdentify();
+      handleIdentify(languagesForNextIdentify);
       imageUpload.setIsThumbnailUpdate(false);
+      setLanguagesForNextIdentify(undefined);
     }
-  }, [imageUpload.file, imageUpload.isThumbnailUpdate]);
+  }, [imageUpload.file, imageUpload.isThumbnailUpdate, languagesForNextIdentify]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (languageDropdownRef.current && !languageDropdownRef.current.contains(event.target as Node)) {
+        setIsLanguageDropdownOpen(false);
+      }
+    };
+
+    if (isLanguageDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isLanguageDropdownOpen]);
+
+  // Handlers for Database View
+  const handleSearchQueryChange = (value: string) => {
+    setSearchQuery(value);
+  };
+
+  const processPoolImagesResponse = (data: any[]) => {
+    if (!data || data.length === 0) {
+      setDatabaseImages([]);
+      return;
+    }
+
+    const formattedImages: DatabaseImage[] = data.map((item: any) => ({
+      object: {
+        thumbnail: item.poolImage.thumbnail_base64,
+        image_base64: item.poolImage.image_base64,
+        image_hash: item.poolImage.image_hash,
+      },
+      file_info: {
+        filename: item.file_info.file_name,
+        size: formatFileSize(item.file_info.file_size),
+        mimeType: item.file_info.mime_type,
+        created_at: item.file_info.created_at,
+        updated_at: item.file_info.updated_at,
+        dimensions: '', 
+        created_by: '',
+        updated_by: '',
+      },
+      common_data: {
+        object_name_en: item.poolImage.object_name_en,
+        object_category: "",
+        tags: [],
+        field_of_study: "",
+        age_appropriate: "",
+        image_status: "",
+        object_id: item.poolImage.object_id || "",
+        image_base64: "",
+        flag_object: false
+      },
+      popularity_stars: item.poolImage.popularity_stars,
+      total_vote_count: item.poolImage.total_vote_count,
+      translated_languages: item.translated_languages,
+      untranslated_languages: item.untranslated_languages,
+    }));
+
+    setDatabaseImages(formattedImages);
+  };
+  
+  const handleDatabaseSearch = async (query: string) => {
+    worklist.setError(null);
+    setIsSearchLoading(true);
+    try {
+      const poolImagesData = await translationService.fetchPopularImages(query);
+      processPoolImagesResponse(poolImagesData);
+    } catch (error) {
+      console.error("Failed to fetch search results:", error);
+      worklist.setError((error as Error).message || UI_MESSAGES.ERRORS.SOMETHING_WRONG);
+      setDatabaseImages([]);
+    } finally {
+      setIsSearchLoading(false);
+    }
+  };
+  
+  const handleFetchPopularImages = async () => {
+    worklist.setError(null);
+    setIsPopularImagesLoading(true);
+    try {
+      const popularImagesData = await translationService.fetchPopularImages();
+      processPoolImagesResponse(popularImagesData);
+    } catch (error) {
+      console.error("Failed to fetch popular images:", error);
+      worklist.setError((error as Error).message || UI_MESSAGES.ERRORS.SOMETHING_WRONG);
+      setDatabaseImages([]);
+    } finally {
+      setIsPopularImagesLoading(false);
+    }
+  };
+
+  const handleDatabaseImageClick = async (image: DatabaseImage) => {
+    // 1. Reset current state
+    imageUpload.resetUpload();
+    languageResults.clearResults();
+  
+    const { object, file_info, common_data } = image;
+    const base64 = object.image_base64;
+    const filename = file_info.filename;
+    const imageHash = object.image_hash;
+  
+    // 2. Load the new image as if it were uploaded
+    await imageUpload.handleThumbnailFile(base64, filename);
+    imageUpload.setImageHash(imageHash);
+    
+    // 3. Populate the data panels
+    languageResults.setCurrentCommonData({
+      ...common_data,
+      image_base64: base64,
+    });
+    languageResults.setCurrentFileInfo(file_info);
+    
+    // 4. Switch back to upload view to see the selected image
+    setLeftPanelView('upload');
+  
+    // 5. Set languages and trigger auto-identify
+    if (image.untranslated_languages && image.untranslated_languages.length > 0) {
+      languageResults.setSelectedLanguages(image.untranslated_languages);
+      setLanguagesForNextIdentify(image.untranslated_languages);
+    } else {
+      setLanguagesForNextIdentify(undefined);
+    }
+  };
 
   // UPDATED: handleIdentify with permission-based mode logic
-  const handleIdentify = async () => {
+  const handleIdentify = async (languagesOverride?: string[]) => {
+    const languagesToUse = languagesOverride || languageResults.selectedLanguages;
+    
     languageResults.setSaveMessages({});
     setIsLanguageDropdownOpen(false);
     worklist.setError(null);
@@ -154,7 +295,7 @@ useEffect(() => {
       return;
     }
     
-    if (languageResults.selectedLanguages.length === 0) {
+    if (languagesToUse.length === 0) {
       worklist.setError("Please select at least one language.");
       return;
     }
@@ -163,7 +304,7 @@ useEffect(() => {
 
     // Initialize placeholders
     const initialResults: any = {};
-    languageResults.selectedLanguages.forEach((lang: string) => {
+    languagesToUse.forEach((lang: string) => {
       initialResults[lang] = {
         object_name: "",
         object_description: "",
@@ -177,10 +318,10 @@ useEffect(() => {
     });
     
     languageResults.setLanguageResults(initialResults);
-    languageResults.setAvailableTabs(languageResults.selectedLanguages);
-    languageResults.setActiveTab(languageResults.selectedLanguages[0]);
+    languageResults.setAvailableTabs(languagesToUse);
+    languageResults.setActiveTab(languagesToUse[0]);
     languageResults.setIsDatabaseView(
-      languageResults.selectedLanguages.reduce((acc: { [key: string]: boolean }, lang: string) => {
+      languagesToUse.reduce((acc: { [key: string]: boolean }, lang: string) => {
         acc[lang] = true;
         return acc;
       }, {} as { [key: string]: boolean })
@@ -191,7 +332,7 @@ useEffect(() => {
       let sharedFileInfo: any = null;
       let commonDataMapped = false;
 
-      const identifyPromises = languageResults.selectedLanguages.map(async (language: string) => {
+      const identifyPromises = languagesToUse.map(async (language: string) => {
         try {
           const data = await translationService.identifyObject(
             imageUpload.file!,
@@ -268,7 +409,7 @@ useEffect(() => {
             }));
 
             // Set current data if this is the active tab
-            if (language === languageResults.selectedLanguages[0]) {
+            if (language === languagesToUse[0]) {
               languageResults.setCurrentCommonData(languageSpecificCommonData);
               languageResults.setCurrentFileInfo(languageSpecificFileInfo);
             }
@@ -351,6 +492,10 @@ useEffect(() => {
   // Other handlers remain the same
   const handleThumbnailClick = async (thumbnailIndex: number) => {
     try {
+      // Switch to upload view whenever a thumbnail is clicked
+      setLeftPanelView('upload');
+      setLanguagesForNextIdentify(undefined);
+      
       if (recentTranslations.length > 0 && thumbnailIndex < recentTranslations.length) {
         const selectedThumbnail = recentTranslations[thumbnailIndex];
         
@@ -475,28 +620,53 @@ useEffect(() => {
       <Header userContext={userContext} onLogout={logout} />
       <main className="flex-1 flex flex-col md:flex-row p-4 gap-4 overflow-hidden">
         <LeftPanel
+          // View state
+          leftPanelView={leftPanelView}
+          onViewChange={setLeftPanelView}
+          
+          // File upload props
           file={imageUpload.file}
           previewUrl={imageUpload.previewUrl}
           currentCommonData={getCurrentCommonData(languageResults.activeTab)}
           fileInputRef={imageUpload.fileInputRef}
+          languageDropdownRef={languageDropdownRef}
+          // Language selection props
           selectedLanguages={languageResults.selectedLanguages}
           languageOptions={languageOptions}
           isLanguageDropdownOpen={isLanguageDropdownOpen}
+          // Recent translations
           recentTranslations={recentTranslations}
+          
+          // Database search props
+          searchQuery={searchQuery}
+          databaseImages={databaseImages}
+
+          // Loading and error states
           isLoading={languageResults.isLoading}
+          isWorklistLoading={worklist.isLoading}
           isRedirecting={isRedirecting}
+          isPopularImagesLoading={isPopularImagesLoading}
+          isSearchLoading={isSearchLoading}
           error={imageUpload.error || worklist.error}
+          
+          // Permissions (using the correct index values)
           canUploadPicture={canUploadPicture}
           canIdentifyImage={canIdentifyImage}
           canViewWorkList={canViewWorkList}
+          
+          // Event handlers
           onFileChange={imageUpload.handleFileChange}
           onDrop={imageUpload.handleDrop}
           onFileClick={imageUpload.handleClick}
           onLanguageToggle={languageResults.handleLanguageToggle}
           onLanguageDropdownToggle={() => setIsLanguageDropdownOpen(!isLanguageDropdownOpen)}
-          onIdentify={handleIdentify}
+          onIdentify={() => handleIdentify()}
           onFetchWorklist={handleFetchWorklist}
           onThumbnailClick={handleThumbnailClick}
+          onSearchQueryChange={handleSearchQueryChange}
+          onDatabaseSearch={handleDatabaseSearch}
+          onFetchPopularImages={handleFetchPopularImages}
+          onDatabaseImageClick={handleDatabaseImageClick}
         />
         
         <MiddlePanel

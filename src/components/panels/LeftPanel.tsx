@@ -1,15 +1,19 @@
 // components/panels/LeftPanel.tsx
 import React from 'react';
-import { ChevronDownIcon, XMarkIcon, SparklesIcon, ListBulletIcon } from '@heroicons/react/24/solid';
-import { CommonData, RecentTranslation, PermissionCheck } from '../../types';
+import { ChevronDownIcon, XMarkIcon, SparklesIcon, ListBulletIcon, ArrowUpTrayIcon, PhotoIcon, MagnifyingGlassIcon, StarIcon } from '@heroicons/react/24/solid';
+import { CommonData, RecentTranslation, PermissionCheck, DatabaseImage } from '../../types';
 
 interface LeftPanelProps {
+  // View state props
+  leftPanelView: 'upload' | 'database';
+
   // File upload props
   file: File | null;
   previewUrl: string | null;
   currentCommonData: CommonData;
-  // fileInputRef: React.RefObject<HTMLInputElement>;
   fileInputRef: React.RefObject<HTMLInputElement | null>;
+  languageDropdownRef: React.RefObject<HTMLDivElement>;
+  
   // Language selection props
   selectedLanguages: string[];
   languageOptions: string[];
@@ -18,17 +22,25 @@ interface LeftPanelProps {
   // Recent translations
   recentTranslations: RecentTranslation[];
   
+  // Database search props
+  searchQuery: string;
+  databaseImages: DatabaseImage[];
+
   // Loading and error states
   isLoading: boolean;
+  isWorklistLoading: boolean;
   isRedirecting: boolean;
+  isPopularImagesLoading: boolean;
+  isSearchLoading: boolean;
   error: string | null;
   
-  // Permissions (using the correct index values)
+  // Permissions
   canUploadPicture: PermissionCheck;
   canIdentifyImage: PermissionCheck;
   canViewWorkList: PermissionCheck;
   
   // Event handlers
+  onViewChange: (view: 'upload' | 'database') => void;
   onFileChange: (file: File) => void;
   onDrop: (e: React.DragEvent<HTMLDivElement>) => void;
   onFileClick: () => void;
@@ -37,23 +49,35 @@ interface LeftPanelProps {
   onIdentify: () => void;
   onFetchWorklist: () => void;
   onThumbnailClick: (index: number) => void;
+  onSearchQueryChange: (value: string) => void;
+  onDatabaseSearch: (query: string) => void;
+  onDatabaseImageClick: (image: DatabaseImage) => void;
+  onFetchPopularImages: () => void;
 }
 
 export const LeftPanel: React.FC<LeftPanelProps> = ({
+  leftPanelView,
   file,
   previewUrl,
   currentCommonData,
   fileInputRef,
+  languageDropdownRef,
   selectedLanguages,
   languageOptions,
   isLanguageDropdownOpen,
   recentTranslations,
+  searchQuery,
+  databaseImages,
   isLoading,
+  isWorklistLoading,
   isRedirecting,
+  isPopularImagesLoading,
+  isSearchLoading,
   error,
   canUploadPicture,
   canIdentifyImage,
   canViewWorkList,
+  onViewChange,
   onFileChange,
   onDrop,
   onFileClick,
@@ -61,70 +85,222 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
   onLanguageDropdownToggle,
   onIdentify,
   onFetchWorklist,
-  onThumbnailClick
+  onThumbnailClick,
+  onSearchQueryChange,
+  onDatabaseSearch,
+  onDatabaseImageClick,
+  onFetchPopularImages
 }) => {
+  const renderSwappableTopSection = () => {
+    if (leftPanelView === 'upload') {
+      return (
+        <>
+          {/* Upload Area */}
+          <div
+            className={`border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center p-4 mb-3 h-32 ${
+              canUploadPicture.metadata ? "cursor-pointer hover:border-[#00AEEF]" : "cursor-not-allowed opacity-50"
+            }`}
+            onDragOver={(e) => canUploadPicture.metadata && e.preventDefault()}
+            onDrop={(e) => canUploadPicture.metadata && onDrop(e)}
+            onClick={() => canUploadPicture.metadata && onFileClick()}
+          >
+            <p className="text-gray-500 text-sm mb-1">Drag & drop your image here</p>
+            <p className="text-xs text-gray-400 mb-2">or</p>
+            <button className="px-3 py-1 bg-[#00AEEF] text-white rounded text-sm hover:bg-[#0096CC] transition">
+              Browse Files
+            </button>
+            <input
+              type="file"
+              ref={fileInputRef as React.RefObject<HTMLInputElement>}
+              accept=".jpg,.jpeg,.png,.heic,.heif,.webp,.gif,.bmp,.tiff,.tif"
+              className="hidden"
+              onChange={(e) => {
+                if (!canUploadPicture.metadata) return;
+                const file = e.target.files?.[0];
+                if (!file) return;
+                onFileChange(file);
+              }}
+            />
+          </div>
+
+          {/* Preview Image */}
+          {previewUrl ? (
+            <div className="mb-4">
+              <img src={previewUrl} alt="Uploaded" className="w-full h-auto object-contain rounded-lg animate-fade-in max-h-[500px]" />
+            </div>
+          ) : currentCommonData?.image_base64 ? (
+            <div className="mb-4">
+              <img
+                src={`data:image/png;base64,${currentCommonData.image_base64}`}
+                alt="Work item"
+                className="w-full h-auto object-contain rounded-lg animate-fade-in max-h-64"
+              />
+            </div>
+          ) : (
+            <div className="mb-4 bg-gray-100 rounded-lg flex items-center justify-center h-48">
+              <p className="text-gray-400">Selected image preview</p>
+            </div>
+          )}
+        </>
+      );
+    }
+    
+    // Database View
+    return (
+      <>
+        {/* Search Filters Area */}
+        <div className="border-2 border-dashed border-gray-300 rounded-lg p-3 mb-3 flex flex-col">
+          {/* Unified Search Input */}
+          <div className="mb-2">
+            <input
+              type="text"
+              placeholder="Search by object name, category, etc..."
+              value={searchQuery}
+              onChange={(e) => onSearchQueryChange(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  onDatabaseSearch(searchQuery);
+                }
+              }}
+              className="w-full p-1.5 border border-gray-300 rounded-md text-sm focus:ring-[#00AEEF] focus:border-[#00AEEF]"
+            />
+          </div>
+
+          {/* Buttons */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                onDatabaseSearch(searchQuery);
+              }}
+              disabled={isSearchLoading || isPopularImagesLoading}
+              className="w-full px-2 py-1.5 bg-[#00AEEF] text-white rounded-lg hover:bg-[#0096CC] transition flex items-center justify-center text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isSearchLoading ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                  <span>Searching...</span>
+                </>
+              ) : (
+                <>
+                  <MagnifyingGlassIcon className="w-4 h-4 mr-1" />
+                  Search
+                </>
+              )}
+            </button>
+            <button
+              onClick={onFetchPopularImages}
+              disabled={isPopularImagesLoading || isSearchLoading}
+              className="w-full px-2 py-1.5 bg-[#F15A29] text-white rounded-lg hover:bg-[#D14A23] transition flex items-center justify-center text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isPopularImagesLoading ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                  <span>Loading...</span>
+                </>
+              ) : (
+                <>
+                  <SparklesIcon className="w-4 h-4 mr-1" />
+                  Popular
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+
+
+        {/* Database Image Grid */}
+        <div className={`mb-4 ${databaseImages.length === 0 ? 'h-64 border-2 border-dashed border-gray-300 rounded-lg' : ''}`}>
+          {databaseImages.length > 0 ? (
+            <div className="grid grid-cols-3 gap-3">
+              {databaseImages.slice(0, 9).map((image, idx) => (
+                <div
+                  key={idx}
+                  className="relative group rounded-xl overflow-hidden shadow-md cursor-pointer h-24"
+                  onClick={() => onDatabaseImageClick(image)}
+                  title={image.common_data.object_name_en || image.file_info.filename || ''}
+                >
+                  <img
+                    src={`data:image/jpeg;base64,${image.object.thumbnail}`}
+                    alt={image.common_data.object_name_en || image.file_info.filename || ''}
+                    className="w-full h-full object-cover transition-transform duration-300 ease-in-out group-hover:scale-110"
+                  />
+                  {/* Permanent Text Overlay */}
+                  <div className="absolute bottom-0 left-0 right-0 p-1 bg-gradient-to-t from-black/60 to-transparent pointer-events-none">
+                    <p className="text-white font-bold text-xs text-center drop-shadow-lg truncate">
+                      {image.common_data.object_name_en || (image.file_info.filename ? image.file_info.filename.split('.').slice(0, -1).join('.') : 'Untitled')}
+                    </p>
+                  </div>
+                  
+                  {/* Hover Overlay for Stars and Votes */}
+                  {(image.popularity_stars !== undefined && image.total_vote_count !== undefined) && (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-black bg-opacity-0 group-hover:bg-opacity-60 transition-opacity duration-300 opacity-0 group-hover:opacity-100">
+                      <div className="flex items-center text-white">
+                        <StarIcon className="w-5 h-5 text-yellow-400" />
+                        <span className="ml-1 font-bold">{typeof image.popularity_stars === 'number' ? image.popularity_stars.toFixed(1) : ''}</span>
+                      </div>
+                      <span className="text-xs text-gray-200 mt-1">{image.total_vote_count} votes</span>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="flex items-center justify-center h-full text-gray-500 italic">
+              Search to see results
+            </div>
+          )}
+        </div>
+      </>
+    );
+  };
+  
   return (
     <div className="w-full md:w-1/3 bg-white rounded-lg shadow p-4 flex flex-col">
-      <h2 className="text-lg font-semibold mb-4 flex items-center">
-        <span className="text-[#00AEEF]">Take </span>
-        <span className="text-[#F15A29] ml-1">TUB</span>
-        <span className="text-[#00AEEF] ml-1"> Shot</span>
-      </h2>
-      
-      {/* Upload Area */}
-      <div
-        className={`border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center p-4 mb-3 max-h-32 ${
-          canUploadPicture.metadata ? "cursor-pointer hover:border-[#00AEEF]" : "cursor-not-allowed opacity-50"
-        }`}
-        onDragOver={(e) => canUploadPicture.metadata && e.preventDefault()}
-        onDrop={(e) => canUploadPicture.metadata && onDrop(e)}
-        onClick={() => canUploadPicture.metadata && onFileClick()}
-      >
-        <svg className="w-12 h-12 text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-        </svg>
-        <p className="text-gray-500 mb-2">Drag & drop your image here</p>
-        <p className="text-sm text-gray-400 mb-4">or</p>
-        <button className="px-4 py-2 bg-[#00AEEF] text-white rounded hover:bg-[#0096CC] transition">
-          Browse Files
-        </button>
-        <input
-          type="file"
-          ref={fileInputRef}
-          accept=".jpg,.jpeg,.png,.heic,.heif,.webp,.gif,.bmp,.tiff,.tif"
-          className="hidden"
-          onChange={(e) => {
-            if (!canUploadPicture.metadata) return;
-            const file = e.target.files?.[0];
-            if (!file) return;
-            onFileChange(file);
-          }}
-        />
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-lg font-semibold flex items-center">
+          <span className="text-[#00AEEF]">Take </span>
+          <span className="text-[#F15A29] ml-1">TUB</span>
+          <span className="text-[#00AEEF] ml-1"> Shot</span>
+        </h2>
+        
+        {/* View Switcher */}
+        <div className="flex items-center space-x-1">
+          <button
+            onClick={() => onViewChange('upload')}
+            title="Upload View"
+            className={`p-2 rounded-md transition ${
+              leftPanelView === 'upload'
+                ? 'bg-blue-100 text-[#00AEEF]'
+                : 'text-gray-600 hover:bg-gray-100 hover:text-[#00AEEF]'
+            }`}
+          >
+            <ArrowUpTrayIcon className="w-5 h-5" />
+          </button>
+          <button
+            onClick={() => onViewChange('database')}
+            disabled={!canUploadPicture.metadata || !canIdentifyImage.metadata}
+            title={
+              !canUploadPicture.metadata || !canIdentifyImage.metadata
+                ? "You need upload and identify permissions to view the database"
+                : "Database View"
+            }
+            className={`p-2 rounded-md transition ${
+              leftPanelView === 'database'
+                ? 'bg-blue-100 text-[#00AEEF]'
+                : 'text-gray-600 hover:bg-gray-100 hover:text-[#00AEEF]'
+            } disabled:opacity-50 disabled:cursor-not-allowed`}
+          >
+            <PhotoIcon className="w-5 h-5" />
+          </button>
+        </div>
       </div>
+      
+      {renderSwappableTopSection()}
 
-      {/* Preview Image */}
-      {previewUrl ? (
-        <div className="mb-4">
-          <img src={previewUrl} alt="Uploaded" className="w-full h-auto object-contain rounded-lg animate-fade-in max-h-[500px]" />
-        </div>
-      ) : currentCommonData?.image_base64 ? (
-        <div className="mb-4">
-          <img
-            src={`data:image/png;base64,${currentCommonData.image_base64}`}
-            alt="Work item"
-            className="w-full h-auto object-contain rounded-lg animate-fade-in max-h-64"
-          />
-        </div>
-      ) : (
-        <div className="mb-4 bg-gray-100 rounded-lg flex items-center justify-center h-48">
-          <p className="text-gray-400">Selected image preview</p>
-        </div>
-      )}
-
-      {/* Controls Row - Language Multi-Select and Action Buttons */}
+      {/* --- SHARED COMPONENTS --- */}
       <div className="flex items-center gap-2 mb-4">
         {/* Language Multi-Select */}
-        <div className="relative">
+        <div className="relative" ref={languageDropdownRef}>
           <button
             onClick={onLanguageDropdownToggle}
             className="px-3 py-1 border border-gray-300 bg-white text-gray-700 rounded text-sm flex items-center justify-between focus:ring-2 focus:ring-[#00AEEF] min-w-[180px]"
@@ -162,17 +338,15 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
         <button
           onClick={onIdentify}
           disabled={isLoading || !canIdentifyImage.metadata || isRedirecting}
-          className={`px-4 py-2 rounded-lg transition ${
+          title="Identify Object"
+          className={`px-4 py-2 rounded-lg transition flex justify-center items-center ${
             isLoading || !canIdentifyImage.metadata
               ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
               : 'bg-[#00AEEF] text-white hover:bg-[#0096CC]'
           }`}
         >
           {isLoading ? (
-            <div className="flex items-center justify-center">
-              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-              Processing...
-            </div>
+            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
           ) : (
             <SparklesIcon className="w-5 h-5" />
           )}
@@ -181,15 +355,19 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
         {/* Worklist Button */}
         <button
           onClick={onFetchWorklist}
-          disabled={!canViewWorkList.language}
+          disabled={!canViewWorkList.language || isWorklistLoading}
           title="My Work Items"
-          className={`px-4 py-2 rounded-lg transition ${
-            !canViewWorkList.language
+          className={`px-4 py-2 rounded-lg transition flex justify-center items-center ${
+            !canViewWorkList.language || isWorklistLoading
               ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
               : 'bg-[#F15A29] text-white hover:bg-[#D14A23]'
           }`}
         >
-          <ListBulletIcon className="w-5 h-5" />
+          {isWorklistLoading ? (
+            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+          ) : (
+            <ListBulletIcon className="w-5 h-5" />
+          )}
         </button>
       </div>
 
@@ -211,7 +389,7 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
                 className="bg-gray-100 rounded overflow-hidden flex flex-col items-center shadow"
               >
                 {/* Thumbnail */}
-                <div className="aspect-square w-full">
+                <div className="h-24 w-full">
                   <img
                     src={`data:image/jpeg;base64,${item.object.thumbnail}`}
                     alt="thumbnail"
@@ -237,9 +415,9 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
             ))
           ) : (
             <>
-              <div className="aspect-square bg-gray-200 rounded"></div>
-              <div className="aspect-square bg-gray-200 rounded"></div>
-              <div className="aspect-square bg-gray-200 rounded"></div>
+              <div className="h-24 bg-gray-200 rounded"></div>
+              <div className="h-24 bg-gray-200 rounded"></div>
+              <div className="h-24 bg-gray-200 rounded"></div>
             </>
           )}
         </div>

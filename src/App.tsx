@@ -1,6 +1,5 @@
 // App.tsx
 import React from 'react';
-import ReactDOM from 'react-dom/client';
 import { LoginPage } from './pages/LoginPage';
 import { MainApp } from './pages/MainApp';
 import { useAuth } from './hooks/useAuth';
@@ -30,8 +29,5 @@ const App: React.FC = () => {
   return <MainApp authData={auth} />;
 };
 
-// Render the app
-const root = ReactDOM.createRoot(document.getElementById('root') as HTMLElement);
-root.render(<App />);
 
 export default App;
