@@ -55,7 +55,7 @@ export const MainApp: React.FC<MainAppProps> = ({ authData }) => {
   const [databaseImages, setDatabaseImages] = useState<DatabaseImage[]>([]);
   const [isPopularImagesLoading, setIsPopularImagesLoading] = useState(false);
   const [isSearchLoading, setIsSearchLoading] = useState(false);
-  const [languagesForNextIdentify, setLanguagesForNextIdentify] = useState<string[] | undefined>(undefined);
+  const [pendingIdentify, setPendingIdentify] = useState<string[] | null>(null);
 
   // Permission checks
   const currentMetadataState = languageResults.currentCommonData?.image_status || "";
@@ -144,15 +144,6 @@ useEffect(() => {
   }, [imageUpload.error]);
 
   useEffect(() => {
-    if (imageUpload.file && imageUpload.isThumbnailUpdate) {
-      console.log('useEffect: Thumbnail update detected, calling handleIdentify');
-      handleIdentify(languagesForNextIdentify);
-      imageUpload.setIsThumbnailUpdate(false);
-      setLanguagesForNextIdentify(undefined);
-    }
-  }, [imageUpload.file, imageUpload.isThumbnailUpdate, languagesForNextIdentify]);
-
-  useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (languageDropdownRef.current && !languageDropdownRef.current.contains(event.target as Node)) {
         setIsLanguageDropdownOpen(false);
@@ -167,6 +158,22 @@ useEffect(() => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [isLanguageDropdownOpen]);
+
+  // Robustly handle auto-identification after state updates
+  useEffect(() => {
+    const languagesReady =
+      pendingIdentify &&
+      pendingIdentify.length > 0 &&
+      languageResults.selectedLanguages.length === pendingIdentify.length &&
+      pendingIdentify.every(lang =>
+        languageResults.selectedLanguages.includes(lang)
+      );
+  
+    if (languagesReady) {
+      handleIdentify(pendingIdentify);
+      setPendingIdentify(null); // Reset the trigger
+    }
+  }, [pendingIdentify, languageResults.selectedLanguages]);
 
   // Handlers for Database View
   const handleSearchQueryChange = (value: string) => {
@@ -270,11 +277,10 @@ useEffect(() => {
     setLeftPanelView('upload');
   
     // 5. Set languages and trigger auto-identify
-    if (image.untranslated_languages && image.untranslated_languages.length > 0) {
-      languageResults.setSelectedLanguages(image.untranslated_languages);
-      setLanguagesForNextIdentify(image.untranslated_languages);
-    } else {
-      setLanguagesForNextIdentify(undefined);
+    const languagesToIdentify = image.untranslated_languages || [];
+    if (languagesToIdentify.length > 0) {
+      languageResults.setSelectedLanguages(languagesToIdentify);
+      setPendingIdentify(languagesToIdentify); // Use the robust trigger
     }
   };
 
@@ -494,7 +500,6 @@ useEffect(() => {
     try {
       // Switch to upload view whenever a thumbnail is clicked
       setLeftPanelView('upload');
-      setLanguagesForNextIdentify(undefined);
       
       if (recentTranslations.length > 0 && thumbnailIndex < recentTranslations.length) {
         const selectedThumbnail = recentTranslations[thumbnailIndex];
@@ -510,8 +515,7 @@ useEffect(() => {
           return;
         }
 
-        const newFile = await imageUpload.handleThumbnailFile(base64, filename);
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await imageUpload.handleThumbnailFile(base64, filename);
         
         imageUpload.setImageHash(imageHash);
 
@@ -563,11 +567,10 @@ useEffect(() => {
           image_base64: base64.includes(',') ? base64.split(',')[1] : base64,
           filename,
         }));
-        imageUpload.setIsThumbnailUpdate(true);
+        
+        // Use the robust trigger instead of setTimeout
+        setPendingIdentify([language]);
       }
-      
-      await new Promise(resolve => setTimeout(resolve, 100));
-
     } catch (error) {
       console.error('Error handling thumbnail:', error);
       worklist.setError('Failed to process the image.');
