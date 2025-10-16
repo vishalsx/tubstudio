@@ -32,6 +32,7 @@ class ApiClient {
   }
 
   async get(endpoint: string, options: RequestInit = {}) {
+    console.log("GET request to:", `${this.baseUrl}${endpoint}`);
     const response = await fetch(`${this.baseUrl}${endpoint}`, {
       ...options,
       headers: {
