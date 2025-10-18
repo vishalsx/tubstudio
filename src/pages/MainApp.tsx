@@ -46,6 +46,7 @@ export const MainApp: React.FC<MainAppProps> = ({ authData }) => {
   const worklist = useWorklist();
 
   const [isLanguageDropdownOpen, setIsLanguageDropdownOpen] = useState(false);
+  const [isLeftPanelCollapsed, setIsLeftPanelCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 640);
   const languageDropdownRef = useRef<HTMLDivElement>(null);
   
@@ -66,6 +67,10 @@ export const MainApp: React.FC<MainAppProps> = ({ authData }) => {
       return [tab, normalized];
     })
   );
+
+  const handleToggleLeftPanel = () => {
+    setIsLeftPanelCollapsed(prev => !prev);
+  };
 
   function makeActionChecks(
     action: string,
@@ -670,6 +675,11 @@ useEffect(() => {
           onDatabaseSearch={handleDatabaseSearch}
           onFetchPopularImages={handleFetchPopularImages}
           onDatabaseImageClick={handleDatabaseImageClick}
+          
+          // Collapse functionality
+          isCollapsed={isLeftPanelCollapsed}
+          onToggleCollapse={handleToggleLeftPanel}
+          className={`transition-all duration-300 ease-in-out ${isLeftPanelCollapsed ? 'md:w-16' : 'md:w-1/3'}`}
         />
         
         <MiddlePanel
@@ -696,6 +706,7 @@ useEffect(() => {
           onSave={(action: string) => languageResults.handleQuickSave(action, imageUpload.file ?? undefined, userContext?.username)}
           onSkip={handleSkip}
           onToggleEdit={onToggleEdit}
+          className={`transition-all duration-300 ease-in-out ${isLeftPanelCollapsed ? 'md:w-1/2' : 'md:w-1/3'}`}
         />
         
         <RightPanel
@@ -709,6 +720,7 @@ useEffect(() => {
             canSwitchToEditMode
           }}
           onUpdateCommonData={languageResults.updateCommonData}
+          className={`transition-all duration-300 ease-in-out ${isLeftPanelCollapsed ? 'md:w-1/2' : 'md:w-1/3'}`}
         />
       </main>
     </div>

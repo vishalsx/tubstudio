@@ -1,6 +1,6 @@
 // components/panels/LeftPanel.tsx
 import React from 'react';
-import { ChevronDownIcon, XMarkIcon, SparklesIcon, ListBulletIcon, ArrowUpTrayIcon, PhotoIcon, MagnifyingGlassIcon, StarIcon } from '@heroicons/react/24/solid';
+import { Bars3Icon, ChevronDownIcon, XMarkIcon, SparklesIcon, ListBulletIcon, ArrowUpTrayIcon, PhotoIcon, MagnifyingGlassIcon, StarIcon } from '@heroicons/react/24/solid';
 import { CommonData, RecentTranslation, PermissionCheck, DatabaseImage } from '../../types';
 
 interface LeftPanelProps {
@@ -53,6 +53,11 @@ interface LeftPanelProps {
   onDatabaseSearch: (query: string) => void;
   onDatabaseImageClick: (image: DatabaseImage) => void;
   onFetchPopularImages: () => void;
+
+  // New props for collapse functionality
+  className?: string;
+  isCollapsed: boolean;
+  onToggleCollapse: () => void;
 }
 
 export const LeftPanel: React.FC<LeftPanelProps> = ({
@@ -89,7 +94,10 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
   onSearchQueryChange,
   onDatabaseSearch,
   onDatabaseImageClick,
-  onFetchPopularImages
+  onFetchPopularImages,
+  className = '',
+  isCollapsed,
+  onToggleCollapse,
 }) => {
   const renderSwappableTopSection = () => {
     if (leftPanelView === 'upload') {
@@ -255,171 +263,132 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
   };
   
   return (
-    <div className="w-full md:w-1/3 bg-white rounded-lg shadow p-4 flex flex-col">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-lg font-semibold flex items-center">
-          <span className="text-[#00AEEF]">Take </span>
-          <span className="text-[#F15A29] ml-1">TUB</span>
-          <span className="text-[#00AEEF] ml-1"> Shot</span>
-        </h2>
-        
-        {/* View Switcher */}
-        <div className="flex items-center space-x-1">
-          <button
-            onClick={() => onViewChange('upload')}
-            title="Upload View"
-            className={`p-2 rounded-md transition ${
-              leftPanelView === 'upload'
-                ? 'bg-blue-100 text-[#00AEEF]'
-                : 'text-gray-600 hover:bg-gray-100 hover:text-[#00AEEF]'
-            }`}
-          >
-            <ArrowUpTrayIcon className="w-5 h-5" />
-          </button>
-          <button
-            onClick={() => onViewChange('database')}
-            disabled={!canUploadPicture.metadata || !canIdentifyImage.metadata}
-            title={
-              !canUploadPicture.metadata || !canIdentifyImage.metadata
-                ? "You need upload and identify permissions to view the database"
-                : "Database View"
-            }
-            className={`p-2 rounded-md transition ${
-              leftPanelView === 'database'
-                ? 'bg-blue-100 text-[#00AEEF]'
-                : 'text-gray-600 hover:bg-gray-100 hover:text-[#00AEEF]'
-            } disabled:opacity-50 disabled:cursor-not-allowed`}
-          >
-            <PhotoIcon className="w-5 h-5" />
-          </button>
+    <div className={`w-full bg-white rounded-lg shadow p-4 flex flex-col overflow-hidden ${className}`}>
+      {/* Header with Toggle */}
+      <div className="flex items-center mb-4 flex-shrink-0">
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleCollapse();
+          }}
+          className="p-2 -ml-2 rounded-md text-gray-500 hover:bg-gray-100 transition md:block"
+          title={isCollapsed ? "Expand Panel" : "Collapse Panel"}
+        >
+          <Bars3Icon className="w-5 h-5" />
+        </button>
+
+        {/* Header Content (conditionally rendered) */}
+        <div className={`flex justify-between items-center w-full ml-2 transition-opacity duration-200 ${isCollapsed ? 'opacity-0' : 'opacity-100'}`}>
+          <h2 className="text-lg font-semibold flex items-center whitespace-nowrap">
+            <span className="text-[#00AEEF]">Take </span>
+            <span className="text-[#F15A29] ml-1">TUB</span>
+            <span className="text-[#00AEEF] ml-1"> Shot</span>
+          </h2>
+          
+          <div className="flex items-center space-x-1">
+            <button
+              onClick={() => onViewChange('upload')}
+              title="Upload View"
+              className={`p-2 rounded-md transition ${leftPanelView === 'upload' ? 'bg-blue-100 text-[#00AEEF]' : 'text-gray-600 hover:bg-gray-100 hover:text-[#00AEEF]'}`}
+            >
+              <ArrowUpTrayIcon className="w-5 h-5" />
+            </button>
+            <button
+              onClick={() => onViewChange('database')}
+              disabled={!canUploadPicture.metadata || !canIdentifyImage.metadata}
+              title={!canUploadPicture.metadata || !canIdentifyImage.metadata ? "You need upload and identify permissions to view the database" : "Database View"}
+              className={`p-2 rounded-md transition ${leftPanelView === 'database' ? 'bg-blue-100 text-[#00AEEF]' : 'text-gray-600 hover:bg-gray-100 hover:text-[#00AEEF]'} disabled:opacity-50 disabled:cursor-not-allowed`}
+            >
+              <PhotoIcon className="w-5 h-5" />
+            </button>
+          </div>
         </div>
       </div>
       
-      {renderSwappableTopSection()}
+      {/* Main Content (conditionally rendered) */}
+      <div className={`flex-1 flex flex-col transition-opacity duration-200 ${isCollapsed ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
+        {renderSwappableTopSection()}
 
-      {/* --- SHARED COMPONENTS --- */}
-      <div className="flex items-center gap-2 mb-4">
-        {/* Language Multi-Select */}
-        <div className="relative" ref={languageDropdownRef}>
-          <button
-            onClick={onLanguageDropdownToggle}
-            className="px-3 py-1 border border-gray-300 bg-white text-gray-700 rounded text-sm flex items-center justify-between focus:ring-2 focus:ring-[#00AEEF] min-w-[180px]"
-          >
-            <span className="truncate">
-              {selectedLanguages.length === 0
-                ? 'Select Languages'
-                : `${selectedLanguages.length} selected`
-              }
-            </span>
-            <ChevronDownIcon className={`w-4 h-4 ml-2 transition-transform ${isLanguageDropdownOpen ? 'rotate-180' : ''}`} />
-          </button>
-
-          {isLanguageDropdownOpen && (
-            <div className="absolute top-full right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-10 max-h-60 overflow-y-auto min-w-[150px]">
-              {languageOptions.map((language) => (
-                <label
-                  key={language}
-                  className="flex items-center px-3 py-2 hover:bg-gray-50 cursor-pointer"
-                >
-                  <input
-                    type="checkbox"
-                    checked={selectedLanguages.includes(language)}
-                    onChange={() => onLanguageToggle(language)}
-                    className="mr-3 rounded border-gray-300 text-[#00AEEF] focus:ring-[#00AEEF]"
-                  />
-                  <span className="text-gray-700">{language}</span>
-                </label>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Identify Image Button */}
-        <button
-          onClick={onIdentify}
-          disabled={isLoading || !canIdentifyImage.metadata || isRedirecting}
-          title="Identify Object"
-          className={`px-4 py-2 rounded-lg transition flex justify-center items-center ${
-            isLoading || !canIdentifyImage.metadata
-              ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-              : 'bg-[#00AEEF] text-white hover:bg-[#0096CC]'
-          }`}
-        >
-          {isLoading ? (
-            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-          ) : (
-            <SparklesIcon className="w-5 h-5" />
-          )}
-        </button>
-
-        {/* Worklist Button */}
-        <button
-          onClick={onFetchWorklist}
-          disabled={!canViewWorkList.language || isWorklistLoading}
-          title="My Work Items"
-          className={`px-4 py-2 rounded-lg transition flex justify-center items-center ${
-            !canViewWorkList.language || isWorklistLoading
-              ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-              : 'bg-[#F15A29] text-white hover:bg-[#D14A23]'
-          }`}
-        >
-          {isWorklistLoading ? (
-            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-          ) : (
-            <ListBulletIcon className="w-5 h-5" />
-          )}
-        </button>
-      </div>
-
-      {/* Error Display */}
-      {error && (
-        <div className="mt-4 p-3 rounded-lg bg-red-50 border-l-4 border-red-500">
-          <p className="font-medium text-red-600 text-sm">{error}</p>
-        </div>
-      )}
-
-      {/* Recent Uploads */}
-      <div className="mt-4">
-        <h3 className="font-medium mb-2">Latest Edits</h3>
-        <div className="grid grid-cols-3 gap-2">
-          {recentTranslations.length > 0 ? (
-            recentTranslations.map((item, idx) => (
-              <div
-                key={idx}
-                className="bg-gray-100 rounded overflow-hidden flex flex-col items-center shadow"
-              >
-                {/* Thumbnail */}
-                <div className="h-24 w-full">
-                  <img
-                    src={`data:image/jpeg;base64,${item.object.thumbnail}`}
-                    alt="thumbnail"
-                    className="w-full h-full object-cover cursor-pointer hover:opacity-80 transition"
-                    onClick={
-                      canUploadPicture.metadata
-                        ? () => onThumbnailClick(idx)
-                        : undefined
-                    }
-                  />
-                </div>
-
-                {/* Details */}
-                <div className="p-2 text-center">
-                  <p className="text-xs font-medium">
-                    {item.translation.requested_language}
-                  </p>
-                  <p className="text-xs text-gray-600">
-                    {item.translation.translation_status}
-                  </p>
-                </div>
+        {/* --- SHARED COMPONENTS --- */}
+        <div className="flex items-center gap-2 mb-4">
+          <div className="relative" ref={languageDropdownRef}>
+            <button
+              onClick={onLanguageDropdownToggle}
+              className="px-3 py-1 border border-gray-300 bg-white text-gray-700 rounded text-sm flex items-center justify-between focus:ring-2 focus:ring-[#00AEEF] min-w-[180px]"
+            >
+              <span className="truncate">
+                {selectedLanguages.length === 0 ? 'Select Languages' : `${selectedLanguages.length} selected`}
+              </span>
+              <ChevronDownIcon className={`w-4 h-4 ml-2 transition-transform ${isLanguageDropdownOpen ? 'rotate-180' : ''}`} />
+            </button>
+            {isLanguageDropdownOpen && (
+              <div className="absolute top-full right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-10 max-h-60 overflow-y-auto min-w-[150px]">
+                {languageOptions.map((language) => (
+                  <label key={language} className="flex items-center px-3 py-2 hover:bg-gray-50 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={selectedLanguages.includes(language)}
+                      onChange={() => onLanguageToggle(language)}
+                      className="mr-3 rounded border-gray-300 text-[#00AEEF] focus:ring-[#00AEEF]"
+                    />
+                    <span className="text-gray-700">{language}</span>
+                  </label>
+                ))}
               </div>
-            ))
-          ) : (
-            <>
-              <div className="h-24 bg-gray-200 rounded"></div>
-              <div className="h-24 bg-gray-200 rounded"></div>
-              <div className="h-24 bg-gray-200 rounded"></div>
-            </>
-          )}
+            )}
+          </div>
+          <button
+            onClick={onIdentify}
+            disabled={isLoading || !canIdentifyImage.metadata || isRedirecting}
+            title="Identify Object"
+            className={`px-4 py-2 rounded-lg transition flex justify-center items-center ${isLoading || !canIdentifyImage.metadata ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-[#00AEEF] text-white hover:bg-[#0096CC]'}`}
+          >
+            {isLoading ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : <SparklesIcon className="w-5 h-5" />}
+          </button>
+          <button
+            onClick={onFetchWorklist}
+            disabled={!canViewWorkList.language || isWorklistLoading}
+            title="My Work Items"
+            className={`px-4 py-2 rounded-lg transition flex justify-center items-center ${!canViewWorkList.language || isWorklistLoading ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-[#F15A29] text-white hover:bg-[#D14A23]'}`}
+          >
+            {isWorklistLoading ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : <ListBulletIcon className="w-5 h-5" />}
+          </button>
+        </div>
+
+        {error && (
+          <div className="mt-4 p-3 rounded-lg bg-red-50 border-l-4 border-red-500">
+            <p className="font-medium text-red-600 text-sm">{error}</p>
+          </div>
+        )}
+
+        <div className="mt-4">
+          <h3 className="font-medium mb-2">Latest Edits</h3>
+          <div className="grid grid-cols-3 gap-2">
+            {recentTranslations.length > 0 ? (
+              recentTranslations.map((item, idx) => (
+                <div key={idx} className="bg-gray-100 rounded overflow-hidden flex flex-col items-center shadow">
+                  <div className="h-24 w-full">
+                    <img
+                      src={`data:image/jpeg;base64,${item.object.thumbnail}`}
+                      alt="thumbnail"
+                      className="w-full h-full object-cover cursor-pointer hover:opacity-80 transition"
+                      onClick={canUploadPicture.metadata ? () => onThumbnailClick(idx) : undefined}
+                    />
+                  </div>
+                  <div className="p-2 text-center">
+                    <p className="text-xs font-medium">{item.translation.requested_language}</p>
+                    <p className="text-xs text-gray-600">{item.translation.translation_status}</p>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <>
+                <div className="h-24 bg-gray-200 rounded"></div>
+                <div className="h-24 bg-gray-200 rounded"></div>
+                <div className="h-24 bg-gray-200 rounded"></div>
+              </>
+            )}
+          </div>
         </div>
       </div>
     </div>

@@ -2,6 +2,7 @@
 import React from 'react';
 import { XMarkIcon } from '@heroicons/react/24/solid';
 import { LanguageResult, SaveStatus, PermissionCheck } from '../../types';
+import { StatusWorkflow } from '../common/StatusWorkflow';
 
 interface MiddlePanelProps {
   activeTab: string;
@@ -31,7 +32,7 @@ interface MiddlePanelProps {
   onSave: (action: string) => void;
   onSkip: () => void;
   onToggleEdit: (language: string) => void;   // ✅ NEW
-
+  className?: string;
 }
 
 export const MiddlePanel: React.FC<MiddlePanelProps> = ({
@@ -50,6 +51,7 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = ({
   onSave,
   onSkip,
   onToggleEdit,
+  className = '',
 }) => {
   const handleEditClick = () => {
     // Toggle edit mode for current tab
@@ -61,8 +63,8 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = ({
     };
 
   return (
-    <div className="w-full md:w-1/3 bg-white rounded-lg shadow p-4 flex flex-col">
-      <h2 className="text-lg font-semibold mb-4">Language Translations</h2>
+    <div className={`w-full bg-white rounded-lg shadow p-4 flex flex-col ${className}`}>
+      <h2 className="text-lg font-semibold mb-4">Object Translation</h2>
 
       {/* Selected Languages Badges */}
       {selectedLanguages.length > 0 && (
@@ -317,11 +319,22 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = ({
                               className="w-full p-2 border border-gray-300 rounded-md focus:ring-[#00AEEF] focus:border-[#00AEEF]"
                             />
                           )
-                        ) : (
-                          <p className="text-gray-900 bg-gray-50 p-2 rounded-md">
-                            {(languageResults[activeTab][key] as string || '-')}
-                          </p>
-                        )}
+                        ) : key === 'translation_status' ? (
+                            languageResults[activeTab].translation_status && languageResults[activeTab].translation_status!.toLowerCase() !== 'approved' ? (
+                              <StatusWorkflow
+                                statuses={['Draft', 'Released', 'Verified', 'Approved']}
+                                currentStatus={languageResults[activeTab].translation_status}
+                              />
+                            ) : (
+                              <p className="text-gray-900 bg-gray-50 p-2 rounded-md font-semibold text-green-600">
+                                {languageResults[activeTab].translation_status || '-'}
+                              </p>
+                            )
+                          ) : (
+                            <p className="text-gray-900 bg-gray-50 p-2 rounded-md">
+                              {(languageResults[activeTab][key] as string || '-')}
+                            </p>
+                          )}
                       </div>
                     ))}
                   </div>
