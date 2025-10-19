@@ -622,6 +622,27 @@ useEffect(() => {
   
     languageResults.setIsEditing(prev => ({ ...prev, [currentTab]: true }));
   };
+
+  // New handler to clear results when a new file is uploaded
+  const handleNewFile = (file: File) => {
+    // Clear all results from middle and right panels
+    languageResults.clearResults();
+    // Clear any errors that might be showing
+    worklist.setError(null);
+    // Let the image upload hook handle the new file
+    imageUpload.handleFileChange(file);
+  };
+
+  // New handler for drag-and-drop to ensure results are cleared
+  const handleFileDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    // This logic is mostly from the useImageUpload hook's handleDrop
+    e.preventDefault();
+    e.stopPropagation();
+    const droppedFile = e.dataTransfer.files[0];
+    if (droppedFile) {
+      handleNewFile(droppedFile);
+    }
+  };
   
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#FFFFFF] via-[#E6F7FC] to-[#FDE6E0] text-gray-900 font-sans antialiased">
@@ -663,8 +684,8 @@ useEffect(() => {
           canViewWorkList={canViewWorkList}
           
           // Event handlers
-          onFileChange={imageUpload.handleFileChange}
-          onDrop={imageUpload.handleDrop}
+          onFileChange={handleNewFile}
+          onDrop={handleFileDrop}
           onFileClick={imageUpload.handleClick}
           onLanguageToggle={languageResults.handleLanguageToggle}
           onLanguageDropdownToggle={() => setIsLanguageDropdownOpen(!isLanguageDropdownOpen)}

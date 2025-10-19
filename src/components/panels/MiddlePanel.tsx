@@ -12,7 +12,7 @@ interface MiddlePanelProps {
   saveStatus: { [key: string]: SaveStatus };
   saveMessages: { [key: string]: string | null };
   isEditing: { [key: string]: boolean };
-  isSaving: boolean;
+  isSaving: { [key: string]: boolean };
   permissions: {
     canSwitchToEditMode: PermissionCheck;
     canSaveToDatabase: PermissionCheck;
@@ -60,7 +60,12 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = ({
     if (activeTab) {
       onToggleEdit(activeTab);   // ✅ pass current tab up
     }
-    };
+  };
+  
+  const isCurrentTabSaving = isSaving[activeTab] || false;
+  const currentResult = languageResults[activeTab];
+  const hasError = !!currentResult?.error;
+  const isLoading = currentResult?.isLoading || false;
 
   return (
     <div className={`w-full bg-white rounded-lg shadow p-4 flex flex-col ${className}`}>
@@ -139,7 +144,7 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = ({
                   {/* Edit/View Button */}
                   <button
                     onClick={handleEditClick}
-                    disabled={!permissions.canSwitchToEditMode.language||languageResults[activeTab].isLoading}
+                    disabled={!permissions.canSwitchToEditMode.language || isLoading || hasError || isCurrentTabSaving}
                     title={
                       !permissions.canSwitchToEditMode.language
                         ? 'You do not have permission to switch edit mode'
@@ -149,7 +154,7 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = ({
                       !permissions.canSwitchToEditMode.language
                         ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                         : 'text-gray-600 hover:text-[#00AEEF] hover:bg-gray-100'
-                    }`}
+                    } disabled:opacity-50`}
                   >
                     {isEditing[activeTab] ? (
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -166,7 +171,7 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = ({
                   {/* Save Button */}
                   <button
                     onClick={() => onSave("saveToDatabase")}
-                    disabled={isSaving || !permissions.canSaveToDatabase.language || languageResults[activeTab].isLoading}
+                    disabled={isCurrentTabSaving || !permissions.canSaveToDatabase.language || isLoading || hasError}
                     title={`Save ${activeTab} to Database`}
                     className={`p-2 rounded transition ${
                       !permissions.canSaveToDatabase.language
@@ -174,7 +179,7 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = ({
                         : 'text-gray-600 hover:text-green-600 hover:bg-green-50'
                     } disabled:opacity-50`}
                   >
-                    {isSaving ? (
+                    {isCurrentTabSaving ? (
                       <div className="w-5 h-5 border-2 border-gray-400 border-t-green-400 rounded-full animate-spin"></div>
                     ) : (
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -186,7 +191,7 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = ({
                   {/* Release Button */}
                   <button
                     onClick={() => onSave("releaseToDatabase")}
-                    disabled={isSaving || !permissions.canReleaseToDatabase.language}
+                    disabled={isCurrentTabSaving || !permissions.canReleaseToDatabase.language || isLoading || hasError}
                     title={`Release ${activeTab} to Database`}
                     className={`p-2 rounded transition ${
                       !permissions.canReleaseToDatabase.language
@@ -194,7 +199,7 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = ({
                         : 'text-gray-600 hover:text-green-600 hover:bg-green-50'
                     } disabled:opacity-50`}
                   >
-                    {isSaving ? (
+                    {isCurrentTabSaving ? (
                       <div className="w-5 h-5 border-2 border-gray-400 border-t-green-400 rounded-full animate-spin"></div>
                     ) : (
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -206,7 +211,7 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = ({
                   {/* Verify Button */}
                   <button
                     onClick={() => onSave("verifyData")}
-                    disabled={isSaving || !permissions.canVerifyData.language}
+                    disabled={isCurrentTabSaving || !permissions.canVerifyData.language || isLoading || hasError}
                     title={`Verify ${activeTab} Data`}
                     className={`p-2 rounded transition ${
                       !permissions.canVerifyData.language
@@ -214,7 +219,7 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = ({
                         : 'text-gray-600 hover:text-green-600 hover:bg-green-50'
                     } disabled:opacity-50`}
                   >
-                    {isSaving ? (
+                    {isCurrentTabSaving ? (
                       <div className="w-5 h-5 border-2 border-gray-400 border-t-green-400 rounded-full animate-spin"></div>
                     ) : (
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -226,7 +231,7 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = ({
                   {/* Approve Button */}
                   <button
                     onClick={() => onSave("approveData")}
-                    disabled={isSaving || !permissions.canApproveData.language}
+                    disabled={isCurrentTabSaving || !permissions.canApproveData.language || isLoading || hasError}
                     title={`Approve ${activeTab} Data`}
                     className={`p-2 rounded transition ${
                       !permissions.canApproveData.language
@@ -242,7 +247,7 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = ({
                   {/* Reject Button */}
                   <button
                     onClick={() => onSave("rejectData")}
-                    disabled={isSaving || !permissions.canRejectData.language}
+                    disabled={isCurrentTabSaving || !permissions.canRejectData.language || isLoading || hasError}
                     title={`Reject ${activeTab} Data`}
                     className={`p-2 rounded transition ${
                       !permissions.canRejectData.language
@@ -258,7 +263,7 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = ({
                   {/* Skip Button */}
                   <button
                     onClick={onSkip}
-                    disabled={!permissions.canSkiptData.language}
+                    disabled={!permissions.canSkiptData.language || isLoading || hasError || isCurrentTabSaving}
                     title={`Skip to next in ${activeTab}`}
                     className={`p-2 rounded transition ${
                       !permissions.canSkiptData.language
@@ -273,16 +278,16 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = ({
                 </div>
 
                 {/* Loading / Error / Content */}
-                {languageResults[activeTab].isLoading ? (
+                {isLoading ? (
                   <div className="flex items-center justify-center py-8">
                     <div className="flex items-center space-x-2">
                       <div className="w-5 h-5 border-2 border-gray-300 border-t-[#00AEEF] rounded-full animate-spin"></div>
                       <span className="text-gray-600">Loading {activeTab} translation...</span>
                     </div>
                   </div>
-                ) : languageResults[activeTab].error ? (
+                ) : hasError ? (
                   <div className="p-3 bg-red-50 text-red-700 rounded-lg">
-                    <p><strong>Error:</strong> {languageResults[activeTab].error}</p>
+                    <p><strong>Error:</strong> {currentResult.error}</p>
                   </div>
                 ) : (
                   <div className="space-y-4">
@@ -297,7 +302,7 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = ({
                       <div key={key}>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
                           {label}:
-                          {languageResults[activeTab].flag_translation ? (
+                          {currentResult.flag_translation ? (
                             <span className="text-xs text-green-600 ml-2">⭐️</span>
                           ) : (
                             <span className="text-xs text-blue-600 ml-2">✨</span>
@@ -307,32 +312,32 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = ({
                           textarea ? (
                             <textarea
                               rows={3}
-                              value={languageResults[activeTab][key] as string || ''}
+                              value={currentResult[key] as string || ''}
                               onChange={(e) => onUpdateLanguageResult(activeTab, key, e.target.value)}
                               className="w-full p-2 border border-gray-300 rounded-md focus:ring-[#00AEEF] focus:border-[#00AEEF]"
                             />
                           ) : (
                             <input
                               type="text"
-                              value={languageResults[activeTab][key] as string || ''}
+                              value={currentResult[key] as string || ''}
                               onChange={(e) => onUpdateLanguageResult(activeTab, key, e.target.value)}
                               className="w-full p-2 border border-gray-300 rounded-md focus:ring-[#00AEEF] focus:border-[#00AEEF]"
                             />
                           )
                         ) : key === 'translation_status' ? (
-                            languageResults[activeTab].translation_status && languageResults[activeTab].translation_status!.toLowerCase() !== 'approved' ? (
+                            currentResult.translation_status && currentResult.translation_status!.toLowerCase() !== 'approved' ? (
                               <StatusWorkflow
                                 statuses={['Draft', 'Released', 'Verified', 'Approved']}
-                                currentStatus={languageResults[activeTab].translation_status}
+                                currentStatus={currentResult.translation_status}
                               />
                             ) : (
                               <p className="text-gray-900 bg-gray-50 p-2 rounded-md font-semibold text-green-600">
-                                {languageResults[activeTab].translation_status || '-'}
+                                {currentResult.translation_status || '-'}
                               </p>
                             )
                           ) : (
                             <p className="text-gray-900 bg-gray-50 p-2 rounded-md">
-                              {(languageResults[activeTab][key] as string || '-')}
+                              {(currentResult[key] as string || '-')}
                             </p>
                           )}
                       </div>
