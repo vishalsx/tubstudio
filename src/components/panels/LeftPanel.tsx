@@ -322,8 +322,7 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
               <ChevronDownIcon className={`w-4 h-4 ml-2 transition-transform ${isLanguageDropdownOpen ? 'rotate-180' : ''}`} />
             </button>
             {isLanguageDropdownOpen && (
-              <div className="absolute top-full right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-10 max-h-60 overflow-y-auto min-w-[150px]">
-                {languageOptions.map((language) => (
+             <div className="absolute bottom-full right-0 mb-1 bg-white border border-gray-300 rounded-lg shadow-lg z-10 max-h-60 overflow-y-auto min-w-[150px]">                {languageOptions.map((language) => (
                   <label key={language} className="flex items-center px-3 py-2 hover:bg-gray-50 cursor-pointer">
                     <input
                       type="checkbox"
