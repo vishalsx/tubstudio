@@ -8,11 +8,11 @@ import { useAuth } from '../hooks/useAuth';
 import { useImageUpload } from '../hooks/useImageUpload';
 import { useLanguageResults } from '../hooks/useLanguageResults';
 import { useWorklist } from '../hooks/useWorklist';
+import { useCurriculum } from '../hooks/useCurriculum'; // Import the new hook
 import { translationService } from '../services/translation.service';
 import { canPerformUiAction, METADATA, LANGUAGE, RETURN_PERMISSION_ACTION } from '../utils/permissions/hasPermissions';
 import { PermissionCheck, UserContext, DatabaseImage } from '../types';
 import { formatFileSize } from '../utils/imageUtils';
-// FIX: Import DEFAULT_FILE_INFO to use as a fallback.
 import { UI_MESSAGES, DEFAULT_FILE_INFO, DEFAULT_COMMON_DATA } from '../utils/constants';
 
 interface MainAppProps {
@@ -604,24 +604,6 @@ useEffect(() => {
       )
     );
   };
-  
-  const onToggleEdit = async (tab: string) => {
-    const currentTab = tab;
-    
-    if (languageResults.isEditing[currentTab]) {
-      if (currentTab === 'English') {
-        languageResults.setCurrentCommonData(languageResults.originalCommonData);
-      }
-      languageResults.setLanguageResults(prev => ({
-        ...prev,
-        [currentTab]: languageResults.originalResults[currentTab] || prev[currentTab]
-      }));
-      languageResults.setIsEditing(prev => ({ ...prev, [currentTab]: false }));
-      return;
-    }
-  
-    languageResults.setIsEditing(prev => ({ ...prev, [currentTab]: true }));
-  };
 
   // New handler to clear results when a new file is uploaded
   const handleNewFile = (file: File) => {
@@ -726,7 +708,7 @@ useEffect(() => {
           onUpdateLanguageResult={languageResults.updateLanguageResult}
           onSave={(action: string) => languageResults.handleQuickSave(action, imageUpload.file ?? undefined, userContext?.username)}
           onSkip={handleSkip}
-          onToggleEdit={onToggleEdit}
+          onToggleEdit={languageResults.toggleEdit}
           className={`transition-all duration-300 ease-in-out ${isLeftPanelCollapsed ? 'md:w-1/2' : 'md:w-1/3'}`}
         />
         

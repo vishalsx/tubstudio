@@ -69,7 +69,7 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = ({
 
   return (
     <div className={`w-full bg-white rounded-lg shadow p-4 flex flex-col ${className}`}>
-      <h2 className="text-lg font-semibold mb-4">Object Translation</h2>
+      <h2 className="text-lg font-semibold mb-4">Object Details</h2>
 
       {/* Selected Languages Badges */}
       {selectedLanguages.length > 0 && (
@@ -282,7 +282,7 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = ({
                   <div className="flex items-center justify-center py-8">
                     <div className="flex items-center space-x-2">
                       <div className="w-5 h-5 border-2 border-gray-300 border-t-[#00AEEF] rounded-full animate-spin"></div>
-                      <span className="text-gray-600">Loading {activeTab} translation...</span>
+                      <span className="text-gray-600">Loading {activeTab} data...</span>
                     </div>
                   </div>
                 ) : hasError ? (

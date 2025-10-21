@@ -73,6 +73,7 @@ export interface RecentTranslation {
   translation: {
     requested_language: string;
     translation_status: string;
+    translation_id: string;
   };
   file_info: {
     filename: string;
@@ -106,4 +107,33 @@ export type CheckType = "metadata" | "language";
 export interface PermissionCheck {
   metadata: boolean;
   language: boolean;
+}
+
+// --- CURRICULUM TYPES ---
+
+export interface PageImage {
+  objectId: string; // Links to CommonData.object_id
+  thumbnail: string; // base64 thumbnail for display on the page
+  objectName: string; // English name for quick reference
+}
+
+export interface Page {
+  _id: string;
+  pageNumber: number;
+  images: PageImage[];
+}
+
+export interface Chapter {
+  _id: string;
+  chapterNumber: number;
+  title: string;
+  pages: Page[];
+}
+
+export interface Book {
+  _id: string;
+  title: string;
+  author: string;
+  gradeLevel: string;
+  chapters: Chapter[];
 }

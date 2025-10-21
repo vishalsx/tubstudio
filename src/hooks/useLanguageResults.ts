@@ -353,6 +353,30 @@ export const useLanguageResults = () => {
     setIsDatabaseView({});
   }, []);
 
+  const toggleEdit = useCallback((tab: string) => {
+    const currentTab = tab;
+    
+    // If currently in edit mode, revert changes and exit edit mode
+    if (isEditing[currentTab]) {
+      // Revert common data if it's the 'English' tab
+      if (currentTab === 'English') {
+        setCurrentCommonData(originalCommonData);
+      }
+      // Revert language-specific data
+      setLanguageResults(prev => ({
+        ...prev,
+        [currentTab]: originalResults[currentTab] || prev[currentTab]
+      }));
+      // Exit edit mode
+      setIsEditing(prev => ({ ...prev, [currentTab]: false }));
+      return;
+    }
+  
+    // If not in edit mode, simply enter edit mode
+    setIsEditing(prev => ({ ...prev, [currentTab]: true }));
+  }, [isEditing, originalCommonData, originalResults]);
+
+
   return {
     // States
     selectedLanguages,
@@ -399,6 +423,7 @@ export const useLanguageResults = () => {
     removeLanguageTab,
     handleQuickSave,
     refreshActiveTab,
-    clearResults
+    clearResults,
+    toggleEdit
   };
 };

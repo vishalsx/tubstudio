@@ -55,7 +55,7 @@ export const RightPanel: React.FC<RightPanelProps> = ({
   return (
     <div className={`w-full bg-white rounded-lg shadow p-4 flex flex-col ${className}`}>
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold">Image Metadata</h2>
+        <h2 className="text-lg font-semibold">Object's Metadata</h2>
         {commonDataMode === 'shared' && (
           <span className="text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded">
             Shared
@@ -69,7 +69,7 @@ export const RightPanel: React.FC<RightPanelProps> = ({
             <div className="flex items-center justify-center py-8">
               <div className="flex items-center space-x-2">
                 <div className="w-5 h-5 border-2 border-gray-300 border-t-[#00AEEF] rounded-full animate-spin"></div>
-                <span className="text-gray-600">Loading Image Data...</span>
+                <span className="text-gray-600">Loading Object's Metadata...</span>
               </div>
             </div>
           ) : (
