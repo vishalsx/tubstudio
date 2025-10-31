@@ -119,13 +119,20 @@ export const useCurriculum = (userContext: UserContext | null) => {
   const updateActiveBook = useCallback((updater: (book: Book) => Book, options: { markDirty: boolean } = { markDirty: true }) => {
     setActiveBook(currentBook => {
       if (!currentBook) return null;
+      
       const updatedBook = updater(deepClone(currentBook));
+      
+      // Also update the book in the main `books` array to keep them in sync
+      setBooks(currentBooks =>
+        currentBooks.map(b => (b._id === updatedBook._id ? updatedBook : b))
+      );
+      
       if (options.markDirty) {
         setIsDirty(true);
       }
       return updatedBook;
     });
-  }, []);
+  }, [setBooks, setIsDirty]);
 
 
   const handleNodeExpansion = useCallback(async (node: Book | Chapter) => {
@@ -177,37 +184,31 @@ export const useCurriculum = (userContext: UserContext | null) => {
   }, [expansionState]);
 
   const selectPage = useCallback(async (page: Page) => {
-    const chapter = activeBook?.chapters.find(c => c.pages.some(p => p.page_id === page.page_id));
-    const pageFromState = chapter?.pages.find(p => p.page_id === page.page_id);
+    if (!activeBook?._id || !page.page_id) return;
+    
+    const chapter = activeBook.chapters.find(c => c.pages.some(p => p.page_id === page.page_id));
+    if (!chapter?.chapter_id) return;
+    
+    // Always set the selected page immediately for responsiveness
+    setSelectedPage(page);
 
-    if (!pageFromState) {
-        setSelectedPage(page);
-        return;
-    }
-
-    setSelectedPage(pageFromState);
-
-    if (pageFromState.isNew || !activeBook?._id || !pageFromState.page_id || !chapter?.chapter_id) {
-        return;
-    }
-
-    const areImagesPopulated = pageFromState.images && pageFromState.images.length > 0 && pageFromState.images.every(img => img.thumbnail);
-    if (areImagesPopulated) {
-        return;
-    }
+    // Don't fetch images for a brand new page that hasn't been saved
+    if (page.isNew) return;
 
     setIsLoading(true);
     try {
-        const fetchedImages = await curriculumService.fetchImagesForPage(activeBook._id, chapter.chapter_id, pageFromState.page_id);
-        const pageWithImages = { ...pageFromState, images: fetchedImages };
+        const fetchedImages = await curriculumService.fetchImagesForPage(activeBook._id, chapter.chapter_id, page.page_id);
+        const pageWithImages = { ...page, images: fetchedImages };
 
+        // Update the selected page state with the fresh images
         setSelectedPage(pageWithImages);
         
+        // Update the master activeBook state without marking it as dirty
         updateActiveBook(book => {
             const chapterToUpdate = book.chapters.find(c => c.chapter_id === chapter!.chapter_id);
-            const pageToUpdate = chapterToUpdate?.pages.find(p => p.page_id === pageFromState.page_id);
-            if (pageToUpdate) {
-                pageToUpdate.images = fetchedImages;
+            const pageIndex = chapterToUpdate?.pages.findIndex(p => p.page_id === page.page_id);
+            if (chapterToUpdate && pageIndex !== undefined && pageIndex > -1) {
+                chapterToUpdate.pages[pageIndex] = pageWithImages;
             }
             return book;
         }, { markDirty: false });
@@ -219,27 +220,67 @@ export const useCurriculum = (userContext: UserContext | null) => {
     }
   }, [activeBook, updateActiveBook]);
 
-  const addChapter = useCallback(() => {
-    if (!activeBook?._id) return;
-    const newChapterCount = idCounters.chapter + 1;
+  // A helper to load a book if it's not active, then perform an action.
+  const performActionOnBook = async (bookId: string, action: (book: Book) => Book) => {
+    setIsLoading(true);
+    try {
+      let bookToUpdate = activeBook;
+      
+      // If the target book isn't active, or if it's a lightweight version from search results, fetch the full details.
+      if (!bookToUpdate || bookToUpdate._id !== bookId || bookToUpdate.chapters.length < (bookToUpdate.chapter_count ?? 0)) {
+        bookToUpdate = await curriculumService.fetchBookDetails(bookId);
+      }
+      
+      const updatedBook = action(deepClone(bookToUpdate));
 
-    const newChapter: Chapter = {
-        chapter_id: `${activeBook._id}-${pad(newChapterCount, 3)}`,
-        chapter_number: newChapterCount,
-        chapter_name: `New Chapter ${newChapterCount}`,
-        pages: [],
-        isNew: true,
-    };
+      // Update the main list of books
+      setBooks(prev => prev.map(b => b._id === bookId ? updatedBook : b));
+      // Set the modified book as active
+      setActiveBook(updatedBook);
+      setIsDirty(true);
 
-    updateActiveBook(book => {
-        book.chapters.push(newChapter);
-        return book;
+    } catch (error) {
+      setNotification({ message: `Failed to update book: ${(error as Error).message}`, type: 'error' });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const addChapter = useCallback(async (bookId: string) => {
+    await performActionOnBook(bookId, (book) => {
+      const newChapterCount = book.chapters.length + 1;
+      const newChapter: Chapter = {
+          chapter_id: `${book._id}-new-${Date.now()}`, // Temporary unique ID
+          chapter_number: newChapterCount,
+          chapter_name: `New Chapter ${newChapterCount}`,
+          pages: [],
+          isNew: true,
+      };
+      book.chapters.push(newChapter);
+      setExpansionState(prev => ({ ...prev, [book._id]: true, [newChapter.chapter_id!]: true }));
+      return book;
     });
+  }, [activeBook]);
 
-    setIdCounters(prev => ({ ...prev, chapter: newChapterCount }));
-    setExpansionState(prev => ({ ...prev, [activeBook._id]: true, [newChapter.chapter_id!]: true }));
-  }, [activeBook, updateActiveBook, idCounters]);
-
+  const addPage = useCallback(async (bookId: string, chapterId: string) => {
+    await performActionOnBook(bookId, (book) => {
+      const chapter = book.chapters.find(c => c.chapter_id === chapterId);
+      if (chapter) {
+        const newPageCount = chapter.pages.length + 1;
+        const newPage: Page = {
+          page_id: `${chapterId}-new-${Date.now()}`, // Temporary unique ID
+          page_number: newPageCount,
+          title: `New Page ${newPageCount}`,
+          images: [],
+          isNew: true,
+        };
+        chapter.pages.push(newPage);
+        setExpansionState(prev => ({ ...prev, [chapterId]: true }));
+      }
+      return book;
+    });
+  }, [activeBook]);
+  
   const deleteChapter = useCallback((chapterId: string) => {
     let shouldClearSelectedPage = false;
     if (selectedPage && activeBook) {
@@ -266,30 +307,7 @@ export const useCurriculum = (userContext: UserContext | null) => {
         return book;
     });
   }, [updateActiveBook]);
-
-  const addPage = useCallback((chapterId: string) => {
-    if (!activeBook?._id) return;
-    const newPageCount = idCounters.page + 1;
-    
-    updateActiveBook(book => {
-      const chapter = book.chapters.find(c => c.chapter_id === chapterId);
-      if (chapter && chapter.chapter_number) {
-        const newPage: Page = {
-          page_id: `${book._id}-${pad(chapter.chapter_number, 3)}-${pad(newPageCount, 4)}`,
-          page_number: newPageCount,
-          title: `New Page ${newPageCount}`,
-          images: [],
-          isNew: true,
-        };
-        chapter.pages.push(newPage);
-      }
-      return book;
-    });
-    
-    setIdCounters(prev => ({ ...prev, page: newPageCount }));
-    setExpansionState(prev => ({ ...prev, [chapterId]: true }));
-  }, [activeBook, updateActiveBook, idCounters]);
-
+  
   const deletePage = useCallback((chapterId: string, pageId: string) => {
     updateActiveBook(book => {
       const chapter = book.chapters.find(c => c.chapter_id === chapterId);
@@ -322,56 +340,20 @@ export const useCurriculum = (userContext: UserContext | null) => {
   }, [updateActiveBook, selectedPage]);
 
   const setPageStoryAndMoral = useCallback((pageId: string, story: string, moral: string | undefined) => {
-    let wasUpdatedInActiveBook = false;
-    
-    setActiveBook(currentBook => {
-      if (!currentBook) return null;
-      
-      const newBook = deepClone(currentBook);
-      let pageFound = false;
-
-      for (const chapter of newBook.chapters) {
+    updateActiveBook(book => {
+      for (const chapter of book.chapters) {
         const page = chapter.pages.find(p => p.page_id === pageId);
         if (page) {
           page.story = story;
           page.moral = moral;
-          pageFound = true;
-          
+          // Update selected page state if it's the one we modified
           setSelectedPage(currentPage => (currentPage?.page_id === pageId ? { ...page } : currentPage));
-          break;
+          break; // Exit loop once page is found and updated
         }
       }
-      
-      if (pageFound) {
-        wasUpdatedInActiveBook = true;
-        return newBook;
-      }
-      return currentBook;
-    });
-    
-    // Also update the main 'books' list to ensure consistency
-    setBooks(currentBooks => {
-        return currentBooks.map(book => {
-            if (book._id !== activeBook?._id) return book;
-
-            const newBook = deepClone(book);
-            for (const chapter of newBook.chapters) {
-                const page = chapter.pages.find(p => p.page_id === pageId);
-                if (page) {
-                    page.story = story;
-                    page.moral = moral;
-                    break;
-                }
-            }
-            return newBook;
-        });
-    });
-
-    // Only set dirty if the story was successfully added/changed
-    if (wasUpdatedInActiveBook) {
-        setIsDirty(true);
-    }
-  }, [activeBook?._id]);
+      return book;
+    }, { markDirty: true }); // Story generation marks the book as dirty
+  }, [updateActiveBook]);
 
   const generateStoryForPage = useCallback(async (pageId: string, userComments?: string) => {
     if (!activeBook) return;
@@ -490,6 +472,7 @@ export const useCurriculum = (userContext: UserContext | null) => {
 
     if (updatedPageData) {
       setSelectedPage(updatedPageData);
+      setIsDirty(true);
     }
   }, [updateActiveBook, selectedPage]);
 

@@ -18,27 +18,29 @@ interface CurriculumPanelProps {
   onOpenCreateBookModal: () => void;
   onSaveBook: () => void;
   onNodeExpansion: (node: Book | Chapter) => void;
-  onAddChapter: () => void;
+  onAddChapter: (bookId: string) => void;
   onDeleteChapter: (chapterId: string) => void;
   onUpdateChapterName: (chapterId: string, newName: string) => void;
-  onAddPage: (chapterId: string) => void;
+  onAddPage: (bookId: string, chapterId: string) => void;
   onDeletePage: (chapterId: string, pageId: string) => void;
   onUpdatePageTitle: (chapterId: string, pageId: string, newTitle: string) => void;
 }
 
-// FIX: Include 'activeBook' in TreeNodeProps by removing it from Omit. This resolves a TypeScript error as 'props.activeBook' is used to determine if a book node has unsaved changes.
-interface TreeNodeProps extends Omit<CurriculumPanelProps, 'books' | 'searchAttempted' | 'onOpenCreateBookModal'> {
+interface TreeNodeProps extends Omit<CurriculumPanelProps, 'books' | 'searchAttempted' | 'onOpenCreateBookModal' | 'onAddChapter' | 'onAddPage'> {
   node: Book | Chapter | Page;
   type: 'book' | 'chapter' | 'page';
   level: number;
   isExpanded: boolean;
   parentChapter?: Chapter;
+  bookId: string; // The ID of the root book for this node
+  onAddChapter: (bookId: string) => void;
+  onAddPage: (bookId: string, chapterId: string) => void;
 }
 
 const TreeNode: React.FC<TreeNodeProps> = (props) => {
   const { node, type, level, isExpanded, expansionState, isDirty, onSelectNode, onSelectPage, 
     onSaveBook, onNodeExpansion, onAddChapter, onDeleteChapter, onUpdateChapterName, 
-    onAddPage, onDeletePage, onUpdatePageTitle, parentChapter, onSelectBook } = props;
+    onAddPage, onDeletePage, onUpdatePageTitle, parentChapter, onSelectBook, bookId } = props;
 
   const [isEditingName, setIsEditingName] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -83,8 +85,8 @@ const TreeNode: React.FC<TreeNodeProps> = (props) => {
 
   const handleAdd = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (type === 'book') onAddChapter();
-    if (type === 'chapter') onAddPage(nodeAsAny.chapter_id);
+    if (type === 'book') onAddChapter((node as Book)._id);
+    if (type === 'chapter') onAddPage(bookId, (node as Chapter).chapter_id!);
   };
 
   const handleDelete = async (e: React.MouseEvent) => {
@@ -153,6 +155,7 @@ const TreeNode: React.FC<TreeNodeProps> = (props) => {
             {...props}
             key={childId}
             node={child}
+            bookId={bookId} // Pass the bookId down to children
             parentChapter={type === 'book' ? child as Chapter : parentChapter}
             type={childIsChapter ? 'chapter' : 'page'}
             level={level + 1}
@@ -201,6 +204,7 @@ export const CurriculumPanel: React.FC<CurriculumPanelProps> = (props) => {
                     level={0} 
                     isExpanded={!!props.expansionState[bookNodeId]}
                     onSelectBook={handleBookSelect} // Pass the handler for book-specific clicks
+                    bookId={book._id} // Pass bookId to the top-level node
                 />
             );
         });
