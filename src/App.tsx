@@ -3,6 +3,7 @@ import React from 'react';
 import { LoginPage } from './pages/LoginPage';
 import { MainApp } from './pages/MainApp';
 import { useAuth } from './hooks/useAuth';
+import { ConfirmationProvider } from './contexts/ConfirmationContext';
 import './index.css'; // Import Tailwind CSS
 
 const App: React.FC = () => {
@@ -26,7 +27,11 @@ const App: React.FC = () => {
   }
 
   // Show main app if logged in
-  return <MainApp authData={auth} />;
+  return (
+    <ConfirmationProvider>
+      <MainApp authData={auth} />
+    </ConfirmationProvider>
+  );
 };
 
 

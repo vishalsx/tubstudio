@@ -1,5 +1,6 @@
 // utils/constants.ts
-export const API_URL = (import.meta.env && import.meta.env.VITE_FASTAPI_URL) || 'http://localhost:8000/';
+// FIX: Cast import.meta to any to access Vite env variables without the `vite/client` type definitions.
+export const API_URL = ((import.meta as any).env && (import.meta as any).env.VITE_FASTAPI_URL) || 'http://localhost:8000/';
 
 export const VALID_IMAGE_TYPES = [
   'image/jpeg', 

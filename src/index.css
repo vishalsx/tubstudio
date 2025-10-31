@@ -18,3 +18,57 @@
     transform: translateY(0);
   }
 }
+
+/* New animations for StoryLoadingSpinner */
+.running-child-container {
+  animation: bounce 1.2s infinite ease-in-out;
+}
+
+.running-child-svg {
+  transform-origin: bottom center;
+}
+
+.running-child-arm-1 {
+  animation: run-arm-1 0.6s infinite ease-in-out;
+  transform-origin: 40px 30px;
+}
+
+.running-child-arm-2 {
+  animation: run-arm-2 0.6s infinite ease-in-out;
+  transform-origin: 40px 30px;
+}
+
+.running-child-leg-1 {
+  animation: run-leg-1 0.6s infinite ease-in-out;
+  transform-origin: 40px 55px;
+}
+
+.running-child-leg-2 {
+  animation: run-leg-2 0.6s infinite ease-in-out;
+  transform-origin: 40px 55px;
+}
+
+@keyframes bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes run-arm-1 {
+  0%, 100% { transform: rotate(45deg); }
+  50% { transform: rotate(-45deg); }
+}
+
+@keyframes run-arm-2 {
+  0%, 100% { transform: rotate(-45deg); }
+  50% { transform: rotate(45deg); }
+}
+
+@keyframes run-leg-1 {
+  0%, 100% { transform: rotate(35deg); }
+  50% { transform: rotate(-35deg); }
+}
+
+@keyframes run-leg-2 {
+  0%, 100% { transform: rotate(-35deg); }
+  50% { transform: rotate(35deg); }
+}

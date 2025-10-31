@@ -109,31 +109,55 @@ export interface PermissionCheck {
   language: boolean;
 }
 
-// --- CURRICULUM TYPES ---
+// ===========================================
+// NEW CURRICULUM TYPES (REWRITTEN)
+// ===========================================
 
-export interface PageImage {
-  objectId: string; // Links to CommonData.object_id
-  thumbnail: string; // base64 thumbnail for display on the page
-  objectName: string; // English name for quick reference
+export interface CurriculumImage {
+  image_id?: string;
+  image_hash: string;
+  position?: number;
+  object_name?: string;
+  // UI-only fields, populated on fetch, not for saving
+  thumbnail?: string;
+  isNew?: boolean;
 }
 
 export interface Page {
-  _id: string;
-  pageNumber: number;
-  images: PageImage[];
+  page_id?: string;
+  page_number?: number;
+  title?: string;
+  images: CurriculumImage[];
+  story?: string;
+  moral?: string;
+  isEditing?: boolean;
+  isNew?: boolean;
 }
 
 export interface Chapter {
-  _id: string;
-  chapterNumber: number;
-  title: string;
+  chapter_id?: string;
+  chapter_number?: number;
+  chapter_name: string;
+  description?: string;
   pages: Page[];
+  isEditing?: boolean;
+  isNew?: boolean;
 }
 
 export interface Book {
-  _id: string;
+  _id: string; // From backend, will be local for new books
   title: string;
-  author: string;
-  gradeLevel: string;
+  language: string;
+  author?: string;
+  subject?: string;
+  education_board?: string;
+  grade_level?: string;
+  tags?: string[];
   chapters: Chapter[];
+  // New Count Fields
+  chapter_count?: number;
+  page_count?: number;
+  image_count?: number;
+  created_at?: string;
+  updated_at?: string;
 }

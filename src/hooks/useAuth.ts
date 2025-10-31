@@ -15,11 +15,11 @@ export const useAuth = () => {
   const fetchRecentTranslations = useCallback(async (username: string) => {
     try {
       const data = await translationService.fetchThumbnails(username);
-      console.log("After calling fetchRecentTranslations service:", data);
+      // console.log("After calling fetchRecentTranslations service:", data);
       setRecentTranslations(data || []); // Update state
       return data;
     } catch (err) {
-      console.error("Error fetching recent translations:", err);
+      // console.error("Error fetching recent translations:", err);
       setRecentTranslations([]); // Clear on error
       return [];
     }

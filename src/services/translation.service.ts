@@ -55,16 +55,21 @@ export class TranslationService {
     return apiClient.post('thumbnail', formData);
   }
 
-  async fetchPopularImages(searchQuery?: string): Promise<any> {
-    let endpoint = 'pool/recommendations';
-
-    // The backend expects `search_query` as a URL query parameter for this POST request.
+  async fetchPopularImages(searchQuery?: string, language?: string): Promise<any> {
+    const params = new URLSearchParams();
     if (searchQuery && searchQuery.trim() !== '') {
-      endpoint += `?search_query=${encodeURIComponent(searchQuery)}`;
+        params.append('search_query', searchQuery);
+    }
+    if (language) {
+        params.append('language', language);
     }
 
-    // The body can be empty as the search parameter is in the URL.
-    // Passing `null` as the body to the apiClient.
+    let endpoint = 'pool/recommendations';
+    const queryString = params.toString();
+    if (queryString) {
+        endpoint += `?${queryString}`;
+    }
+
     return apiClient.post(endpoint, null);
   }
 }

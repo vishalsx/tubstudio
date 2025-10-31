@@ -78,7 +78,7 @@ export function canPerformUiAction(
 ): boolean {
   if (!user) return false;
 
-  console.log(`Checking if user ${user.username} can perform action "${uiAction}", with permission rules override:`, permissionRulesOverride);
+  // console.log(`Checking if user ${user.username} can perform action "${uiAction}", with permission rules override:`, permissionRulesOverride);
 
 
   const permissionRules = permissionRulesOverride ?? user.permission_rules ?? null;
@@ -93,7 +93,7 @@ export function canPerformUiAction(
     const actions = PERMISSION_TO_UI_ACTIONS[permKey] || [];
     actions.forEach(action => allowedUiActions.add(action));
   }
-  console.log(`User allowed UI actions:`, Array.from(allowedUiActions));
+  // console.log(`User allowed UI actions:`, Array.from(allowedUiActions));
 
   // If this uiAction is not in user’s allowed set → deny
   if (!allowedUiActions.has(uiAction)) return false;
@@ -110,11 +110,11 @@ export function canPerformUiAction(
     }
   }
   
-  console.log(`Allowed states for action "${uiAction}":`, Array.from(allowedStates));
+  // console.log(`Allowed states for action "${uiAction}":`, Array.from(allowedStates));
   // Step 3: Normalize and check current state
   const stateToCheck = checkType === "metadata" ? currentMetadataState : currentLanguageState;
   const stateNorm = stateToCheck === "" || stateToCheck === undefined ? null : stateToCheck;
-  console.log(`State getting checked:`, stateNorm);
+  // console.log(`State getting checked:`, stateNorm);
   return allowedStates.has(stateNorm);
 }
 

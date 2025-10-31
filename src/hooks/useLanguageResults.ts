@@ -28,7 +28,7 @@ export const useLanguageResults = () => {
   const [isEditing, setIsEditing] = useState<{ [key: string]: boolean }>({});
   const [saveStatus, setSaveStatus] = useState<{ [key: string]: SaveStatus }>({});
   const [saveMessages, setSaveMessages] = useState<{ [key: string]: string | null }>({});
-  const [isSaving, setIsSaving] = useState<{ [key: string]: boolean }>({});
+  const [isSaving, setIsSaving] = useState<{ [key: string]: string | null }>({});
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isDatabaseView, setIsDatabaseView] = useState<{ [key: string]: boolean }>({});
 
@@ -148,7 +148,7 @@ export const useLanguageResults = () => {
 
     flushSync(() => {});
 
-    setIsSaving(prev => ({ ...prev, [currentTab]: true }));
+    setIsSaving(prev => ({ ...prev, [currentTab]: ui_action }));
     setSaveMessages(prev => ({ ...prev, [currentTab]: null }));
 
     let commonAttributes: any = {};
@@ -232,7 +232,7 @@ export const useLanguageResults = () => {
         [currentTab]: `Error saving ${currentTab}: ${(err as Error).message}`,
       }));
     } finally {
-      setIsSaving(prev => ({ ...prev, [currentTab]: false }));
+      setIsSaving(prev => ({ ...prev, [currentTab]: null }));
     }
   }, [activeTab, languageResults, currentCommonData, perLanguageCommonData, commonDataMode]);
 
