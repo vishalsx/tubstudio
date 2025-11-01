@@ -6,6 +6,7 @@ import { CurriculumPanel } from './CurriculumPanel';
 import { useCurriculum } from '../../hooks/useCurriculum';
 import { CreateBookModal } from '../curriculum/CreateBookModal';
 import { LoadingSpinner } from '../common/LoadingSpinner';
+import { useConfirmation } from '../../contexts/ConfirmationContext';
 
 type CurriculumHookProps = ReturnType<typeof useCurriculum>;
 
@@ -122,6 +123,22 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
   notification,
 }) => {
   const [isCreateBookModalOpen, setIsCreateBookModalOpen] = useState(false);
+  const confirm = useConfirmation();
+
+  const handleCurriculumSearch = async () => {
+    if (curriculumProps.isDirty) {
+      const confirmed = await confirm({
+        title: 'Unsaved Changes',
+        message: 'You have unsaved changes that will be lost if you perform a new search. Are you sure you want to continue?',
+        confirmText: 'Search Anyway',
+        isDestructive: true,
+      });
+      if (!confirmed) {
+        return;
+      }
+    }
+    curriculumProps.handleSearch();
+  };
 
   const renderViewSpecificControls = () => {
     if (leftPanelView === 'upload') {
@@ -213,11 +230,11 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
               placeholder="Search books..."
               value={curriculumProps.searchQuery}
               onChange={(e) => curriculumProps.setSearchQuery(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') curriculumProps.handleSearch(); }}
+              onKeyDown={(e) => { if (e.key === 'Enter') handleCurriculumSearch(); }}
               className="flex-grow p-1.5 border border-gray-300 rounded-md text-sm focus:ring-[#00AEEF] focus:border-[#00AEEF]"
             />
             <button
-              onClick={curriculumProps.handleSearch}
+              onClick={handleCurriculumSearch}
               disabled={curriculumProps.isLoading}
               className="p-2 bg-[#00AEEF] text-white rounded-lg hover:bg-[#0096CC] transition disabled:opacity-50"
               aria-label="Search curriculum"

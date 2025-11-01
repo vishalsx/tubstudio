@@ -6,6 +6,25 @@
   .animate-fade-in {
     animation: fadeIn 0.5s ease-in-out;
   }
+
+  /* Robust Drag and Drop Styles */
+  /* The item being actively dragged */
+  .is-ghost {
+    opacity: 0.4;
+    transform: scale(0.95);
+  }
+
+  /* When a drag is in progress, highlight potential drop targets on hover */
+  .is-dragging .draggable-item:hover {
+    outline: 2px dashed #00AEEF;
+    outline-offset: 2px;
+    border-radius: 0.75rem; /* Matches rounded-xl */
+  }
+
+  /* Prevents children (like buttons/overlays) from interfering with drag events */
+  .is-dragging .draggable-item > * {
+    pointer-events: none;
+  }
 }
 
 @keyframes fadeIn {

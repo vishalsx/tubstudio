@@ -132,6 +132,8 @@ export interface Page {
   moral?: string;
   isEditing?: boolean;
   isNew?: boolean;
+  isModified?: boolean;
+  imagesLoaded?: boolean;
 }
 
 export interface Chapter {
@@ -142,6 +144,7 @@ export interface Chapter {
   pages: Page[];
   isEditing?: boolean;
   isNew?: boolean;
+  isModified?: boolean;
 }
 
 export interface Book {

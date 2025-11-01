@@ -26,15 +26,14 @@ interface CurriculumPanelProps {
   onUpdatePageTitle: (chapterId: string, pageId: string, newTitle: string) => void;
 }
 
-interface TreeNodeProps extends Omit<CurriculumPanelProps, 'books' | 'searchAttempted' | 'onOpenCreateBookModal' | 'onAddChapter' | 'onAddPage'> {
+interface TreeNodeProps extends Omit<CurriculumPanelProps, 'books' | 'searchAttempted' | 'onOpenCreateBookModal' | 'onSelectBook'> {
   node: Book | Chapter | Page;
   type: 'book' | 'chapter' | 'page';
   level: number;
   isExpanded: boolean;
   parentChapter?: Chapter;
-  bookId: string; // The ID of the root book for this node
-  onAddChapter: (bookId: string) => void;
-  onAddPage: (bookId: string, chapterId: string) => void;
+  bookId: string;
+  onSelectBook: (bookId: string) => Promise<boolean>;
 }
 
 const TreeNode: React.FC<TreeNodeProps> = (props) => {
@@ -49,6 +48,7 @@ const TreeNode: React.FC<TreeNodeProps> = (props) => {
   const nodeAsAny = node as any;
   const id = nodeAsAny._id || nodeAsAny.chapter_id || nodeAsAny.page_id;
   const name = nodeAsAny.title || nodeAsAny.chapter_name || `Page ${nodeAsAny.page_number}`;
+  const isNodeDirty = nodeAsAny.isNew || nodeAsAny.isModified;
 
   const [editValue, setEditValue] = useState(name);
 
@@ -57,10 +57,9 @@ const TreeNode: React.FC<TreeNodeProps> = (props) => {
 
   const handleCommit = () => {
     if (isEditingName) {
-      if (type === 'book') console.warn('Book title editing not implemented through this handler yet');
       if (type === 'chapter' && nodeAsAny.chapter_id) onUpdateChapterName(nodeAsAny.chapter_id, editValue);
-      if (type === 'page' && nodeAsAny.page_id) {
-        if (parentChapter && parentChapter.chapter_id) onUpdatePageTitle(parentChapter.chapter_id, nodeAsAny.page_id, editValue);
+      if (type === 'page' && nodeAsAny.page_id && parentChapter?.chapter_id) {
+        onUpdatePageTitle(parentChapter.chapter_id, nodeAsAny.page_id, editValue);
       }
       setIsEditingName(false);
     }
@@ -71,16 +70,23 @@ const TreeNode: React.FC<TreeNodeProps> = (props) => {
     if (e.key === 'Escape') setIsEditingName(false);
   };
 
-  const handleNodeClick = () => {
+  const handleNodeClick = async () => {
     if (isEditingName) return;
-    
-    // When a book node is clicked, it should trigger the detail fetch
+    onSelectNode(node);
+
+    if (type === 'page') {
+      onSelectPage(node as Page);
+      return;
+    }
+
+    let canProceed = true;
     if (type === 'book') {
-        onSelectBook((node as Book)._id);
+      canProceed = await onSelectBook((node as Book)._id);
     }
     
-    onSelectNode(node);
-    if (type === 'page') onSelectPage(node as Page);
+    if (canProceed) {
+      onNodeExpansion(node as Book | Chapter);
+    }
   };
 
   const handleAdd = (e: React.MouseEvent) => {
@@ -99,17 +105,15 @@ const TreeNode: React.FC<TreeNodeProps> = (props) => {
     });
 
     if (confirmed) {
-      if (type === 'book') console.warn('Delete book not implemented');
       if (type === 'chapter') onDeleteChapter(nodeAsAny.chapter_id);
-      if (type === 'page' && parentChapter && parentChapter.chapter_id) {
-          onDeletePage(parentChapter.chapter_id, nodeAsAny.page_id);
+      if (type === 'page' && parentChapter?.chapter_id) {
+        onDeletePage(parentChapter.chapter_id, nodeAsAny.page_id);
       }
     }
   };
 
   const children = (node as Book).chapters || (node as Chapter).pages;
-  const hasChildren = type !== 'page' && children && children.length > 0;
-  const canExpand = type !== 'page'; // Books and Chapters can be expanded
+  const canExpand = type !== 'page';
   
   const icon = type === 'book' ? <BookOpenIcon className="w-5 h-5 text-blue-600" /> :
              type === 'chapter' ? <FolderIcon className="w-5 h-5 text-yellow-600" /> :
@@ -139,6 +143,7 @@ const TreeNode: React.FC<TreeNodeProps> = (props) => {
             />
           ) : name}
           {type === 'book' && isDirty && (node as Book)._id === props.activeBook?._id && <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 ml-2" title="Unsaved changes"></div>}
+          {(type === 'chapter' || type === 'page') && isNodeDirty && <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 ml-2" title="Unsaved changes"></div>}
         </span>
         <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100">
           {type === 'book' && <button onClick={(e) => {e.stopPropagation(); onSaveBook()}} title={isDirty ? "Save Book" : "No changes"} disabled={!isDirty} className="p-1 rounded text-gray-500 hover:bg-blue-100 disabled:text-gray-300"><CloudArrowUpIcon className="w-4 h-4" /></button>}
@@ -153,10 +158,11 @@ const TreeNode: React.FC<TreeNodeProps> = (props) => {
         return (
           <TreeNode
             {...props}
+            onSelectBook={onSelectBook}
             key={childId}
             node={child}
-            bookId={bookId} // Pass the bookId down to children
-            parentChapter={type === 'book' ? child as Chapter : parentChapter}
+            bookId={bookId}
+            parentChapter={childIsChapter ? (child as Chapter) : (node as Chapter)}
             type={childIsChapter ? 'chapter' : 'page'}
             level={level + 1}
             isExpanded={!!expansionState[childId]}
@@ -167,13 +173,12 @@ const TreeNode: React.FC<TreeNodeProps> = (props) => {
   );
 };
 
-
 export const CurriculumPanel: React.FC<CurriculumPanelProps> = (props) => {
   const { books, isLoading, onSelectBook, onOpenCreateBookModal, isDirty, searchAttempted } = props;
   const confirm = useConfirmation();
 
-  const handleBookSelect = async (bookId: string) => {
-    if (isDirty) {
+  const handleBookSelect = async (bookId: string): Promise<boolean> => {
+    if (isDirty && props.activeBook?._id !== bookId) {
       const userConfirmed = await confirm({
         title: 'Unsaved Changes',
         message: 'You have unsaved changes that will be lost. Are you sure you want to switch books?',
@@ -181,10 +186,11 @@ export const CurriculumPanel: React.FC<CurriculumPanelProps> = (props) => {
         isDestructive: true,
       });
       if (!userConfirmed) {
-        return;
+        return false;
       }
     }
     onSelectBook(bookId);
+    return true;
   };
 
   const renderContent = () => {
@@ -203,8 +209,8 @@ export const CurriculumPanel: React.FC<CurriculumPanelProps> = (props) => {
                     type="book" 
                     level={0} 
                     isExpanded={!!props.expansionState[bookNodeId]}
-                    onSelectBook={handleBookSelect} // Pass the handler for book-specific clicks
-                    bookId={book._id} // Pass bookId to the top-level node
+                    onSelectBook={handleBookSelect}
+                    bookId={book._id}
                 />
             );
         });
@@ -223,8 +229,7 @@ export const CurriculumPanel: React.FC<CurriculumPanelProps> = (props) => {
             Search for a book or create a new one.
         </div>
     );
-};
-
+  };
 
   return (
     <div className="flex flex-col h-full relative">
