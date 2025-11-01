@@ -1082,8 +1082,8 @@ export const useCurriculum = (userContext: UserContext | null) => {
     }
   }, [activeBook, updateActiveBook]);
 
-  const performActionOnBook = async (bookId: string, action: (book: Book) => Book) => {
-    setIsLoading(true);
+  const performActionOnBook = useCallback(async (bookId: string, action: (book: Book) => Book) => {
+        setIsLoading(true);
     try {
       let bookToUpdate = activeBook;
       
@@ -1091,7 +1091,7 @@ export const useCurriculum = (userContext: UserContext | null) => {
         bookToUpdate = await curriculumService.fetchBookDetails(bookId);
       }
       
-      const updatedBook = action(deepClone(bookToUpdate));
+      const updatedBook = action(deepClone(bookToUpdate!));
 
       setBooks(prev => prev.map(b => b._id === bookId ? updatedBook : b));
       setActiveBook(updatedBook);
@@ -1102,7 +1102,7 @@ export const useCurriculum = (userContext: UserContext | null) => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [activeBook]);
 
   const addChapter = useCallback(async (bookId: string) => {
     await performActionOnBook(bookId, (book) => {
@@ -1119,7 +1119,7 @@ export const useCurriculum = (userContext: UserContext | null) => {
       setExpansionState(prev => ({ ...prev, [book._id]: true, [newChapter.chapter_id!]: true }));
       return book;
     });
-  }, []);
+  }, [performActionOnBook]);
 
   const addPage = useCallback(async (bookId: string, chapterId: string) => {
     await performActionOnBook(bookId, (book) => {
@@ -1140,7 +1140,7 @@ export const useCurriculum = (userContext: UserContext | null) => {
       }
       return book;
     });
-  }, []);
+  }, [performActionOnBook]);
   
   const deleteChapter = useCallback((chapterId: string) => {
     if (selectedPage && activeBook?.chapters.find(c => c.chapter_id === chapterId)?.pages.some(p => p.page_id === selectedPage.page_id)) {
