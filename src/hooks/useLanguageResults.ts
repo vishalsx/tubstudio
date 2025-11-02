@@ -4,9 +4,16 @@ import { flushSync } from 'react-dom';
 import { translationService } from '../services/translation.service';
 import { LanguageResult, CommonData, FileInfo, SaveStatus } from '../types';
 import { DEFAULT_COMMON_DATA, DEFAULT_FILE_INFO, UI_MESSAGES } from '../utils/constants';
-import { RETURN_PERMISSION_ACTION } from '../utils/permissions/hasPermissions';
+// import { RETURN_PERMISSION_ACTION } from '../utils/permissions/hasPermissions';
+import { UserContext } from '../types';
+import { returnPermissionForUiActionForUser } from '../utils/permissions/hasPermissions';
+import { useAuth } from "./useAuth"; 
+
+
 
 export const useLanguageResults = () => {
+  
+  const { userContext } = useAuth(); // ✅ access user context here
   const [selectedLanguages, setSelectedLanguages] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState<string>('');
   const [availableTabs, setAvailableTabs] = useState<string[]>([]);
@@ -185,9 +192,10 @@ export const useLanguageResults = () => {
         },
       ];
 
-      const action = RETURN_PERMISSION_ACTION[ui_action];
-      console.log("Saving with attributes:", { commonAttributes, languageAttributes, action });
-
+      // const action = RETURN_PERMISSION_ACTION[ui_action];
+      const action = returnPermissionForUiActionForUser(userContext!)[ui_action];
+      console.log(`Performing QuickSave with action: ${action}\nAnd with userContext:`, userContext);
+      
       const returned_data = await translationService.saveToDatabase(
         commonAttributes,
         languageAttributes,

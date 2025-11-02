@@ -325,11 +325,11 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
         {leftPanelView === 'upload' && (
           (previewUrl || currentCommonData?.image_base64) ? (
             <div className="mb-4">
-              <div className="flex-shrink-0 h-64 bg-gray-100 rounded-xl flex items-center justify-center overflow-hidden">
+              <div className="flex-shrink-0 h-82 bg-gray-100 rounded-xl flex items-center justify-center overflow-hidden">
                 {previewUrl ? (
-                  <img src={previewUrl} alt="Uploaded" className="w-full h-full object-cover" />
+                  <img src={previewUrl} alt="Uploaded" className="w-full h-full object-contain" />
                 ) : currentCommonData?.image_base64 ? (
-                  <img src={`data:image/png;base64,${currentCommonData.image_base64}`} alt="Work item" className="w-full h-full object-cover" />
+                  <img src={`data:image/png;base64,${currentCommonData.image_base64}`} alt="Work item" className="w-full h-full object-contain" />
                 ) : null}
               </div>
             </div>
