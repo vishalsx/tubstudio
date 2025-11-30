@@ -1,6 +1,6 @@
 // components/panels/LeftPanel.tsx
 import React, { useState } from 'react';
-import { Bars3Icon, ChevronDownIcon, XMarkIcon, SparklesIcon, ListBulletIcon, ArrowUpTrayIcon, PhotoIcon, MagnifyingGlassIcon, BookOpenIcon, StarIcon } from '@heroicons/react/24/solid';
+import { Bars3Icon, ChevronDownIcon, XMarkIcon, SparklesIcon, ListBulletIcon, ArrowUpTrayIcon, PhotoIcon, MagnifyingGlassIcon, BookOpenIcon, StarIcon, StopIcon } from '@heroicons/react/24/solid';
 import { CommonData, RecentTranslation, PermissionCheck, DatabaseImage, Book, Chapter, Page } from '../../types';
 import { CurriculumPanel } from './CurriculumPanel';
 import { useCurriculum } from '../../hooks/useCurriculum';
@@ -40,7 +40,8 @@ interface LeftPanelProps {
   isWorklistLoading: boolean;
   isRedirecting: boolean;
   error: string | null;
-  
+  identifyProgress: { current: number; total: number } | null;
+
   // Permissions
   canUploadPicture: PermissionCheck;
   canIdentifyImage: PermissionCheck;
@@ -54,6 +55,7 @@ interface LeftPanelProps {
   onLanguageToggle: (language: string) => void;
   onLanguageDropdownToggle: () => void;
   onIdentify: () => void;
+  onCancelIdentify: () => void;
   onFetchWorklist: () => void;
   onThumbnailClick: (index: number) => void;
   onSearchQueryChange: (value: string) => void;
@@ -96,6 +98,7 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
   isWorklistLoading,
   isRedirecting,
   error,
+  identifyProgress,
   canUploadPicture,
   canIdentifyImage,
   canViewWorkList,
@@ -106,6 +109,7 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
   onLanguageToggle,
   onLanguageDropdownToggle,
   onIdentify,
+  onCancelIdentify,
   onFetchWorklist,
   onThumbnailClick,
   onSearchQueryChange,
@@ -270,6 +274,9 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
     return null;
   };
   
+  // Logic to determine if we need horizontal scroll for database view
+  const isHorizontalScroll = leftPanelView === 'database' && databaseImages.length > 9;
+  
   return (
     <div className={`w-full bg-white rounded-lg shadow p-4 flex flex-col overflow-hidden ${className}`}>
       {/* Header with Toggle */}
@@ -325,7 +332,7 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
         {leftPanelView === 'upload' && (
           (previewUrl || currentCommonData?.image_base64) ? (
             <div className="mb-4">
-              <div className="flex-shrink-0 h-82 bg-gray-100 rounded-xl flex items-center justify-center overflow-hidden">
+              <div className="flex-shrink-0 h-64 bg-gray-100 rounded-xl flex items-center justify-center overflow-hidden">
                 {previewUrl ? (
                   <img src={previewUrl} alt="Uploaded" className="w-full h-full object-contain" />
                 ) : currentCommonData?.image_base64 ? (
@@ -342,11 +349,18 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
 
         {/* Content Area for Database View */}
         {leftPanelView === 'database' && (
-          <div className="flex-1 overflow-y-auto mb-4 min-h-64 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50 p-2">
+          // <div className="flex-1 overflow-y-auto mb-4 min-h-64 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50 p-2">
+          <div className={`flex-1 mb-4 min-h-64 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50 p-2 ${isHorizontalScroll ? 'overflow-x-auto' : 'overflow-y-auto'}`}>
+
             {databaseImages.length > 0 ? (
-              <div className="grid grid-cols-3 gap-2 pr-2">
+              // <div className="grid grid-cols-3 gap-2 pr-2">
+              <div className={isHorizontalScroll 
+                ? "grid grid-rows-3 grid-flow-col gap-2 w-max" // Horizontal scroll layout
+                : "grid grid-cols-3 gap-2 pr-2" // Vertical scroll layout
+              }>
                 {databaseImages.map((image, idx) => (
-                  <div key={image.object.image_hash || idx} className="relative group rounded-xl overflow-hidden shadow-md cursor-pointer aspect-square" onClick={() => onDatabaseImageClick(image)} title={image.common_data.object_name_en || image.file_info.filename || ''}>
+                  // <div key={image.object.image_hash || idx} className="relative group rounded-xl overflow-hidden shadow-md cursor-pointer aspect-square" onClick={() => onDatabaseImageClick(image)} title={image.common_data.object_name_en || image.file_info.filename || ''}>
+                  <div key={image.object.image_hash || idx} className={`relative group rounded-xl overflow-hidden shadow-md cursor-pointer aspect-square ${isHorizontalScroll ? 'w-28' : ''}`} onClick={() => onDatabaseImageClick(image)} title={image.common_data.object_name_en || image.file_info.filename || ''}>
                     <img src={`data:image/jpeg;base64,${image.object.thumbnail}`} alt={image.common_data.object_name_en || image.file_info.filename || ''} className="w-full h-full object-cover transition-transform duration-300 ease-in-out group-hover:scale-110" />
                     <div className="absolute bottom-0 left-0 right-0 p-1 bg-gradient-to-t from-black/60 to-transparent pointer-events-none">
                       <p className="text-white font-bold text-xs text-center drop-shadow-lg truncate">{image.common_data.object_name_en || (image.file_info.filename ? image.file_info.filename.split('.').slice(0, -1).join('.') : 'Untitled')}</p>
@@ -394,12 +408,34 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
                 )}
               </div>
               <button
-                onClick={onIdentify}
-                disabled={isLoading || !canIdentifyImage.metadata || isRedirecting}
-                title="Identify Object"
-                className={`px-4 py-2 rounded-lg transition flex justify-center items-center ${isLoading || !canIdentifyImage.metadata ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-[#00AEEF] text-white hover:bg-[#0096CC]'}`}
-              >
-                {isLoading ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : <SparklesIcon className="w-5 h-5" />}
+              //   onClick={onIdentify}
+              //   disabled={isLoading || !canIdentifyImage.metadata || isRedirecting}
+              //   title="Identify Object"
+              //   className={`px-4 py-2 rounded-lg transition flex justify-center items-center ${isLoading || !canIdentifyImage.metadata ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-[#00AEEF] text-white hover:bg-[#0096CC]'}`}
+              // >
+              //   {isLoading ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : <SparklesIcon className="w-5 h-5" />}
+              onClick={isLoading ? onCancelIdentify : onIdentify}
+              disabled={(!isLoading && !canIdentifyImage.metadata) || isRedirecting}
+              title={isLoading ? "Cancel Identification" : "Identify Object"}
+              className={`px-4 py-2 rounded-lg transition flex justify-center items-center ${
+                  (!isLoading && !canIdentifyImage.metadata) ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 
+                  isLoading ? 'bg-red-500 text-white hover:bg-red-600' : 'bg-[#00AEEF] text-white hover:bg-[#0096CC]'
+              }`}
+            >
+              {/* {isLoading ? <StopIcon className="w-5 h-5 animate-pulse" /> : <SparklesIcon className="w-5 h-5" />} */}
+              {isLoading ? (
+                  <div className="flex items-center gap-1">
+                    <StopIcon className="w-5 h-5 animate-pulse" />
+                    {identifyProgress && (
+                      <span className="text-xs font-bold">
+                        {identifyProgress.current}/{identifyProgress.total}
+                      </span>
+                    )}
+                  </div>
+                ) : (
+                  <SparklesIcon className="w-5 h-5" />
+                )}
+
               </button>
               <button
                 onClick={onFetchWorklist}
@@ -419,10 +455,10 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
             
             <div className="mt-auto">
               <h3 className="font-medium mb-2">Latest Edits</h3>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="flex space-x-3 overflow-x-auto pb-2 -mx-1 px-1">
                 {recentTranslations.length > 0 ? (
                   recentTranslations.map((item, idx) => (
-                    <div key={idx} className="bg-gray-100 rounded overflow-hidden flex flex-col items-center shadow">
+                    <div key={idx} className="flex-shrink-0 w-28 bg-gray-100 rounded-lg overflow-hidden flex flex-col items-center shadow-md transition-transform hover:scale-105">
                       <div className="h-24 w-full">
                         <img
                           src={`data:image/jpeg;base64,${item.object.thumbnail}`}
@@ -431,18 +467,16 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
                           onClick={canUploadPicture.metadata ? () => onThumbnailClick(idx) : undefined}
                         />
                       </div>
-                      <div className="p-2 text-center">
-                        <p className="text-xs font-medium">{item.translation.requested_language}</p>
-                        <p className="text-xs text-gray-600">{item.translation.translation_status}</p>
+                      <div className="p-1.5 text-center w-full">
+                        <p className="text-xs font-semibold text-gray-800 truncate" title={item.translation.requested_language}>{item.translation.requested_language}</p>
+                        <p className="text-xs text-gray-600 truncate" title={item.translation.translation_status}>{item.translation.translation_status}</p>
                       </div>
                     </div>
                   ))
                 ) : (
-                  <>
-                    <div className="h-24 bg-gray-200 rounded"></div>
-                    <div className="h-24 bg-gray-200 rounded"></div>
-                    <div className="h-24 bg-gray-200 rounded"></div>
-                  </>
+                  [...Array(3)].map((_, idx) => (
+                    <div key={idx} className="flex-shrink-0 w-28 h-36 bg-gray-200 rounded-lg animate-pulse"></div>
+                  ))
                 )}
               </div>
             </div>

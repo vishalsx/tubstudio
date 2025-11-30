@@ -1,3 +1,5 @@
+
+
 // // components/panels/MiddlePanel.tsx
 // import React, { useState, useEffect } from 'react';
 // import { XMarkIcon, StarIcon, ArrowUpCircleIcon, CheckCircleIcon, CheckBadgeIcon, XCircleIcon, ArrowRightCircleIcon } from '@heroicons/react/24/solid';
@@ -47,7 +49,7 @@
 //   activeBook: Book | null;
 //   isLoading: boolean;
 //   selectedPageData: Page | null;
-//   onCurriculumImageClick: (image: CurriculumImage, language: string) => void;
+//   onCurriculumImageDoubleClick: (image: CurriculumImage, language: string) => void;
 //   languageForImageSearch: string;
 //   onAddImageToCurriculumPage: (image: DatabaseImage) => void;
 //   onRemoveImageFromCurriculumPage: (imageHash: string) => void;
@@ -56,6 +58,7 @@
 //   onCreateStory: () => void;
 //   onGenerateStory?: (pageId: string, userComments?: string) => void;
 //   onReorderImagesOnPage: (draggedImageHash: string, targetImageHash: string) => void;
+//   imageLoadingProgress: { loaded: number, total: number } | null;
 // }
 
 // export const MiddlePanel: React.FC<MiddlePanelProps> = (props) => {
@@ -83,7 +86,7 @@
 //     activeBook,
 //     isLoading: isCurriculumLoading,
 //     selectedPageData,
-//     onCurriculumImageClick,
+//     onCurriculumImageDoubleClick,
 //     languageForImageSearch,
 //     onAddImageToCurriculumPage,
 //     onRemoveImageFromCurriculumPage,
@@ -92,16 +95,25 @@
 //     onCreateStory,
 //     onGenerateStory,
 //     onReorderImagesOnPage,
+//     imageLoadingProgress,
 //   } = props;
 
 //   const [isImageSearchModalOpen, setIsImageSearchModalOpen] = useState(false);
-//   const [draggedImageHash, setDraggedImageHash] = useState<string | null>(null);
-//   const [dragOverHash, setDragOverHash] = useState<string | null>(null);
 //   const [userComments, setUserComments] = useState('');
+//   const [validationErrors, setValidationErrors] = useState<Set<string>>(new Set());
+  
+//   // Drag and drop state
+//   const [draggedImageHash, setDraggedImageHash] = useState<string | null>(null);
+//   const [dragOverImageHash, setDragOverImageHash] = useState<string | null>(null);
 
 //   useEffect(() => {
 //     setUserComments('');
 //   }, [selectedPageData?.page_id]);
+
+//   // Clear validation errors when tab changes
+//   useEffect(() => {
+//     setValidationErrors(new Set());
+//   }, [activeTab]);
 
 
 //   const handleEditClick = () => {
@@ -116,8 +128,34 @@
 //   const hasError = !!currentResult?.error;
 //   const isLoading = currentResult?.isLoading || false;
 
+//   // Validate fields before API calls
+//   const handleActionClick = (action: string) => {
+//     if (!currentResult) return;
+
+//     const errors = new Set<string>();
+//     // Only validate editable text fields
+//     const fieldsToCheck = ['object_name', 'object_description', 'object_hint', 'object_short_hint'];
+
+//     fieldsToCheck.forEach(key => {
+//         const val = currentResult[key as keyof LanguageResult];
+//         if (!val || (typeof val === 'string' && !val.trim())) {
+//             errors.add(key);
+//         }
+//     });
+
+//     if (errors.size > 0) {
+//         setValidationErrors(errors);
+//         return; // Stop execution, don't call API
+//     }
+
+//     setValidationErrors(new Set()); // Clear previous errors
+//     onSave(action);
+//   };
+
+//   // Helper to check if a specific field has a validation error
+//   const isFieldInvalid = (key: string) => validationErrors.has(key);
+
 //   const handleAddImageFromSearch = (image: DatabaseImage) => {
-//     // The duplicate check is now handled inside the modal, so we just call the add function.
 //     if (selectedPageData && onAddImageToCurriculumPage) {
 //       onAddImageToCurriculumPage(image);
 //     }
@@ -125,39 +163,69 @@
 
 //   const handleAddNewImage = (searchQuery: string) => {
 //     onAddNewImageFromSearch(searchQuery);
-//     setIsImageSearchModalOpen(false); // Close the modal after triggering the action
+//     setIsImageSearchModalOpen(false);
 //   };
 
-//   // --- Drag and Drop Handlers ---
+//   // Drag and drop handlers
 //   const handleDragStart = (e: React.DragEvent<HTMLDivElement>, imageHash: string) => {
 //     setDraggedImageHash(imageHash);
 //     e.dataTransfer.effectAllowed = 'move';
-//     e.dataTransfer.setData('text/plain', imageHash);
+//     // Add a slight delay to prevent the ghost image from showing the dragged state
+//     setTimeout(() => {
+//       e.currentTarget.style.opacity = '0.4';
+//     }, 0);
 //   };
 
-//   const handleDragOver = (e: React.DragEvent<HTMLDivElement>, targetImageHash: string) => {
+//   const handleDragEnter = (e: React.DragEvent<HTMLDivElement>, imageHash: string) => {
 //     e.preventDefault();
-//     if (draggedImageHash && targetImageHash !== draggedImageHash) {
-//       setDragOverHash(targetImageHash);
+//     e.stopPropagation();
+//     if (draggedImageHash !== null && draggedImageHash !== imageHash) {
+//       setDragOverImageHash(imageHash);
 //     }
 //   };
 
-//   const handleDragLeave = () => {
-//     setDragOverHash(null);
+//   const handleDragOver = (e: React.DragEvent<HTMLDivElement>, imageHash: string) => {
+//     e.preventDefault();
+//     e.stopPropagation();
+//     e.dataTransfer.dropEffect = 'move';
+    
+//     // Continuously update drop target while dragging over
+//     if (draggedImageHash !== null && draggedImageHash !== imageHash) {
+//       setDragOverImageHash(imageHash);
+//     }
+//   };
+  
+//   const handleDragLeave = (e: React.DragEvent<HTMLDivElement>, imageHash: string) => {
+//     e.preventDefault();
+//     e.stopPropagation();
+//     // Clear drop target indicator when leaving this specific item
+//     if (dragOverImageHash === imageHash) {
+//       setDragOverImageHash(null);
+//     }
 //   };
 
 //   const handleDrop = (e: React.DragEvent<HTMLDivElement>, targetImageHash: string) => {
 //     e.preventDefault();
-//     if (draggedImageHash && draggedImageHash !== targetImageHash) {
+//     e.stopPropagation();
+    
+//     console.log('Drop triggered - Dragged:', draggedImageHash, 'Target:', targetImageHash);
+    
+//     if (draggedImageHash !== null && draggedImageHash !== targetImageHash) {
+//       console.log('Calling onReorderImagesOnPage with hashes:', draggedImageHash, targetImageHash);
 //       onReorderImagesOnPage(draggedImageHash, targetImageHash);
 //     }
+    
+//     // Reset all states
 //     setDraggedImageHash(null);
-//     setDragOverHash(null);
+//     setDragOverImageHash(null);
 //   };
 
-//   const handleDragEnd = () => {
+//   const handleDragEnd = (e: React.DragEvent<HTMLDivElement>) => {
+//     // Reset opacity
+//     e.currentTarget.style.opacity = '1';
+//     // Reset all drag states
 //     setDraggedImageHash(null);
-//     setDragOverHash(null);
+//     setDragOverImageHash(null);
 //   };
 
 //   const renderTranslationEditor = () => (
@@ -197,26 +265,62 @@
 //                     <button onClick={handleEditClick} disabled={!permissions.canSwitchToEditMode.language || isLoading || hasError || isCurrentTabSaving} title={!permissions.canSwitchToEditMode.language ? 'You do not have permission to switch edit mode' : (isEditing[activeTab] ? 'Switch to View Mode' : 'Switch to Edit Mode')} className={`p-2 rounded transition ${!permissions.canSwitchToEditMode.language ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'text-gray-600 hover:text-[#00AEEF] hover:bg-gray-100'} disabled:opacity-50`}>
 //                         {isEditing[activeTab] ? <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542 7z"></path></svg> : <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002 2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>}
 //                     </button>
-//                     <button onClick={() => onSave("saveToDatabase")} disabled={isCurrentTabSaving || !permissions.canSaveToDatabase.language || isLoading || hasError} title={`Save ${activeTab} to Database`} className={`p-2 rounded transition ${!permissions.canSaveToDatabase.language ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'text-gray-600 hover:text-green-600 hover:bg-green-50'} disabled:opacity-50`}>
+//                     <button onClick={() => handleActionClick("saveToDatabase")} disabled={isCurrentTabSaving || !permissions.canSaveToDatabase.language || isLoading || hasError} title={`Save ${activeTab} to Database`} className={`p-2 rounded transition ${!permissions.canSaveToDatabase.language ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'text-gray-600 hover:text-green-600 hover:bg-green-50'} disabled:opacity-50`}>
 //                         {savingAction === 'saveToDatabase' ? <div className="w-5 h-5 border-2 border-gray-400 border-t-green-400 rounded-full animate-spin"></div> : <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>}
 //                     </button>
-//                     <button onClick={() => onSave("releaseToDatabase")} disabled={isCurrentTabSaving || !permissions.canReleaseToDatabase.language || isLoading || hasError} title="Release to Database" className={`p-2 rounded transition ${!permissions.canReleaseToDatabase.language ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'text-gray-600 hover:text-blue-600 hover:bg-blue-50'} disabled:opacity-50`}>
+//                     <button onClick={() => handleActionClick("releaseToDatabase")} disabled={isCurrentTabSaving || !permissions.canReleaseToDatabase.language || isLoading || hasError} title="Release to Database" className={`p-2 rounded transition ${!permissions.canReleaseToDatabase.language ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'text-gray-600 hover:text-blue-600 hover:bg-blue-50'} disabled:opacity-50`}>
 //                         {savingAction === 'releaseToDatabase' ? <div className="w-5 h-5 border-2 border-gray-400 border-t-blue-400 rounded-full animate-spin"></div> : <ArrowUpCircleIcon className="w-5 h-5" />}
 //                     </button>
-//                     <button onClick={() => onSave("verifyData")} disabled={isCurrentTabSaving || !permissions.canVerifyData.language || isLoading || hasError} title="Verify Data" className={`p-2 rounded transition ${!permissions.canVerifyData.language ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'text-gray-600 hover:text-purple-600 hover:bg-purple-50'} disabled:opacity-50`}>
+//                     <button onClick={() => handleActionClick("verifyData")} disabled={isCurrentTabSaving || !permissions.canVerifyData.language || isLoading || hasError} title="Verify Data" className={`p-2 rounded transition ${!permissions.canVerifyData.language ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'text-gray-600 hover:text-purple-600 hover:bg-purple-50'} disabled:opacity-50`}>
 //                         {savingAction === 'verifyData' ? <div className="w-5 h-5 border-2 border-gray-400 border-t-purple-400 rounded-full animate-spin"></div> : <CheckCircleIcon className="w-5 h-5" />}
 //                     </button>
-//                     <button onClick={() => onSave("approveData")} disabled={isCurrentTabSaving || !permissions.canApproveData.language || isLoading || hasError} title="Approve Data" className={`p-2 rounded transition ${!permissions.canApproveData.language ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'text-gray-600 hover:text-teal-600 hover:bg-teal-50'} disabled:opacity-50`}>
+//                     <button onClick={() => handleActionClick("approveData")} disabled={isCurrentTabSaving || !permissions.canApproveData.language || isLoading || hasError} title="Approve Data" className={`p-2 rounded transition ${!permissions.canApproveData.language ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'text-gray-600 hover:text-teal-600 hover:bg-teal-50'} disabled:opacity-50`}>
 //                         {savingAction === 'approveData' ? <div className="w-5 h-5 border-2 border-gray-400 border-t-teal-400 rounded-full animate-spin"></div> : <CheckBadgeIcon className="w-5 h-5" />}
 //                     </button>
-//                     <button onClick={() => onSave("rejectData")} disabled={isCurrentTabSaving || !permissions.canRejectData.language || isLoading || hasError} title="Reject Data" className={`p-2 rounded transition ${!permissions.canRejectData.language ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'text-gray-600 hover:text-red-600 hover:bg-red-50'} disabled:opacity-50`}>
+//                     <button onClick={() => handleActionClick("rejectData")} disabled={isCurrentTabSaving || !permissions.canRejectData.language || isLoading || hasError} title="Reject Data" className={`p-2 rounded transition ${!permissions.canRejectData.language ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'text-gray-600 hover:text-red-600 hover:bg-red-50'} disabled:opacity-50`}>
 //                         {savingAction === 'rejectData' ? <div className="w-5 h-5 border-2 border-gray-400 border-t-red-400 rounded-full animate-spin"></div> : <XCircleIcon className="w-5 h-5" />}
 //                     </button>
 //                     <button onClick={onSkip} disabled={isCurrentTabSaving || isWorklistLoading || !permissions.canSkiptData.language || isLoading || hasError} title="Skip to Next" className={`p-2 rounded transition ${!permissions.canSkiptData.language ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'text-gray-600 hover:text-orange-600 hover:bg-orange-50'} disabled:opacity-50`}>
 //                         {isWorklistLoading ? <div className="w-5 h-5 border-2 border-gray-400 border-t-orange-400 rounded-full animate-spin"></div> : <ArrowRightCircleIcon className="w-5 h-5" />}
 //                     </button>
 //                 </div>
-//                 {isLoading ? <div className="flex items-center justify-center py-8"><div className="flex items-center space-x-2"><div className="w-5 h-5 border-2 border-gray-300 border-t-[#00AEEF] rounded-full animate-spin"></div><span className="text-gray-600">Loading {activeTab} Details...</span></div></div> : hasError ? <div className="p-3 bg-red-50 text-red-700 rounded-lg"><p><strong>Error:</strong> {currentResult.error}</p></div> : <div className="space-y-4">{[{ label: 'Object Name', key: 'object_name' }, { label: 'Description', key: 'object_description', textarea: true }, { label: 'Hint', key: 'object_hint', textarea: true }, { label: 'Short Hint', key: 'object_short_hint', textarea: true }, { label: 'Translation Status', key: 'translation_status' }].map(({ label, key, textarea }) => (<div key={key}><label className="block text-sm font-medium text-gray-700 mb-1">{label}:{currentResult.flag_translation ? <span className="text-xs text-green-600 ml-2">⭐️</span> : <span className="text-xs text-blue-600 ml-2">✨</span>}</label>{isEditing[activeTab] && key !== 'translation_status' ? (textarea ? <textarea rows={3} value={currentResult[key as keyof LanguageResult] as string || ''} onChange={(e) => onUpdateLanguageResult(activeTab, key as keyof LanguageResult, e.target.value)} className="w-full p-2 border border-gray-300 rounded-md focus:ring-[#00AEEF] focus:border-[#00AEEF]" /> : <input type="text" value={currentResult[key as keyof LanguageResult] as string || ''} onChange={(e) => onUpdateLanguageResult(activeTab, key as keyof LanguageResult, e.target.value)} className="w-full p-2 border border-gray-300 rounded-md focus:ring-[#00AEEF] focus:border-[#00AEEF]" />) : key === 'translation_status' ? (currentResult.translation_status && currentResult.translation_status!.toLowerCase() !== 'approved' ? <StatusWorkflow statuses={['Draft', 'Released', 'Verified', 'Approved']} currentStatus={currentResult.translation_status} /> : <p className="text-gray-900 bg-gray-50 p-2 rounded-md font-semibold text-green-600">{currentResult.translation_status || '-'}</p>) : <p className="text-gray-900 bg-gray-50 p-2 rounded-md">{currentResult[key as keyof LanguageResult] as string || '-'}</p>}</div>))}</div>}
+//                 {isLoading ? <div className="flex items-center justify-center py-8"><div className="flex items-center space-x-2"><div className="w-5 h-5 border-2 border-gray-300 border-t-[#00AEEF] rounded-full animate-spin"></div><span className="text-gray-600">Loading {activeTab} Details...</span></div></div> : hasError ? <div className="p-3 bg-red-50 text-red-700 rounded-lg"><p><strong>Error:</strong> {currentResult.error}</p></div> : <div className="space-y-4">{[{ label: 'Object Name', key: 'object_name' }, { label: 'Description', key: 'object_description', textarea: true }, { label: 'Hint', key: 'object_hint', textarea: true }, { label: 'Short Hint', key: 'object_short_hint', textarea: true }, { label: 'Translation Status', key: 'translation_status' }].map(({ label, key, textarea }) => {
+//                   // Check if field has validation error
+//                   const isInvalid = isFieldInvalid(key);
+//                   const displayLabel = key === 'translation_status' ? `${activeTab} Approval Status` : label;
+                  
+//                   return (
+//                     <div key={key}>
+//                         <label className="block text-sm font-medium text-gray-700 mb-1">
+//                             {displayLabel}:
+//                             {currentResult.flag_translation ? <span className="text-xs text-green-600 ml-2">⭐️</span> : <span className="text-xs text-blue-600 ml-2">✨</span>}
+//                         </label>
+//                         {isEditing[activeTab] && key !== 'translation_status' ? (
+//                             textarea ? (
+//                                 <textarea 
+//                                     rows={3} 
+//                                     value={currentResult[key as keyof LanguageResult] as string || ''} 
+//                                     onChange={(e) => onUpdateLanguageResult(activeTab, key as keyof LanguageResult, e.target.value)} 
+//                                     className={`w-full p-2 border rounded-md focus:ring-[#00AEEF] focus:border-[#00AEEF] ${isInvalid ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : 'border-gray-300'}`} 
+//                                 />
+//                             ) : (
+//                                 <input 
+//                                     type="text" 
+//                                     value={currentResult[key as keyof LanguageResult] as string || ''} 
+//                                     onChange={(e) => onUpdateLanguageResult(activeTab, key as keyof LanguageResult, e.target.value)} 
+//                                     className={`w-full p-2 border rounded-md focus:ring-[#00AEEF] focus:border-[#00AEEF] ${isInvalid ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : 'border-gray-300'}`} 
+//                                 />
+//                             )
+//                         ) : key === 'translation_status' ? (
+//                             currentResult.translation_status && currentResult.translation_status!.toLowerCase() !== 'approved' ? 
+//                                 <StatusWorkflow statuses={['Draft', 'Released', 'Verified', 'Approved']} currentStatus={currentResult.translation_status} /> : 
+//                                 <p className="text-gray-900 bg-gray-50 p-2 rounded-md font-semibold text-green-600">{currentResult.translation_status || '-'}</p>
+//                         ) : (
+//                             <p className="text-gray-900 bg-gray-50 p-2 rounded-md">{currentResult[key as keyof LanguageResult] as string || '-'}</p>
+//                         )}
+//                     </div>
+//                   );
+//                 })}</div>}
 //                 {saveMessages[activeTab] && <p className={`text-sm ${saveMessages[activeTab]?.includes('Error') ? 'text-red-600' : 'text-green-600'}`}>{saveMessages[activeTab]}</p>}
 //               </div>
 //             ) : null}
@@ -235,9 +339,6 @@
 //     const chapterName = chapter ? chapter.chapter_name : '';
 //     const pageTitle = selectedPageData?.title || `Page ${selectedPageData?.page_number}`;
 //     const isPageDirty = selectedPageData?.images?.some(img => img.isNew);
-    
-//     // Get hashes of existing images on the page to prevent duplicates
-//     const existingImageHashes = selectedPageData?.images.map(img => img.image_hash) || [];
 
 //     return (
 //       <div className="h-full flex flex-col">
@@ -245,15 +346,21 @@
 //           <div className="flex items-center justify-center h-full text-gray-500 italic">
 //             Select a page from the curriculum tree to view its images.
 //           </div>
-//         ) : isCurriculumLoading ? (
+//         ) : isCurriculumLoading && !imageLoadingProgress ? (
 //           <div className="flex items-center justify-center h-full">
-//             <LoadingSpinner text="Loading images..." />
+//             <LoadingSpinner text="Loading page..." />
 //           </div>
 //         ) : (
 //           <>
 //             <div className="flex justify-between items-center mb-2">
 //               <h3 className="font-medium text-gray-700 truncate pr-4">{chapterName} ({pageTitle})</h3>
 //               <div className="flex items-center space-x-2">
+//                 {imageLoadingProgress && (
+//                   <div className="text-sm text-gray-500 flex items-center">
+//                     <LoadingSpinner size="sm" color="gray" className="mr-2" />
+//                     <span>Loading... {imageLoadingProgress.loaded} / {imageLoadingProgress.total}</span>
+//                   </div>
+//                 )}
 //                 <button
 //                   onClick={onCreateStory}
 //                   disabled={isStoryLoading || !!isPageDirty || !!selectedPageData.story || (selectedPageData.images?.length || 0) < 5}
@@ -288,43 +395,66 @@
 //             </div>
 //             <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 flex-1 overflow-y-auto bg-gray-50/50">
 //               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-//                 {selectedPageData.images?.map(image => (
-//                   <div
-//                     key={image.image_id || image.image_hash}
-//                     draggable
-//                     onDragStart={(e) => handleDragStart(e, image.image_hash)}
-//                     onDragOver={(e) => handleDragOver(e, image.image_hash)}
-//                     onDragLeave={handleDragLeave}
-//                     onDrop={(e) => handleDrop(e, image.image_hash)}
-//                     onDragEnd={handleDragEnd}
-//                     className={`relative group rounded-xl overflow-hidden shadow-md cursor-grab aspect-square transition-all duration-200 ${
-//                       draggedImageHash === image.image_hash ? 'opacity-30' : 'opacity-100'
-//                     } ${
-//                       dragOverHash === image.image_hash && draggedImageHash !== image.image_hash ? 'ring-4 ring-blue-500' : ''
-//                     }`}
-//                   >
-//                     <img
-//                       src={image.thumbnail}
-//                       alt={image.object_name}
-//                       className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
-//                       onClick={() => onCurriculumImageClick(image, activeBook?.language || languageForImageSearch)}
-//                     />
-//                     <div className="absolute bottom-0 left-0 right-0 p-1 bg-gradient-to-t from-black/60 to-transparent pointer-events-none">
-//                       <p className="text-white font-bold text-xs text-center drop-shadow-lg truncate">{image.object_name}</p>
-//                     </div>
-//                       {image.isNew && <div className="absolute top-1 left-1 w-2.5 h-2.5 bg-blue-500 rounded-full border-2 border-white" title="Not saved"></div>}
-//                     <button
-//                       onClick={(e) => {
-//                         e.stopPropagation();
-//                         onRemoveImageFromCurriculumPage(image.image_hash);
-//                       }}
-//                       className="absolute top-1 right-1 p-1 bg-black bg-opacity-40 rounded-full text-white opacity-0 group-hover:opacity-100 hover:bg-red-600 transition-all"
-//                       title="Remove image from page"
+//                 {selectedPageData.images?.map((image, index) => {
+//                   if (image.isLoading) {
+//                     return (
+//                       <div key={image.image_id || `loader-${index}`} className="relative group rounded-xl bg-gray-200 aspect-square animate-pulse">
+//                         <div className="absolute top-1 left-1 z-20 bg-gray-400 bg-opacity-75 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center border-2 border-white">
+//                           {image.position || index + 1}
+//                         </div>
+//                       </div>
+//                     );
+//                   }
+
+//                   const isDraggingThis = draggedImageHash === image.image_hash;
+//                   const isDropTarget = dragOverImageHash === image.image_hash;
+                  
+//                   return (
+//                     <div
+//                       key={image.image_id || image.image_hash}
+//                       draggable={!image.isLoading}
+//                       onDragStart={(e) => handleDragStart(e, image.image_hash)}
+//                       onDragEnter={(e) => handleDragEnter(e, image.image_hash)}
+//                       onDragOver={(e) => handleDragOver(e, image.image_hash)}
+//                       onDragLeave={(e) => handleDragLeave(e, image.image_hash)}
+//                       onDrop={(e) => handleDrop(e, image.image_hash)}
+//                       onDragEnd={handleDragEnd}
+//                       onDoubleClick={() => onCurriculumImageDoubleClick(image, activeBook?.language || languageForImageSearch)}
+//                       className={`relative group rounded-xl overflow-hidden shadow-md cursor-grab active:cursor-grabbing aspect-square transition-all
+//                         ${isDraggingThis ? 'opacity-40 scale-95' : 'opacity-100 scale-100'}
+//                         ${isDropTarget ? 'ring-4 ring-[#00AEEF] ring-offset-2 scale-105' : ''}
+//                         ${draggedImageHash !== null && !isDraggingThis ? 'hover:scale-105' : ''}`}
 //                     >
-//                       <TrashIcon className="w-4 h-4" />
-//                     </button>
-//                   </div>
-//                 ))}
+//                       {/* Position indicator badge */}
+//                       <div className="absolute top-1 left-1 z-20 bg-gray-900 bg-opacity-75 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center border-2 border-white">
+//                         {image.position || index + 1}
+//                       </div>
+                      
+//                       <img
+//                         src={image.thumbnail}
+//                         alt={image.object_name}
+//                         className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110 pointer-events-none"
+                     
+//                       />
+//                       <div className="absolute bottom-0 left-0 right-0 p-1 bg-gradient-to-t from-black/60 to-transparent pointer-events-none">
+//                         <p className="text-white font-bold text-xs text-center drop-shadow-lg truncate">{image.object_name}</p>
+//                       </div>
+//                       {image.isNew && (
+//                         <div className="absolute top-1 right-8 w-2.5 h-2.5 bg-blue-500 rounded-full border-2 border-white pointer-events-none" title="Not saved"></div>
+//                       )}
+//                       <button
+//                         onClick={(e) => {
+//                           e.stopPropagation();
+//                           onRemoveImageFromCurriculumPage(image.image_hash);
+//                         }}
+//                         className="absolute top-1 right-1 p-1 bg-black bg-opacity-40 rounded-full text-white opacity-0 group-hover:opacity-100 hover:bg-red-600 transition-all z-10"
+//                         title="Remove image from page"
+//                       >
+//                         <TrashIcon className="w-4 h-4" />
+//                       </button>
+//                     </div>
+//                   );
+//                 })}
 //                 {/* Add Image Box */}
 //                 <div
 //                   className="relative group rounded-xl border-2 border-dashed border-gray-400 hover:border-[#00AEEF] bg-gray-50 flex flex-col items-center justify-center cursor-pointer aspect-square transition-colors"
@@ -357,19 +487,16 @@
 //   };
 
 //   const renderContent = () => {
-//     // Curriculum view is handled separately
 //     if (leftPanelView === 'curriculum') {
 //       return renderCurriculumView();
 //     }
   
-//     // For both Upload and Database views, show the editor if an image is active (i.e., has language results)
 //     const hasActiveImage = Object.keys(languageResults).length > 0;
   
 //     if (hasActiveImage) {
 //       return renderTranslationEditor();
 //     }
   
-//     // Otherwise, show a relevant placeholder
 //     const placeholderText = leftPanelView === 'database'
 //       ? 'Select an image from the search results to view its details.'
 //       : 'Upload an image or select one from your worklist to start.';
@@ -399,8 +526,8 @@
 // };
 
 // components/panels/MiddlePanel.tsx
-import React, { useState, useEffect, useRef } from 'react';
-import { XMarkIcon, StarIcon, ArrowUpCircleIcon, CheckCircleIcon, CheckBadgeIcon, XCircleIcon, ArrowRightCircleIcon } from '@heroicons/react/24/solid';
+import React, { useState, useEffect } from 'react';
+import { XMarkIcon, StarIcon, ArrowUpCircleIcon, CheckCircleIcon, CheckBadgeIcon, XCircleIcon, ArrowRightCircleIcon, PencilIcon } from '@heroicons/react/24/solid';
 import { PlusCircleIcon, TrashIcon, SparklesIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import { LanguageResult, SaveStatus, PermissionCheck, CurriculumImage, DatabaseImage, CommonData, Page, Book } from '../../types';
 import { StatusWorkflow } from '../common/StatusWorkflow';
@@ -447,7 +574,7 @@ interface MiddlePanelProps {
   activeBook: Book | null;
   isLoading: boolean;
   selectedPageData: Page | null;
-  onCurriculumImageClick: (image: CurriculumImage, language: string) => void;
+  onCurriculumImageDoubleClick: (image: CurriculumImage, language: string) => void;
   languageForImageSearch: string;
   onAddImageToCurriculumPage: (image: DatabaseImage) => void;
   onRemoveImageFromCurriculumPage: (imageHash: string) => void;
@@ -456,6 +583,8 @@ interface MiddlePanelProps {
   onCreateStory: () => void;
   onGenerateStory?: (pageId: string, userComments?: string) => void;
   onReorderImagesOnPage: (draggedImageHash: string, targetImageHash: string) => void;
+  imageLoadingProgress: { loaded: number, total: number } | null;
+  onUpdateImageName?: (imageHash: string, newName: string) => void;
 }
 
 export const MiddlePanel: React.FC<MiddlePanelProps> = (props) => {
@@ -483,7 +612,7 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = (props) => {
     activeBook,
     isLoading: isCurriculumLoading,
     selectedPageData,
-    onCurriculumImageClick,
+    onCurriculumImageDoubleClick,
     languageForImageSearch,
     onAddImageToCurriculumPage,
     onRemoveImageFromCurriculumPage,
@@ -492,18 +621,30 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = (props) => {
     onCreateStory,
     onGenerateStory,
     onReorderImagesOnPage,
+    imageLoadingProgress,
+    onUpdateImageName,
   } = props;
 
   const [isImageSearchModalOpen, setIsImageSearchModalOpen] = useState(false);
   const [userComments, setUserComments] = useState('');
+  const [validationErrors, setValidationErrors] = useState<Set<string>>(new Set());
   
   // Drag and drop state
   const [draggedImageHash, setDraggedImageHash] = useState<string | null>(null);
   const [dragOverImageHash, setDragOverImageHash] = useState<string | null>(null);
 
+  // Image Name Editing State
+  const [editingImageHash, setEditingImageHash] = useState<string | null>(null);
+  const [editingNameValue, setEditingNameValue] = useState('');
+
   useEffect(() => {
     setUserComments('');
   }, [selectedPageData?.page_id]);
+
+  // Clear validation errors when tab changes
+  useEffect(() => {
+    setValidationErrors(new Set());
+  }, [activeTab]);
 
 
   const handleEditClick = () => {
@@ -517,6 +658,33 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = (props) => {
   const currentResult = languageResults[activeTab];
   const hasError = !!currentResult?.error;
   const isLoading = currentResult?.isLoading || false;
+
+  // Validate fields before API calls
+  const handleActionClick = (action: string) => {
+    if (!currentResult) return;
+
+    const errors = new Set<string>();
+    // Only validate editable text fields
+    const fieldsToCheck = ['object_name', 'object_description', 'object_hint', 'object_short_hint'];
+
+    fieldsToCheck.forEach(key => {
+        const val = currentResult[key as keyof LanguageResult];
+        if (!val || (typeof val === 'string' && !val.trim())) {
+            errors.add(key);
+        }
+    });
+
+    if (errors.size > 0) {
+        setValidationErrors(errors);
+        return; // Stop execution, don't call API
+    }
+
+    setValidationErrors(new Set()); // Clear previous errors
+    onSave(action);
+  };
+
+  // Helper to check if a specific field has a validation error
+  const isFieldInvalid = (key: string) => validationErrors.has(key);
 
   const handleAddImageFromSearch = (image: DatabaseImage) => {
     if (selectedPageData && onAddImageToCurriculumPage) {
@@ -591,6 +759,30 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = (props) => {
     setDragOverImageHash(null);
   };
 
+  // Image Name Editing Handlers
+  const startEditingImageName = (e: React.MouseEvent, image: CurriculumImage) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setEditingImageHash(image.image_hash);
+    setEditingNameValue(image.object_name || '');
+  };
+
+  const saveImageName = (imageHash: string) => {
+    if (editingNameValue.trim() && onUpdateImageName) {
+        onUpdateImageName(imageHash, editingNameValue.trim());
+    }
+    setEditingImageHash(null);
+  };
+
+  const handleNameKeyDown = (e: React.KeyboardEvent, imageHash: string) => {
+    if (e.key === 'Enter') {
+        saveImageName(imageHash);
+    } else if (e.key === 'Escape') {
+        setEditingImageHash(null);
+    }
+    e.stopPropagation(); // Prevent triggering other key handlers
+  };
+
   const renderTranslationEditor = () => (
     <div className="flex flex-col h-full overflow-y-auto">
       <h2 className="text-lg font-semibold mb-4">Object Details</h2>
@@ -628,26 +820,62 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = (props) => {
                     <button onClick={handleEditClick} disabled={!permissions.canSwitchToEditMode.language || isLoading || hasError || isCurrentTabSaving} title={!permissions.canSwitchToEditMode.language ? 'You do not have permission to switch edit mode' : (isEditing[activeTab] ? 'Switch to View Mode' : 'Switch to Edit Mode')} className={`p-2 rounded transition ${!permissions.canSwitchToEditMode.language ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'text-gray-600 hover:text-[#00AEEF] hover:bg-gray-100'} disabled:opacity-50`}>
                         {isEditing[activeTab] ? <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542 7z"></path></svg> : <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002 2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>}
                     </button>
-                    <button onClick={() => onSave("saveToDatabase")} disabled={isCurrentTabSaving || !permissions.canSaveToDatabase.language || isLoading || hasError} title={`Save ${activeTab} to Database`} className={`p-2 rounded transition ${!permissions.canSaveToDatabase.language ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'text-gray-600 hover:text-green-600 hover:bg-green-50'} disabled:opacity-50`}>
+                    <button onClick={() => handleActionClick("saveToDatabase")} disabled={isCurrentTabSaving || !permissions.canSaveToDatabase.language || isLoading || hasError} title={`Save ${activeTab} to Database`} className={`p-2 rounded transition ${!permissions.canSaveToDatabase.language ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'text-gray-600 hover:text-green-600 hover:bg-green-50'} disabled:opacity-50`}>
                         {savingAction === 'saveToDatabase' ? <div className="w-5 h-5 border-2 border-gray-400 border-t-green-400 rounded-full animate-spin"></div> : <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>}
                     </button>
-                    <button onClick={() => onSave("releaseToDatabase")} disabled={isCurrentTabSaving || !permissions.canReleaseToDatabase.language || isLoading || hasError} title="Release to Database" className={`p-2 rounded transition ${!permissions.canReleaseToDatabase.language ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'text-gray-600 hover:text-blue-600 hover:bg-blue-50'} disabled:opacity-50`}>
+                    <button onClick={() => handleActionClick("releaseToDatabase")} disabled={isCurrentTabSaving || !permissions.canReleaseToDatabase.language || isLoading || hasError} title="Release to Database" className={`p-2 rounded transition ${!permissions.canReleaseToDatabase.language ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'text-gray-600 hover:text-blue-600 hover:bg-blue-50'} disabled:opacity-50`}>
                         {savingAction === 'releaseToDatabase' ? <div className="w-5 h-5 border-2 border-gray-400 border-t-blue-400 rounded-full animate-spin"></div> : <ArrowUpCircleIcon className="w-5 h-5" />}
                     </button>
-                    <button onClick={() => onSave("verifyData")} disabled={isCurrentTabSaving || !permissions.canVerifyData.language || isLoading || hasError} title="Verify Data" className={`p-2 rounded transition ${!permissions.canVerifyData.language ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'text-gray-600 hover:text-purple-600 hover:bg-purple-50'} disabled:opacity-50`}>
+                    <button onClick={() => handleActionClick("verifyData")} disabled={isCurrentTabSaving || !permissions.canVerifyData.language || isLoading || hasError} title="Verify Data" className={`p-2 rounded transition ${!permissions.canVerifyData.language ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'text-gray-600 hover:text-purple-600 hover:bg-purple-50'} disabled:opacity-50`}>
                         {savingAction === 'verifyData' ? <div className="w-5 h-5 border-2 border-gray-400 border-t-purple-400 rounded-full animate-spin"></div> : <CheckCircleIcon className="w-5 h-5" />}
                     </button>
-                    <button onClick={() => onSave("approveData")} disabled={isCurrentTabSaving || !permissions.canApproveData.language || isLoading || hasError} title="Approve Data" className={`p-2 rounded transition ${!permissions.canApproveData.language ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'text-gray-600 hover:text-teal-600 hover:bg-teal-50'} disabled:opacity-50`}>
+                    <button onClick={() => handleActionClick("approveData")} disabled={isCurrentTabSaving || !permissions.canApproveData.language || isLoading || hasError} title="Approve Data" className={`p-2 rounded transition ${!permissions.canApproveData.language ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'text-gray-600 hover:text-teal-600 hover:bg-teal-50'} disabled:opacity-50`}>
                         {savingAction === 'approveData' ? <div className="w-5 h-5 border-2 border-gray-400 border-t-teal-400 rounded-full animate-spin"></div> : <CheckBadgeIcon className="w-5 h-5" />}
                     </button>
-                    <button onClick={() => onSave("rejectData")} disabled={isCurrentTabSaving || !permissions.canRejectData.language || isLoading || hasError} title="Reject Data" className={`p-2 rounded transition ${!permissions.canRejectData.language ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'text-gray-600 hover:text-red-600 hover:bg-red-50'} disabled:opacity-50`}>
+                    <button onClick={() => handleActionClick("rejectData")} disabled={isCurrentTabSaving || !permissions.canRejectData.language || isLoading || hasError} title="Reject Data" className={`p-2 rounded transition ${!permissions.canRejectData.language ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'text-gray-600 hover:text-red-600 hover:bg-red-50'} disabled:opacity-50`}>
                         {savingAction === 'rejectData' ? <div className="w-5 h-5 border-2 border-gray-400 border-t-red-400 rounded-full animate-spin"></div> : <XCircleIcon className="w-5 h-5" />}
                     </button>
                     <button onClick={onSkip} disabled={isCurrentTabSaving || isWorklistLoading || !permissions.canSkiptData.language || isLoading || hasError} title="Skip to Next" className={`p-2 rounded transition ${!permissions.canSkiptData.language ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'text-gray-600 hover:text-orange-600 hover:bg-orange-50'} disabled:opacity-50`}>
                         {isWorklistLoading ? <div className="w-5 h-5 border-2 border-gray-400 border-t-orange-400 rounded-full animate-spin"></div> : <ArrowRightCircleIcon className="w-5 h-5" />}
                     </button>
                 </div>
-                {isLoading ? <div className="flex items-center justify-center py-8"><div className="flex items-center space-x-2"><div className="w-5 h-5 border-2 border-gray-300 border-t-[#00AEEF] rounded-full animate-spin"></div><span className="text-gray-600">Loading {activeTab} Details...</span></div></div> : hasError ? <div className="p-3 bg-red-50 text-red-700 rounded-lg"><p><strong>Error:</strong> {currentResult.error}</p></div> : <div className="space-y-4">{[{ label: 'Object Name', key: 'object_name' }, { label: 'Description', key: 'object_description', textarea: true }, { label: 'Hint', key: 'object_hint', textarea: true }, { label: 'Short Hint', key: 'object_short_hint', textarea: true }, { label: 'Translation Status', key: 'translation_status' }].map(({ label, key, textarea }) => (<div key={key}><label className="block text-sm font-medium text-gray-700 mb-1">{label}:{currentResult.flag_translation ? <span className="text-xs text-green-600 ml-2">⭐️</span> : <span className="text-xs text-blue-600 ml-2">✨</span>}</label>{isEditing[activeTab] && key !== 'translation_status' ? (textarea ? <textarea rows={3} value={currentResult[key as keyof LanguageResult] as string || ''} onChange={(e) => onUpdateLanguageResult(activeTab, key as keyof LanguageResult, e.target.value)} className="w-full p-2 border border-gray-300 rounded-md focus:ring-[#00AEEF] focus:border-[#00AEEF]" /> : <input type="text" value={currentResult[key as keyof LanguageResult] as string || ''} onChange={(e) => onUpdateLanguageResult(activeTab, key as keyof LanguageResult, e.target.value)} className="w-full p-2 border border-gray-300 rounded-md focus:ring-[#00AEEF] focus:border-[#00AEEF]" />) : key === 'translation_status' ? (currentResult.translation_status && currentResult.translation_status!.toLowerCase() !== 'approved' ? <StatusWorkflow statuses={['Draft', 'Released', 'Verified', 'Approved']} currentStatus={currentResult.translation_status} /> : <p className="text-gray-900 bg-gray-50 p-2 rounded-md font-semibold text-green-600">{currentResult.translation_status || '-'}</p>) : <p className="text-gray-900 bg-gray-50 p-2 rounded-md">{currentResult[key as keyof LanguageResult] as string || '-'}</p>}</div>))}</div>}
+                {isLoading ? <div className="flex items-center justify-center py-8"><div className="flex items-center space-x-2"><div className="w-5 h-5 border-2 border-gray-300 border-t-[#00AEEF] rounded-full animate-spin"></div><span className="text-gray-600">Loading {activeTab} Details...</span></div></div> : hasError ? <div className="p-3 bg-red-50 text-red-700 rounded-lg"><p><strong>Error:</strong> {currentResult.error}</p></div> : <div className="space-y-4">{[{ label: 'Object Name', key: 'object_name' }, { label: 'Description', key: 'object_description', textarea: true }, { label: 'Hint', key: 'object_hint', textarea: true }, { label: 'Short Hint', key: 'object_short_hint', textarea: true }, { label: 'Translation Status', key: 'translation_status' }].map(({ label, key, textarea }) => {
+                  // Check if field has validation error
+                  const isInvalid = isFieldInvalid(key);
+                  const displayLabel = key === 'translation_status' ? `${activeTab} Approval Status` : label;
+                  
+                  return (
+                    <div key={key}>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                            {displayLabel}:
+                            {currentResult.flag_translation ? <span className="text-xs text-green-600 ml-2">⭐️</span> : <span className="text-xs text-blue-600 ml-2">✨</span>}
+                        </label>
+                        {isEditing[activeTab] && key !== 'translation_status' ? (
+                            textarea ? (
+                                <textarea 
+                                    rows={3} 
+                                    value={currentResult[key as keyof LanguageResult] as string || ''} 
+                                    onChange={(e) => onUpdateLanguageResult(activeTab, key as keyof LanguageResult, e.target.value)} 
+                                    className={`w-full p-2 border rounded-md focus:ring-[#00AEEF] focus:border-[#00AEEF] ${isInvalid ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : 'border-gray-300'}`} 
+                                />
+                            ) : (
+                                <input 
+                                    type="text" 
+                                    value={currentResult[key as keyof LanguageResult] as string || ''} 
+                                    onChange={(e) => onUpdateLanguageResult(activeTab, key as keyof LanguageResult, e.target.value)} 
+                                    className={`w-full p-2 border rounded-md focus:ring-[#00AEEF] focus:border-[#00AEEF] ${isInvalid ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : 'border-gray-300'}`} 
+                                />
+                            )
+                        ) : key === 'translation_status' ? (
+                            currentResult.translation_status && currentResult.translation_status!.toLowerCase() !== 'approved' ? 
+                                <StatusWorkflow statuses={['Draft', 'Released', 'Verified', 'Approved']} currentStatus={currentResult.translation_status} /> : 
+                                <p className="text-gray-900 bg-gray-50 p-2 rounded-md font-semibold text-green-600">{currentResult.translation_status || '-'}</p>
+                        ) : (
+                            <p className="text-gray-900 bg-gray-50 p-2 rounded-md">{currentResult[key as keyof LanguageResult] as string || '-'}</p>
+                        )}
+                    </div>
+                  );
+                })}</div>}
                 {saveMessages[activeTab] && <p className={`text-sm ${saveMessages[activeTab]?.includes('Error') ? 'text-red-600' : 'text-green-600'}`}>{saveMessages[activeTab]}</p>}
               </div>
             ) : null}
@@ -673,15 +901,21 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = (props) => {
           <div className="flex items-center justify-center h-full text-gray-500 italic">
             Select a page from the curriculum tree to view its images.
           </div>
-        ) : isCurriculumLoading ? (
+        ) : isCurriculumLoading && !imageLoadingProgress ? (
           <div className="flex items-center justify-center h-full">
-            <LoadingSpinner text="Loading images..." />
+            <LoadingSpinner text="Loading page..." />
           </div>
         ) : (
           <>
             <div className="flex justify-between items-center mb-2">
               <h3 className="font-medium text-gray-700 truncate pr-4">{chapterName} ({pageTitle})</h3>
               <div className="flex items-center space-x-2">
+                {imageLoadingProgress && (
+                  <div className="text-sm text-gray-500 flex items-center">
+                    <LoadingSpinner size="sm" color="gray" className="mr-2" />
+                    <span>Loading... {imageLoadingProgress.loaded} / {imageLoadingProgress.total}</span>
+                  </div>
+                )}
                 <button
                   onClick={onCreateStory}
                   disabled={isStoryLoading || !!isPageDirty || !!selectedPageData.story || (selectedPageData.images?.length || 0) < 5}
@@ -717,20 +951,31 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = (props) => {
             <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 flex-1 overflow-y-auto bg-gray-50/50">
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                 {selectedPageData.images?.map((image, index) => {
+                  if (image.isLoading) {
+                    return (
+                      <div key={image.image_id || `loader-${index}`} className="relative group rounded-xl bg-gray-200 aspect-square animate-pulse">
+                        <div className="absolute top-1 left-1 z-20 bg-gray-400 bg-opacity-75 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center border-2 border-white">
+                          {image.position || index + 1}
+                        </div>
+                      </div>
+                    );
+                  }
+
                   const isDraggingThis = draggedImageHash === image.image_hash;
                   const isDropTarget = dragOverImageHash === image.image_hash;
                   
                   return (
                     <div
                       key={image.image_id || image.image_hash}
-                      draggable
+                      draggable={!image.isLoading}
                       onDragStart={(e) => handleDragStart(e, image.image_hash)}
                       onDragEnter={(e) => handleDragEnter(e, image.image_hash)}
                       onDragOver={(e) => handleDragOver(e, image.image_hash)}
                       onDragLeave={(e) => handleDragLeave(e, image.image_hash)}
                       onDrop={(e) => handleDrop(e, image.image_hash)}
                       onDragEnd={handleDragEnd}
-                      className={`relative group rounded-xl overflow-hidden shadow-md cursor-grab active:cursor-grabbing aspect-square transition-all duration-200
+                      onDoubleClick={() => onCurriculumImageDoubleClick(image, activeBook?.language || languageForImageSearch)}
+                      className={`relative group rounded-xl overflow-hidden shadow-md cursor-grab active:cursor-grabbing aspect-square transition-all
                         ${isDraggingThis ? 'opacity-40 scale-95' : 'opacity-100 scale-100'}
                         ${isDropTarget ? 'ring-4 ring-[#00AEEF] ring-offset-2 scale-105' : ''}
                         ${draggedImageHash !== null && !isDraggingThis ? 'hover:scale-105' : ''}`}
@@ -744,10 +989,28 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = (props) => {
                         src={image.thumbnail}
                         alt={image.object_name}
                         className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110 pointer-events-none"
-                        onClick={() => onCurriculumImageClick(image, activeBook?.language || languageForImageSearch)}
+                     
                       />
-                      <div className="absolute bottom-0 left-0 right-0 p-1 bg-gradient-to-t from-black/60 to-transparent pointer-events-none">
-                        <p className="text-white font-bold text-xs text-center drop-shadow-lg truncate">{image.object_name}</p>
+                      <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/80 via-black/40 to-transparent transition-all duration-200">
+                        {editingImageHash === image.image_hash ? (
+                            <input
+                                type="text"
+                                value={editingNameValue}
+                                onChange={(e) => setEditingNameValue(e.target.value)}
+                                onBlur={() => saveImageName(image.image_hash)}
+                                onKeyDown={(e) => handleNameKeyDown(e, image.image_hash)}
+                                onClick={(e) => e.stopPropagation()}
+                                className="w-full text-xs px-1 py-0.5 rounded border-none focus:ring-1 focus:ring-[#00AEEF] text-black pointer-events-auto"
+                                autoFocus
+                            />
+                        ) : (
+                            <div className="flex items-center justify-center group/name cursor-text pointer-events-auto" onClick={(e) => startEditingImageName(e, image)}>
+                                <p className="text-white font-bold text-xs text-center drop-shadow-md truncate px-1 select-none flex-1">
+                                    {image.object_name}
+                                </p>
+                                <PencilIcon className="w-3 h-3 text-white opacity-0 group-hover/name:opacity-100 ml-1 flex-shrink-0 shadow-sm" />
+                            </div>
+                        )}
                       </div>
                       {image.isNew && (
                         <div className="absolute top-1 right-8 w-2.5 h-2.5 bg-blue-500 rounded-full border-2 border-white pointer-events-none" title="Not saved"></div>

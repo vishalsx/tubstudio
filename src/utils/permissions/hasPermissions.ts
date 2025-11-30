@@ -1,41 +1,15 @@
 export type CheckType = "metadata" | "language";
 export const METADATA = 0;
 export const LANGUAGE = 1;
-// Full user context stored on frontend after login
-export interface UserContext {
-  access_token: string;
-  token_type?: string;        // optional, "bearer" usually
-  username: string;
-  roles: string[];
-  permissions: string[];      // list of assigned permission keys
-  languages_allowed: string[];
-  permission_rules: PermissionRulesDict; // the actual rules with states
-}
+import { UserContext, PermissionRulesDict } from "../../types";
 
 
-// A single permission rule, keyed by permission name (e.g. "SaveText")
-export interface PermissionRuleSimple {
-  metadata: (string | null)[];
-  language: (string | null)[];
-}
-
-
-
-// One rule entry for a given permission (like "SaveText", "VerifyText")
-export interface PermissionRuleEntry {
-  metadata: (string | null)[];
-  language: (string | null)[];
-}
-
-// Dictionary of all permission rules, keyed by permission name (_id in MongoDB)
-
-
-// The shape of one permission rule returned from backend
-export interface PermissionRuleSimple {
-  metadata: (string | null)[];
-  language: (string | null)[];
-}
-export type PermissionRulesDict = Record<string, PermissionRuleSimple>;
+// // The shape of one permission rule returned from backend
+// export interface PermissionRuleSimple {
+//   metadata: (string | null)[];
+//   language: (string | null)[];
+// }
+// export type PermissionRulesDict = Record<string, PermissionRuleSimple>;
 
 /**
  * Map permission keys -> UI actions they enable.

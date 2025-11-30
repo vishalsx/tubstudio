@@ -3,7 +3,9 @@ import { apiClient } from './api';
 import { LanguageResult, CommonData } from '../types';
 
 export class TranslationService {
-  async identifyObject(file: File, language: string, imageHash?: string | null): Promise<any> {
+  // async identifyObject(file: File, language: string, imageHash?: string | null): Promise<any> {
+    async identifyObject(file: File, language: string, imageHash?: string | null, signal?: AbortSignal): Promise<any> {
+
     const formData = new FormData();
     
     if (imageHash) {
@@ -15,7 +17,7 @@ export class TranslationService {
     }
     
     formData.append("language", language);
-    return apiClient.post('identify/object', formData);
+    return apiClient.post('identify/object', formData, { signal });
   }
 
   async saveToDatabase(

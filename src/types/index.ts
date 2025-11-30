@@ -54,6 +54,8 @@ export interface UserContext {
   permissions: string[];
   languages_allowed: string[];
   permission_rules: PermissionRulesDict;
+  org_name?: string;
+  logo_url?: string;
 }
 
 // Permission interfaces from permissions.ts
@@ -120,7 +122,10 @@ export interface CurriculumImage {
   object_name?: string;
   // UI-only fields, populated on fetch, not for saving
   thumbnail?: string;
+  image_base64?: string;
   isNew?: boolean;
+  isLoading?: boolean;
+
 }
 
 export interface Page {
