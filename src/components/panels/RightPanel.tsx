@@ -131,7 +131,7 @@ export const RightPanel: React.FC<RightPanelProps> = ({
               </div>
               <div className="bg-gray-50 p-2 rounded-lg">
                 <h3 className="font-medium text-gray-700 mb-1">Object Status</h3>
-                {currentCommonData.image_status && currentCommonData.image_status.toLowerCase() !== 'approved' ? <StatusWorkflow statuses={['Draft', 'Released', 'Verified', 'Approved']} currentStatus={currentCommonData.image_status} className="py-1" /> : <p className="font-semibold text-green-600">{currentCommonData.image_status || '-'}</p>}
+                {currentCommonData.image_status ? <StatusWorkflow statuses={['Draft', 'Released', 'Verified', 'Approved']} currentStatus={currentCommonData.image_status} className="py-1" /> : <p className="text-gray-900">-</p>}
               </div>
               <div className="bg-gray-50 p-2 rounded-lg">
                 <h3 className="font-medium text-gray-700 mb-2">File Information</h3>
@@ -159,10 +159,10 @@ export const RightPanel: React.FC<RightPanelProps> = ({
 
   const renderCurriculumNodeDetails = () => {
     if (!selectedCurriculumNode) return null;
-  
+
     let details;
     const isPage = 'images' in selectedCurriculumNode && !('pages' in selectedCurriculumNode);
-  
+
     if (isPage && isStoryLoading) {
       return (
         <div className="h-full flex flex-col">
@@ -222,7 +222,7 @@ export const RightPanel: React.FC<RightPanelProps> = ({
         </>
       );
     }
-    
+
     return (
       <div className="h-full flex flex-col">
         <h2 className="text-lg font-semibold mb-4 flex-shrink-0">{getCurriculumNodeTitle()}</h2>
@@ -247,7 +247,7 @@ export const RightPanel: React.FC<RightPanelProps> = ({
         </div>
       );
     }
-  
+
     // For all other views (upload, database), renderMetadataContent handles both
     // showing metadata for an active image and showing a placeholder if none is active.
     return renderMetadataContent();

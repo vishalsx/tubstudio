@@ -11,6 +11,24 @@ export const StatusWorkflow: React.FC<StatusWorkflowProps> = ({ statuses, curren
   const normalizedCurrentStatus = currentStatus?.toLowerCase() || '';
   const currentIndex = statuses.findIndex(s => s.toLowerCase() === normalizedCurrentStatus);
 
+  // Special handling for Rejected status
+  if (normalizedCurrentStatus === 'rejected') {
+    return (
+      <p className={`text-gray-900 bg-red-50 p-2 rounded-md font-semibold text-red-600 ${className}`}>
+        ❌ Rejected
+      </p>
+    );
+  }
+
+  // Special handling for Approved status
+  if (normalizedCurrentStatus === 'approved') {
+    return (
+      <p className={`text-gray-900 bg-green-50 p-2 rounded-md font-semibold text-green-600 ${className}`}>
+        ✅ Approved
+      </p>
+    );
+  }
+
   if (currentIndex === -1 || !currentStatus) {
     // Fallback for unexpected statuses
     return <p className={`text-gray-900 ${className}`}>{currentStatus || '-'}</p>;

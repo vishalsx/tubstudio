@@ -7,6 +7,46 @@ export const getAuthHeaders = (): Record<string, string> => {
   return token ? { Authorization: `Bearer ${token}` } : {};
 };
 
+// Format user-friendly error messages based on status codes and error details
+const formatUserFriendlyError = (status: number, errorDetail: string): string => {
+  // Common error patterns and their user-friendly messages
+  const errorMessages: Record<number, string> = {
+    400: "Invalid request. Please check your input and try again.",
+    403: "You don't have permission to perform this action.",
+    404: "The requested resource was not found.",
+    408: "Request timeout. Please try again.",
+    409: "This action conflicts with existing data.",
+    413: "The file is too large. Please use a smaller image.",
+    422: "Unable to process the data provided.",
+    429: "Too many requests. Please wait a moment and try again.",
+    500: "Server error. Please try again later.",
+    502: "Server is temporarily unavailable. Please try again.",
+    503: "Service unavailable. Please try again later.",
+    504: "Server timeout. Please try again.",
+  };
+
+  // Get base message for the status code
+  let message = errorMessages[status] || "An unexpected error occurred.";
+
+  // If backend provides a meaningful detail message, use it
+  // Check if errorDetail is meaningful (not just HTTP status text)
+  if (errorDetail &&
+    errorDetail.length > 0 &&
+    !errorDetail.match(/^(Internal Server Error|Bad Request|Not Found|Forbidden)$/i)) {
+    // Extract meaningful part from common backend error formats
+    const cleanDetail = errorDetail
+      .replace(/^\d+:\s*/, '')  // Remove status code prefix like "500: "
+      .replace(/Processing error\.?/i, 'processing the request')  // Make generic errors more specific
+      .trim();
+
+    if (cleanDetail && cleanDetail.length > 3) {
+      message = `${message} ${cleanDetail}`;
+    }
+  }
+
+  return message;
+};
+
 // Centralized error handler to catch and manage API response errors.
 const handleResponseError = async (response: Response) => {
   // If the error is a 401 Unauthorized, it means the token is invalid or expired.
@@ -16,12 +56,16 @@ const handleResponseError = async (response: Response) => {
     // Call the logout function, which will clear session data and redirect to the login page.
     authService.logout();
     // Throw an error to stop the current promise chain. The redirect will happen shortly after.
-    throw new Error('401: Invalid authentication token. Session expired.');
+    throw new Error('Your session has expired. Please log in again.');
   }
-  
-  // For any other error, parse the response and throw a generic error.
+
+  // Parse error details from the response
   const errorData = await response.json().catch(() => ({}));
-  throw new Error(`HTTP Error (${response.status}): ${errorData.detail || response.statusText}`);
+  const errorDetail = errorData.detail || errorData.message || response.statusText;
+
+  // Format and throw user-friendly error
+  const userFriendlyMessage = formatUserFriendlyError(response.status, errorDetail);
+  throw new Error(userFriendlyMessage);
 };
 
 class ApiClient {

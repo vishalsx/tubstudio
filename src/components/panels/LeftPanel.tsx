@@ -6,6 +6,7 @@ import { CurriculumPanel } from './CurriculumPanel';
 import { useCurriculum } from '../../hooks/useCurriculum';
 import { CreateBookModal } from '../curriculum/CreateBookModal';
 import { LoadingSpinner } from '../common/LoadingSpinner';
+import { ErrorMessage } from '../common/ErrorMessage';
 import { useConfirmation } from '../../contexts/ConfirmationContext';
 
 type CurriculumHookProps = ReturnType<typeof useCurriculum>;
@@ -19,15 +20,15 @@ interface LeftPanelProps {
   languageDropdownRef: React.RefObject<HTMLDivElement | null>;
   previewUrl: string | null;
   currentCommonData: CommonData;
-  
+
   // Language selection props
   selectedLanguages: string[];
   languageOptions: string[];
   isLanguageDropdownOpen: boolean;
-  
+
   // Recent translations
   recentTranslations: RecentTranslation[];
-  
+
   // Database search props
   searchQuery: string;
   databaseImages: DatabaseImage[];
@@ -46,7 +47,7 @@ interface LeftPanelProps {
   canUploadPicture: PermissionCheck;
   canIdentifyImage: PermissionCheck;
   canViewWorkList: PermissionCheck;
-  
+
   // Event handlers
   onViewChange: (view: 'upload' | 'database' | 'curriculum') => void;
   onFileChange: (file: File) => void;
@@ -148,71 +149,70 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
     if (leftPanelView === 'upload') {
       return (
         <div
-            className={`border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center p-4 mb-3 h-32 ${
-              canUploadPicture.metadata ? "cursor-pointer hover:border-[#00AEEF]" : "cursor-not-allowed opacity-50"
+          className={`border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center p-4 mb-3 h-32 ${canUploadPicture.metadata ? "cursor-pointer hover:border-[#00AEEF]" : "cursor-not-allowed opacity-50"
             }`}
-            onDragOver={(e) => canUploadPicture.metadata && e.preventDefault()}
-            onDrop={(e) => canUploadPicture.metadata && onDrop(e)}
-            onClick={() => canUploadPicture.metadata && onFileClick()}
-          >
-            <p className="text-gray-500 text-sm mb-1">Drag & drop your image here</p>
-            <p className="text-xs text-gray-400 mb-2">or</p>
-            <button className="px-3 py-1 bg-[#00AEEF] text-white rounded text-sm hover:bg-[#0096CC] transition">
-              Browse Files
-            </button>
-            <input
-              type="file"
-              ref={fileInputRef as React.RefObject<HTMLInputElement>}
-              accept=".jpg,.jpeg,.png,.heic,.heif,.webp,.gif,.bmp,.tiff,.tif"
-              className="hidden"
-              onChange={(e) => {
-                if (!canUploadPicture.metadata) return;
-                const file = e.target.files?.[0];
-                if (!file) return;
-                onFileChange(file);
-              }}
-            />
+          onDragOver={(e) => canUploadPicture.metadata && e.preventDefault()}
+          onDrop={(e) => canUploadPicture.metadata && onDrop(e)}
+          onClick={() => canUploadPicture.metadata && onFileClick()}
+        >
+          <p className="text-gray-500 text-sm mb-1">Drag & drop your image here</p>
+          <p className="text-xs text-gray-400 mb-2">or</p>
+          <button className="px-3 py-1 bg-[#00AEEF] text-white rounded text-sm hover:bg-[#0096CC] transition">
+            Browse Files
+          </button>
+          <input
+            type="file"
+            ref={fileInputRef as React.RefObject<HTMLInputElement>}
+            accept=".jpg,.jpeg,.png,.heic,.heif,.webp,.gif,.bmp,.tiff,.tif"
+            className="hidden"
+            onChange={(e) => {
+              if (!canUploadPicture.metadata) return;
+              const file = e.target.files?.[0];
+              if (!file) return;
+              onFileChange(file);
+            }}
+          />
         </div>
       );
     } else if (leftPanelView === 'database') {
       return (
-          <div className="border-2 border-dashed border-gray-300 rounded-lg p-3 mb-3 flex flex-col">
-            <div className="mb-2">
-              <input
-                type="text"
-                placeholder="Search by object name, category, etc..."
-                value={searchQuery}
-                onChange={(e) => onSearchQueryChange(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter' && !(isSearchLoading || isPopularImagesLoading)) onDatabaseSearch(searchQuery); }}
-                disabled={isSearchLoading || isPopularImagesLoading}
-                className="w-full p-1.5 border border-gray-300 rounded-md text-sm focus:ring-[#00AEEF] focus:border-[#00AEEF] disabled:bg-gray-100"
-              />
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => onDatabaseSearch(searchQuery)}
-                disabled={isSearchLoading || isPopularImagesLoading}
-                className="w-full px-2 py-1.5 bg-[#00AEEF] text-white rounded-lg hover:bg-[#0096CC] transition flex items-center justify-center text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isSearchLoading ? (
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                ) : (
-                  <><MagnifyingGlassIcon className="w-4 h-4 mr-1" />Search</>
-                )}
-              </button>
-              <button
-                onClick={onFetchPopularImages}
-                disabled={isSearchLoading || isPopularImagesLoading}
-                className="w-full px-2 py-1.5 bg-[#F15A29] text-white rounded-lg hover:bg-[#D14A23] transition flex items-center justify-center text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isPopularImagesLoading ? (
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                ) : (
-                  <><SparklesIcon className="w-4 h-4 mr-1" />Popular</>
-                )}
-              </button>
-            </div>
+        <div className="border-2 border-dashed border-gray-300 rounded-lg p-3 mb-3 flex flex-col">
+          <div className="mb-2">
+            <input
+              type="text"
+              placeholder="Search by object name, category, etc..."
+              value={searchQuery}
+              onChange={(e) => onSearchQueryChange(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter' && !(isSearchLoading || isPopularImagesLoading)) onDatabaseSearch(searchQuery); }}
+              disabled={isSearchLoading || isPopularImagesLoading}
+              className="w-full p-1.5 border border-gray-300 rounded-md text-sm focus:ring-[#00AEEF] focus:border-[#00AEEF] disabled:bg-gray-100"
+            />
           </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => onDatabaseSearch(searchQuery)}
+              disabled={isSearchLoading || isPopularImagesLoading}
+              className="w-full px-2 py-1.5 bg-[#00AEEF] text-white rounded-lg hover:bg-[#0096CC] transition flex items-center justify-center text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isSearchLoading ? (
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+              ) : (
+                <><MagnifyingGlassIcon className="w-4 h-4 mr-1" />Search</>
+              )}
+            </button>
+            <button
+              onClick={onFetchPopularImages}
+              disabled={isSearchLoading || isPopularImagesLoading}
+              className="w-full px-2 py-1.5 bg-[#F15A29] text-white rounded-lg hover:bg-[#D14A23] transition flex items-center justify-center text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isPopularImagesLoading ? (
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+              ) : (
+                <><SparklesIcon className="w-4 h-4 mr-1" />Popular</>
+              )}
+            </button>
+          </div>
+        </div>
       );
     } else if (leftPanelView === 'curriculum') {
       return (
@@ -273,10 +273,10 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
     }
     return null;
   };
-  
+
   // Logic to determine if we need horizontal scroll for database view
   const isHorizontalScroll = leftPanelView === 'database' && databaseImages.length > 9;
-  
+
   return (
     <div className={`w-full bg-white rounded-lg shadow p-4 flex flex-col overflow-hidden ${className}`}>
       {/* Header with Toggle */}
@@ -296,7 +296,7 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
             <span className="text-[#F15A29] ml-1">TUB</span>
             <span className="text-[#00AEEF] ml-1"> Shot</span>
           </h2>
-          
+
           <div className="flex items-center space-x-1">
             <button
               onClick={() => onViewChange('upload')}
@@ -323,11 +323,11 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
           </div>
         </div>
       </div>
-      
+
       {/* Main Content (conditionally rendered) */}
       <div className={`flex-1 flex flex-col overflow-y-auto transition-opacity duration-200 ${isCollapsed ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
         {renderViewSpecificControls()}
-        
+
         {/* Content Area for Upload View */}
         {leftPanelView === 'upload' && (
           (previewUrl || currentCommonData?.image_base64) ? (
@@ -354,7 +354,7 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
 
             {databaseImages.length > 0 ? (
               // <div className="grid grid-cols-3 gap-2 pr-2">
-              <div className={isHorizontalScroll 
+              <div className={isHorizontalScroll
                 ? "grid grid-rows-3 grid-flow-col gap-2 w-max" // Horizontal scroll layout
                 : "grid grid-cols-3 gap-2 pr-2" // Vertical scroll layout
               }>
@@ -392,7 +392,7 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
                   <ChevronDownIcon className={`w-4 h-4 ml-2 transition-transform ${isLanguageDropdownOpen ? 'rotate-180' : ''}`} />
                 </button>
                 {isLanguageDropdownOpen && (
-                 <div className="absolute bottom-full right-0 mb-1 bg-white border border-gray-300 rounded-lg shadow-lg z-10 max-h-60 overflow-y-auto min-w-[150px]">
+                  <div className="absolute bottom-full right-0 mb-1 bg-white border border-gray-300 rounded-lg shadow-lg z-10 max-h-60 overflow-y-auto min-w-[150px]">
                     {languageOptions.map((language) => (
                       <label key={language} className="flex items-center px-3 py-2 hover:bg-gray-50 cursor-pointer">
                         <input
@@ -408,22 +408,21 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
                 )}
               </div>
               <button
-              //   onClick={onIdentify}
-              //   disabled={isLoading || !canIdentifyImage.metadata || isRedirecting}
-              //   title="Identify Object"
-              //   className={`px-4 py-2 rounded-lg transition flex justify-center items-center ${isLoading || !canIdentifyImage.metadata ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-[#00AEEF] text-white hover:bg-[#0096CC]'}`}
-              // >
-              //   {isLoading ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : <SparklesIcon className="w-5 h-5" />}
-              onClick={isLoading ? onCancelIdentify : onIdentify}
-              disabled={(!isLoading && !canIdentifyImage.metadata) || isRedirecting}
-              title={isLoading ? "Cancel Identification" : "Identify Object"}
-              className={`px-4 py-2 rounded-lg transition flex justify-center items-center ${
-                  (!isLoading && !canIdentifyImage.metadata) ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 
+                //   onClick={onIdentify}
+                //   disabled={isLoading || !canIdentifyImage.metadata || isRedirecting}
+                //   title="Identify Object"
+                //   className={`px-4 py-2 rounded-lg transition flex justify-center items-center ${isLoading || !canIdentifyImage.metadata ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-[#00AEEF] text-white hover:bg-[#0096CC]'}`}
+                // >
+                //   {isLoading ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : <SparklesIcon className="w-5 h-5" />}
+                onClick={isLoading ? onCancelIdentify : onIdentify}
+                disabled={(!isLoading && !canIdentifyImage.metadata) || isRedirecting}
+                title={isLoading ? "Cancel Identification" : "Identify Object"}
+                className={`px-4 py-2 rounded-lg transition flex justify-center items-center ${(!isLoading && !canIdentifyImage.metadata) ? 'bg-gray-300 text-gray-500 cursor-not-allowed' :
                   isLoading ? 'bg-red-500 text-white hover:bg-red-600' : 'bg-[#00AEEF] text-white hover:bg-[#0096CC]'
-              }`}
-            >
-              {/* {isLoading ? <StopIcon className="w-5 h-5 animate-pulse" /> : <SparklesIcon className="w-5 h-5" />} */}
-              {isLoading ? (
+                  }`}
+              >
+                {/* {isLoading ? <StopIcon className="w-5 h-5 animate-pulse" /> : <SparklesIcon className="w-5 h-5" />} */}
+                {isLoading ? (
                   <div className="flex items-center gap-1">
                     <StopIcon className="w-5 h-5 animate-pulse" />
                     {identifyProgress && (
@@ -448,11 +447,9 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
             </div>
 
             {error && (
-              <div className="p-3 rounded-lg bg-red-50 border-l-4 border-red-500">
-                <p className="font-medium text-red-600 text-sm">{error}</p>
-              </div>
+              <ErrorMessage message={error} showDog={true} className="mb-4" />
             )}
-            
+
             <div className="mt-auto">
               <h3 className="font-medium mb-2">Latest Edits</h3>
               <div className="flex space-x-3 overflow-x-auto pb-2 -mx-1 px-1">

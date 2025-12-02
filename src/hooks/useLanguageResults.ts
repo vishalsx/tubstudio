@@ -7,12 +7,12 @@ import { DEFAULT_COMMON_DATA, DEFAULT_FILE_INFO, UI_MESSAGES } from '../utils/co
 // import { RETURN_PERMISSION_ACTION } from '../utils/permissions/hasPermissions';
 import { UserContext } from '../types';
 import { returnPermissionForUiActionForUser } from '../utils/permissions/hasPermissions';
-import { useAuth } from "./useAuth"; 
+import { useAuth } from "./useAuth";
 
 
 
 export const useLanguageResults = () => {
-  
+
   const { userContext } = useAuth(); // ✅ access user context here
   const [selectedLanguages, setSelectedLanguages] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState<string>('');
@@ -48,7 +48,7 @@ export const useLanguageResults = () => {
       if (perLanguageCommonData[activeTab]) {
         setCurrentCommonData(perLanguageCommonData[activeTab]);
       }
-      
+
       if (perLanguageFileInfo[activeTab]) {
         setCurrentFileInfo(perLanguageFileInfo[activeTab]);
       } else {
@@ -104,20 +104,20 @@ export const useLanguageResults = () => {
       if (prev.includes(language)) {
         // --- REMOVAL LOGIC ---
         const newLanguages = prev.filter(lang => lang !== language);
-        
+
         // Update active tab if the removed one was active
         if (activeTab === language) {
           setActiveTab(newLanguages.length > 0 ? newLanguages[0] : '');
         }
-        
+
         // Remove from available tabs as well
         setAvailableTabs(prevTabs => prevTabs.filter(tab => tab !== language));
 
         // Clean up all related state for this language
         const cleanup = (prevState: { [key: string]: any }) => {
-            const newState = { ...prevState };
-            delete newState[language];
-            return newState;
+          const newState = { ...prevState };
+          delete newState[language];
+          return newState;
         };
 
         setLanguageResults(cleanup);
@@ -128,7 +128,7 @@ export const useLanguageResults = () => {
         setPerLanguageFileInfo(cleanup);
         setIsEditing(cleanup);
         setIsSaving(cleanup);
-        
+
         return newLanguages;
       } else {
         // --- ADDITION LOGIC ---
@@ -153,7 +153,7 @@ export const useLanguageResults = () => {
       return;
     }
 
-    flushSync(() => {});
+    flushSync(() => { });
 
     setIsSaving(prev => ({ ...prev, [currentTab]: ui_action }));
     setSaveMessages(prev => ({ ...prev, [currentTab]: null }));
@@ -163,8 +163,8 @@ export const useLanguageResults = () => {
 
     try {
       // NEW: Get common data based on mode
-      const tabCommonData = commonDataMode === 'shared' 
-        ? currentCommonData 
+      const tabCommonData = commonDataMode === 'shared'
+        ? currentCommonData
         : (perLanguageCommonData[currentTab] || currentCommonData);
 
       commonAttributes = {
@@ -195,7 +195,7 @@ export const useLanguageResults = () => {
       // const action = RETURN_PERMISSION_ACTION[ui_action];
       const action = returnPermissionForUiActionForUser(userContext!)[ui_action];
       console.log(`Performing QuickSave with action: ${action}\nAnd with userContext:`, userContext);
-      
+
       const returned_data = await translationService.saveToDatabase(
         commonAttributes,
         languageAttributes,
@@ -220,14 +220,14 @@ export const useLanguageResults = () => {
 
       if (returned_data[0]?.translation_id) {
         await refreshActiveTab(currentTab, returned_data[0]?.translation_id);
+        console.log('=== After refreshActiveTab ===');
+        console.log('languageResults[currentTab] should now be updated by refreshActiveTab');
       }
 
       setOriginalCommonData(currentCommonData);
-      setOriginalResults(prev => ({
-        ...prev,
-        [currentTab]: { ...languageResults[currentTab] },
-      }));
-      
+      // Note: originalResults is now updated inside refreshActiveTab
+      // to capture the refreshed data with translation_status
+
       setSaveStatus(prev => ({ ...prev, [currentTab]: "saved" }));
       setIsEditing(prev => ({ ...prev, [currentTab]: false }));
       setSaveMessages(prev => ({
@@ -249,6 +249,11 @@ export const useLanguageResults = () => {
       const translationId = translationIdOverride || languageResults[tab]?.translation_id;
       if (!translationId) return;
 
+      // Capture existing image_base64 before the API call
+      const existingImageBase64 = commonDataMode === 'shared'
+        ? currentCommonData.image_base64
+        : (perLanguageCommonData[tab]?.image_base64 || currentCommonData.image_base64);
+
       setLanguageResults((prev) => ({
         ...prev,
         [tab]: {
@@ -257,7 +262,7 @@ export const useLanguageResults = () => {
           error: undefined,
         },
       }));
-      
+
       console.log("calling API object/translation_id:", translationId);
       const data = await translationService.getTranslationById(translationId);
       console.log("Refresh response for", tab, data);
@@ -270,7 +275,8 @@ export const useLanguageResults = () => {
         age_appropriate: data.common_data?.metadata?.age_appropriate || "",
         image_status: data.common_data?.image_status || "",
         object_id: data.common_data?._id || "",
-        image_base64: data.common_data?.image_base64 || "",
+        // Preserve existing image_base64 if API doesn't return it
+        image_base64: data.common_data?.image_base64 || existingImageBase64 || "",
         flag_object: data.common_data?.flag_object || "",
       };
 
@@ -325,14 +331,32 @@ export const useLanguageResults = () => {
         },
       }));
 
-      setSaveStatus((prev) => ({ 
-        ...prev, 
+      // Update originalResults to include the refreshed data
+      // This ensures toggling edit mode after save doesn't lose translation_status
+      setOriginalResults((prev) => ({
+        ...prev,
+        [tab]: {
+          object_name: data.translations?.object_name || "",
+          object_description: data.translations?.object_description || "",
+          object_hint: data.translations?.object_hint || "",
+          object_short_hint: data.translations?.object_short_hint || "",
+          translation_status: data.translations?.translation_status || "",
+          translation_id: data.translations?._id || "",
+          flag_translation: data.flag_translation || false,
+        },
+      }));
+
+      console.log('=== refreshActiveTab - originalResults updated ===');
+      console.log('translation_status saved:', data.translations?.translation_status);
+
+      setSaveStatus((prev) => ({
+        ...prev,
         [tab]: "saved"
       }));
 
     } catch (err) {
       console.error("Refresh failed:", err);
-      
+
       setLanguageResults((prev) => ({
         ...prev,
         [tab]: {
@@ -342,7 +366,7 @@ export const useLanguageResults = () => {
         },
       }));
     }
-  }, [activeTab, languageResults, commonDataMode]);
+  }, [activeTab, languageResults, commonDataMode, currentCommonData, perLanguageCommonData]);
 
   const clearResults = useCallback(() => {
     setLanguageResults({});
@@ -363,9 +387,16 @@ export const useLanguageResults = () => {
 
   const toggleEdit = useCallback((tab: string) => {
     const currentTab = tab;
-    
+
+    console.log('=== toggleEdit DEBUG ===');
+    console.log('Current tab:', currentTab);
+    console.log('isEditing before:', isEditing[currentTab]);
+    console.log('languageResults[currentTab]:', languageResults[currentTab]);
+    console.log('originalResults[currentTab]:', originalResults[currentTab]);
+
     // If currently in edit mode, revert changes and exit edit mode
     if (isEditing[currentTab]) {
+      console.log('EXITING edit mode - reverting to original');
       // Revert common data if it's the 'English' tab
       if (currentTab === 'English') {
         setCurrentCommonData(originalCommonData);
@@ -379,10 +410,25 @@ export const useLanguageResults = () => {
       setIsEditing(prev => ({ ...prev, [currentTab]: false }));
       return;
     }
-  
-    // If not in edit mode, simply enter edit mode
+
+    // If not in edit mode, enter edit mode and save current state
+    console.log('ENTERING edit mode');
+
+    // CRITICAL: Save current state before entering edit mode
+    // This allows us to revert changes if user exits without saving
+    if (currentTab === 'English') {
+      // Save common data snapshot for English tab
+      setOriginalCommonData(currentCommonData);
+    }
+
+    // Save language-specific data snapshot
+    setOriginalResults(prev => ({
+      ...prev,
+      [currentTab]: { ...languageResults[currentTab] }
+    }));
+
     setIsEditing(prev => ({ ...prev, [currentTab]: true }));
-  }, [isEditing, originalCommonData, originalResults]);
+  }, [isEditing, originalCommonData, originalResults, languageResults, currentCommonData]);
 
 
   return {
@@ -404,7 +450,7 @@ export const useLanguageResults = () => {
     isLoading,
     isDatabaseView,
     commonDataMode,
-    
+
     // Setters
     setSelectedLanguages,
     setActiveTab,
@@ -423,7 +469,7 @@ export const useLanguageResults = () => {
     setIsLoading,
     setIsDatabaseView,
     setCommonDataMode,
-    
+
     // Actions
     updateLanguageResult,
     updateCommonData,
