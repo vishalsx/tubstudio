@@ -78,6 +78,10 @@ interface LeftPanelProps {
 
   // Notifications
   notification: { message: string; type: 'success' | 'error' } | null;
+
+  // Worklist callout
+  showWorklistCallout?: boolean;
+  onDismissCallout?: () => void;
 }
 
 export const LeftPanel: React.FC<LeftPanelProps> = ({
@@ -126,6 +130,8 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
   curriculumProps,
   languageForImageSearch,
   notification,
+  showWorklistCallout = false,
+  onDismissCallout,
 }) => {
   const [isCreateBookModalOpen, setIsCreateBookModalOpen] = useState(false);
   const confirm = useConfirmation();
@@ -445,6 +451,33 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
                 {isWorklistLoading ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : <ListBulletIcon className="w-5 h-5" />}
               </button>
             </div>
+
+            {/* Worklist Callout */}
+            {showWorklistCallout && (
+              <div className="relative mb-4 animate-bounce">
+                <div className="bg-gradient-to-r from-[#F15A29] to-[#D14A23] text-white px-4 py-2 rounded-lg shadow-lg">
+                  <button
+                    onClick={onDismissCallout}
+                    className="absolute top-1 right-1 text-white hover:text-gray-200 transition"
+                    title="Dismiss"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                  <div className="flex items-center gap-2 pr-6">
+                    <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    <p className="text-sm font-medium">
+                      Click on fetch button for your next work items...
+                    </p>
+                  </div>
+                </div>
+                {/* Arrow pointing up to button */}
+                <div className="absolute -top-2 right-8 w-0 h-0 border-l-8 border-l-transparent border-r-8 border-r-transparent border-b-8 border-b-[#F15A29]"></div>
+              </div>
+            )}
 
             {error && (
               <ErrorMessage message={error} showDog={true} className="mb-4" />

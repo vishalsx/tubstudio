@@ -36,7 +36,7 @@ const formatUserFriendlyError = (status: number, errorDetail: string): string =>
     // Extract meaningful part from common backend error formats
     const cleanDetail = errorDetail
       .replace(/^\d+:\s*/, '')  // Remove status code prefix like "500: "
-      .replace(/Processing error\.?/i, 'processing the request')  // Make generic errors more specific
+      .replace(/Processing error\.?/i, 'Processing failed.')  // Make generic errors more specific
       .trim();
 
     if (cleanDetail && cleanDetail.length > 3) {

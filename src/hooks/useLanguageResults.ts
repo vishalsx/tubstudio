@@ -146,7 +146,7 @@ export const useLanguageResults = () => {
     handleLanguageToggle(language);
   }, [handleLanguageToggle]);
 
-  const handleQuickSave = useCallback(async (ui_action: string, file?: File, username?: string) => {
+  const handleQuickSave = useCallback(async (ui_action: string, file?: File, username?: string, imageHash?: string | null, onSuccess?: () => void) => {
     const currentTab = activeTab;
 
     if ((!file || !languageResults[currentTab]) && ui_action === "saveToDatabase") {
@@ -200,7 +200,8 @@ export const useLanguageResults = () => {
         commonAttributes,
         languageAttributes,
         action,
-        file
+        file,
+        imageHash
       );
 
       console.log("Data returned after QuickSave:", returned_data[0]?.translation_id);
@@ -234,6 +235,13 @@ export const useLanguageResults = () => {
         ...prev,
         [currentTab]: `${currentTab} ${UI_MESSAGES.SUCCESS.DATA_SAVED}`,
       }));
+
+      // Call onSuccess callback if provided
+      if (onSuccess) {
+        onSuccess();
+      }
+
+
     } catch (err) {
       setSaveMessages(prev => ({
         ...prev,

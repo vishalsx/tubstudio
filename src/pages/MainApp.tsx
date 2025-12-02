@@ -72,6 +72,10 @@ export const MainApp: React.FC<MainAppProps> = ({ authData }) => {
   const [selectedCurriculumNode, setSelectedCurriculumNode] = useState<Book | Chapter | Page | null>(null);
   const activeBookIdRef = useRef<string | null>(null);
 
+  // Worklist callout state
+  const [showWorklistCallout, setShowWorklistCallout] = useState(false);
+  const worklistCalloutTimerRef = useRef<NodeJS.Timeout | null>(null);
+
   // This effect syncs the selected node for the right panel with the active book from the curriculum hook.
   // It now only resets to the book level if the active book's ID changes, preventing it from
   // overriding a chapter/page selection when the active book's data is merely updated.
@@ -145,6 +149,15 @@ export const MainApp: React.FC<MainAppProps> = ({ authData }) => {
   useEffect(() => {
     languageResults.setCommonDataMode(commonDataMode);
   }, [commonDataMode, languageResults.setCommonDataMode]);
+
+  // Cleanup worklist callout timer on unmount
+  useEffect(() => {
+    return () => {
+      if (worklistCalloutTimerRef.current) {
+        clearTimeout(worklistCalloutTimerRef.current);
+      }
+    };
+  }, []);
 
   const getCurrentCommonData = (activeTab: string) => {
     if (commonDataMode === 'shared') {
@@ -435,7 +448,6 @@ export const MainApp: React.FC<MainAppProps> = ({ authData }) => {
           }
         }
       });
-      imageUpload.setImageHash(null);
       await Promise.all(identifyPromises);
     } catch (err) {
       if ((err as Error).name !== 'AbortError') {
@@ -458,6 +470,23 @@ export const MainApp: React.FC<MainAppProps> = ({ authData }) => {
       languageResults.setIsEditing, languageResults.setAvailableTabs, languageResults.setSaveMessages
     );
   };
+
+  // Function to show the worklist callout with auto-hide
+  const showWorklistHint = useCallback(() => {
+    // Show callout when worklist is fetched successfully
+    setShowWorklistCallout(true);
+
+    // Clear existing timer if any
+    if (worklistCalloutTimerRef.current) {
+      clearTimeout(worklistCalloutTimerRef.current);
+    }
+
+    // Auto-hide after 5 seconds
+    worklistCalloutTimerRef.current = setTimeout(() => {
+      setShowWorklistCallout(false);
+      worklistCalloutTimerRef.current = null;
+    }, 5000);
+  }, []);
 
   const handleThumbnailClick = async (thumbnailIndex: number) => {
     try {
@@ -654,6 +683,14 @@ export const MainApp: React.FC<MainAppProps> = ({ authData }) => {
           onSelectNode={setSelectedCurriculumNode}
           languageForImageSearch={effectiveLanguageForImageSearch}
           notification={curriculum.notification}
+          showWorklistCallout={showWorklistCallout}
+          onDismissCallout={() => {
+            if (worklistCalloutTimerRef.current) {
+              clearTimeout(worklistCalloutTimerRef.current);
+              worklistCalloutTimerRef.current = null;
+            }
+            setShowWorklistCallout(false);
+          }}
         />
 
         <MiddlePanel
@@ -676,7 +713,17 @@ export const MainApp: React.FC<MainAppProps> = ({ authData }) => {
           onTabChange={languageResults.setActiveTab}
           onRemoveTab={languageResults.removeLanguageTab}
           onUpdateLanguageResult={languageResults.updateLanguageResult}
-          onSave={(action: string) => languageResults.handleQuickSave(action, imageUpload.file ?? undefined, userContext?.username)}
+          onSave={(action: string) => {
+            // Check if action is one of the approved ones for showing the hint
+            const shouldShowHint = ['approveData', 'verifyData', 'rejectData'].includes(action);
+            languageResults.handleQuickSave(
+              action,
+              imageUpload.file ?? undefined,
+              userContext?.username,
+              imageUpload.imageHash,
+              shouldShowHint ? showWorklistHint : undefined
+            );
+          }}
           onSkip={handleSkip}
           onToggleEdit={languageResults.toggleEdit}
 

@@ -28,11 +28,16 @@ export class TranslationService {
     commonAttributes: any,
     languageAttributes: any[],
     action: string,
-    file?: File
+    file?: File,
+    imageHash?: string | null
   ): Promise<any> {
     const formData = new FormData();
 
-    if (file) {
+    if (imageHash) {
+      console.log("saveToDatabase: Using image_hash:", imageHash);
+      formData.append("image_hash", imageHash);
+    } else if (file) {
+      console.log("saveToDatabase: Using file upload:", file.name);
       formData.append("image", file);
     }
 
