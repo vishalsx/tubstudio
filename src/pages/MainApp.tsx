@@ -424,6 +424,7 @@ export const MainApp: React.FC<MainAppProps> = ({ authData }) => {
           languageResults.updateLanguageResult(language, 'object_description', data.object_description);
           languageResults.updateLanguageResult(language, 'object_hint', data.object_hint);
           languageResults.updateLanguageResult(language, 'object_short_hint', data.object_short_hint);
+          languageResults.updateLanguageResult(language, 'quiz_qa', data.quiz_qa || []);
           languageResults.updateLanguageResult(language, 'translation_status', data.translation_status);
           languageResults.updateLanguageResult(language, 'translation_id', data.translation_id);
           languageResults.updateLanguageResult(language, 'flag_translation', data.flag_translation);
@@ -609,6 +610,7 @@ export const MainApp: React.FC<MainAppProps> = ({ authData }) => {
       languageResults.updateLanguageResult(language, 'object_description', data.object_description);
       languageResults.updateLanguageResult(language, 'object_hint', data.object_hint);
       languageResults.updateLanguageResult(language, 'object_short_hint', data.object_short_hint);
+      languageResults.updateLanguageResult(language, 'quiz_qa', data.quiz_qa || []);
 
       // Update common data ONLY if object_flag received is false (not saved yet)
       if (!data.flag_object) {

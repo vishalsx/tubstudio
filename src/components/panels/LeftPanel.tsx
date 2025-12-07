@@ -387,10 +387,10 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
         {leftPanelView !== 'curriculum' && (
           <>
             <div className="flex items-center gap-2 mb-4">
-              <div className="relative" ref={languageDropdownRef as React.RefObject<HTMLDivElement>}>
+              <div className="relative flex-1" ref={languageDropdownRef as React.RefObject<HTMLDivElement>}>
                 <button
                   onClick={onLanguageDropdownToggle}
-                  className="px-3 py-1 border border-gray-300 bg-white text-gray-700 rounded text-sm flex items-center justify-between focus:ring-2 focus:ring-[#00AEEF] min-w-[180px]"
+                  className="px-3 py-1 border border-gray-300 bg-white text-gray-700 rounded text-sm flex items-center justify-between focus:ring-2 focus:ring-[#00AEEF] min-w-[180px] w-full"
                 >
                   <span className="truncate">
                     {selectedLanguages.length === 0 ? 'Select Languages' : `${selectedLanguages.length} selected`}
@@ -413,43 +413,41 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
                   </div>
                 )}
               </div>
-              <button
-                //   onClick={onIdentify}
-                //   disabled={isLoading || !canIdentifyImage.metadata || isRedirecting}
-                //   title="Identify Object"
-                //   className={`px-4 py-2 rounded-lg transition flex justify-center items-center ${isLoading || !canIdentifyImage.metadata ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-[#00AEEF] text-white hover:bg-[#0096CC]'}`}
-                // >
-                //   {isLoading ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : <SparklesIcon className="w-5 h-5" />}
-                onClick={isLoading ? onCancelIdentify : onIdentify}
-                disabled={(!isLoading && !canIdentifyImage.metadata) || isRedirecting}
-                title={isLoading ? "Cancel Identification" : "Identify Object"}
-                className={`px-4 py-2 rounded-lg transition flex justify-center items-center ${(!isLoading && !canIdentifyImage.metadata) ? 'bg-gray-300 text-gray-500 cursor-not-allowed' :
-                  isLoading ? 'bg-red-500 text-white hover:bg-red-600' : 'bg-[#00AEEF] text-white hover:bg-[#0096CC]'
-                  }`}
-              >
-                {/* {isLoading ? <StopIcon className="w-5 h-5 animate-pulse" /> : <SparklesIcon className="w-5 h-5" />} */}
-                {isLoading ? (
-                  <div className="flex items-center gap-1">
-                    <StopIcon className="w-5 h-5 animate-pulse" />
-                    {identifyProgress && (
-                      <span className="text-xs font-bold">
-                        {identifyProgress.current}/{identifyProgress.total}
-                      </span>
-                    )}
-                  </div>
-                ) : (
-                  <SparklesIcon className="w-5 h-5" />
-                )}
+              {canIdentifyImage.metadata && (
+                <button
+                  onClick={isLoading ? onCancelIdentify : onIdentify}
+                  disabled={(!isLoading && !canIdentifyImage.metadata) || isRedirecting}
+                  title={isLoading ? "Cancel Identification" : "Identify Object"}
+                  className={`px-4 py-2 rounded-lg transition flex-1 flex justify-center items-center ${(!isLoading && !canIdentifyImage.metadata) ? 'bg-gray-300 text-gray-500 cursor-not-allowed' :
+                    isLoading ? 'bg-red-500 text-white hover:bg-red-600' : 'bg-[#00AEEF] text-white hover:bg-[#0096CC]'
+                    }`}
+                >
+                  {/* {isLoading ? <StopIcon className="w-5 h-5 animate-pulse" /> : <SparklesIcon className="w-5 h-5" />} */}
+                  {isLoading ? (
+                    <div className="flex items-center gap-1">
+                      <StopIcon className="w-5 h-5 animate-pulse" />
+                      {identifyProgress && (
+                        <span className="text-xs font-bold">
+                          {identifyProgress.current}/{identifyProgress.total}
+                        </span>
+                      )}
+                    </div>
+                  ) : (
+                    <SparklesIcon className="w-5 h-5" />
+                  )}
 
-              </button>
-              <button
-                onClick={onFetchWorklist}
-                disabled={!canViewWorkList.language || isWorklistLoading}
-                title="My Work Items"
-                className={`px-4 py-2 rounded-lg transition flex justify-center items-center ${!canViewWorkList.language || isWorklistLoading ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-[#F15A29] text-white hover:bg-[#D14A23]'}`}
-              >
-                {isWorklistLoading ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : <ListBulletIcon className="w-5 h-5" />}
-              </button>
+                </button>
+              )}
+              {canViewWorkList.language && (
+                <button
+                  onClick={onFetchWorklist}
+                  disabled={!canViewWorkList.language || isWorklistLoading}
+                  title="My Work Items"
+                  className={`px-4 py-2 rounded-lg transition flex-1 flex justify-center items-center ${!canViewWorkList.language || isWorklistLoading ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-[#F15A29] text-white hover:bg-[#D14A23]'}`}
+                >
+                  {isWorklistLoading ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : <ListBulletIcon className="w-5 h-5" />}
+                </button>
+              )}
             </div>
 
             {/* Worklist Callout */}

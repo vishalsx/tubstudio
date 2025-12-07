@@ -1,10 +1,11 @@
 // components/panels/MiddlePanel.tsx
 import React, { useState, useEffect } from 'react';
-import { XMarkIcon, StarIcon, ArrowUpCircleIcon, CheckCircleIcon, CheckBadgeIcon, XCircleIcon, ArrowRightCircleIcon, PencilIcon } from '@heroicons/react/24/solid';
-import { PlusCircleIcon, TrashIcon, SparklesIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
+import { XMarkIcon, StarIcon, ArrowUpCircleIcon, CheckCircleIcon, CheckBadgeIcon, XCircleIcon, ArrowRightCircleIcon, PencilIcon, EyeIcon, ArrowDownTrayIcon } from '@heroicons/react/24/solid';
+import { PlusCircleIcon, TrashIcon, SparklesIcon, ArrowPathIcon, AcademicCapIcon } from '@heroicons/react/24/outline';
 import { LanguageResult, SaveStatus, PermissionCheck, CurriculumImage, DatabaseImage, CommonData, Page, Book } from '../../types';
 import { StatusWorkflow } from '../common/StatusWorkflow';
 import { ImageSearchModal } from '../common/ImageSearchModal';
+import { QuizQAModal } from '../common/QuizQAModal';
 import { LoadingSpinner } from '../common/LoadingSpinner';
 
 interface MiddlePanelProps {
@@ -101,6 +102,7 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = (props) => {
   } = props;
 
   const [isImageSearchModalOpen, setIsImageSearchModalOpen] = useState(false);
+  const [isQuizModalOpen, setIsQuizModalOpen] = useState(false);
   const [userComments, setUserComments] = useState('');
   const [validationErrors, setValidationErrors] = useState<Set<string>>(new Set());
 
@@ -153,6 +155,16 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = (props) => {
         errors.add(key);
       }
     });
+
+    // Validate Quiz QA
+    const quizQA = currentResult.quiz_qa || [];
+    const hasInvalidQuizQA = quizQA.some(item =>
+      !item.question.trim() || !item.answer.trim() || !item.difficulty_level?.trim()
+    );
+
+    if (hasInvalidQuizQA) {
+      errors.add('quiz_qa');
+    }
 
     if (errors.size > 0) {
       setValidationErrors(errors);
@@ -298,10 +310,10 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = (props) => {
               <div className="space-y-4">
                 <div className="flex flex-wrap gap-2 pb-4 border-b border-gray-200">
                   <button onClick={handleEditClick} disabled={!permissions.canSwitchToEditMode.language || isLoading || hasError || isCurrentTabSaving} title={!permissions.canSwitchToEditMode.language ? 'You do not have permission to switch edit mode' : (isEditing[activeTab] ? 'Switch to View Mode' : 'Switch to Edit Mode')} className={`p-2 rounded transition ${!permissions.canSwitchToEditMode.language ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'text-gray-600 hover:text-[#00AEEF] hover:bg-gray-100'} disabled:opacity-50`}>
-                    {isEditing[activeTab] ? <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542 7z"></path></svg> : <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002 2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>}
+                    {isEditing[activeTab] ? <EyeIcon className="w-5 h-5" /> : <PencilIcon className="w-5 h-5" />}
                   </button>
                   <button onClick={() => handleActionClick("saveToDatabase")} disabled={isCurrentTabSaving || !permissions.canSaveToDatabase.language || isLoading || hasError} title={`Save ${activeTab} to Database`} className={`p-2 rounded transition ${!permissions.canSaveToDatabase.language ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'text-gray-600 hover:text-green-600 hover:bg-green-50'} disabled:opacity-50`}>
-                    {savingAction === 'saveToDatabase' ? <div className="w-5 h-5 border-2 border-gray-400 border-t-green-400 rounded-full animate-spin"></div> : <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>}
+                    {savingAction === 'saveToDatabase' ? <div className="w-5 h-5 border-2 border-gray-400 border-t-green-400 rounded-full animate-spin"></div> : <ArrowDownTrayIcon className="w-5 h-5" />}
                   </button>
                   <button onClick={() => handleActionClick("releaseToDatabase")} disabled={isCurrentTabSaving || !permissions.canReleaseToDatabase.language || isLoading || hasError} title="Release to Database" className={`p-2 rounded transition ${!permissions.canReleaseToDatabase.language ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'text-gray-600 hover:text-blue-600 hover:bg-blue-50'} disabled:opacity-50`}>
                     {savingAction === 'releaseToDatabase' ? <div className="w-5 h-5 border-2 border-gray-400 border-t-blue-400 rounded-full animate-spin"></div> : <ArrowUpCircleIcon className="w-5 h-5" />}
@@ -317,6 +329,9 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = (props) => {
                   </button>
                   <button onClick={onSkip} disabled={isCurrentTabSaving || isWorklistLoading || !permissions.canSkiptData.language || isLoading || hasError} title="Skip to Next" className={`p-2 rounded transition ${!permissions.canSkiptData.language ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'text-gray-600 hover:text-orange-600 hover:bg-orange-50'} disabled:opacity-50`}>
                     {isWorklistLoading ? <div className="w-5 h-5 border-2 border-gray-400 border-t-orange-400 rounded-full animate-spin"></div> : <ArrowRightCircleIcon className="w-5 h-5" />}
+                  </button>
+                  <button onClick={() => setIsQuizModalOpen(true)} disabled={isLoading || hasError} title={isFieldInvalid('quiz_qa') ? "Quiz QA has errors (empty fields)" : "View Quiz Q&A"} className={`p-2 rounded transition ${isFieldInvalid('quiz_qa') ? 'text-red-600 bg-red-50 hover:bg-red-100' : 'text-gray-600 hover:text-[#00AEEF] hover:bg-gray-100'} disabled:opacity-50`}>
+                    <AcademicCapIcon className="w-5 h-5" />
                   </button>
                 </div>
                 {isLoading ? <div className="flex items-center justify-center py-8"><div className="flex items-center space-x-2"><div className="w-5 h-5 border-2 border-gray-300 border-t-[#00AEEF] rounded-full animate-spin"></div><span className="text-gray-600">Loading {activeTab} Details...</span></div></div> : hasError ? <div className="p-3 bg-red-50 text-red-700 rounded-lg"><p><strong>Error:</strong> {currentResult.error}</p></div> : <div className="space-y-4">{[{ label: 'Object Name', key: 'object_name' }, { label: 'Description', key: 'object_description', textarea: true }, { label: 'Hint', key: 'object_hint', textarea: true }, { label: 'Short Hint', key: 'object_short_hint', textarea: true }, { label: 'Translation Status', key: 'translation_status' }].map(({ label, key, textarea }) => {
@@ -610,6 +625,17 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = (props) => {
           language={languageForImageSearch}
           onAddNewImage={handleAddNewImage}
           existingImageHashes={selectedPageData?.images.map(img => img.image_hash) || []}
+        />
+      )}
+      {isQuizModalOpen && activeTab && languageResults[activeTab] && (
+        <QuizQAModal
+          isOpen={isQuizModalOpen}
+          onClose={() => setIsQuizModalOpen(false)}
+          quizQA={languageResults[activeTab].quiz_qa || []}
+          language={activeTab}
+          isEditing={isEditing[activeTab]}
+          onUpdate={(newQuizQA) => onUpdateLanguageResult(activeTab, 'quiz_qa', newQuizQA)}
+          hasValidationErrors={isFieldInvalid('quiz_qa')}
         />
       )}
     </div>

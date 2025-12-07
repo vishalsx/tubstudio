@@ -39,7 +39,7 @@ export const useWorklist = () => {
     setSaveMessages: any
   ) => {
     setSaveMessages({});
-    
+
     // Determine languages to fetch
     const languagesToFetch = language === "ALL" ? selectedLanguages : [language];
     const isFullRefresh = language === "ALL";
@@ -127,14 +127,14 @@ export const useWorklist = () => {
           setCurrentCommonData,
           setCurrentFileInfo
         );
-        
+
         setWorklistFetched(true);
         return;
       }
 
       // Process returned data
       const processedData = processWorklistData(data);
-      
+
       // Update states based on refresh type
       if (isFullRefresh) {
         // Replace everything
@@ -188,7 +188,7 @@ export const useWorklist = () => {
     handleFetchWorklistCallback: (language: string) => Promise<void>
   ) => {
     const translationId = languageResults[activeTab]?.translation_id || '';
-    
+
     if (!translationId) {
       setError('No translation ID found for this record');
       return;
@@ -199,7 +199,7 @@ export const useWorklist = () => {
       setError(null);
 
       await translationService.skipToUnlock(translationId);
-      
+
       // Refresh the worklist
       await handleFetchWorklistCallback(activeTab);
 
@@ -250,7 +250,7 @@ export const useWorklist = () => {
     // Update available tabs to remove those with no worklist items
     setAvailableTabs((prevTabs: string[]) => {
       const newTabs = prevTabs.filter(tab => !languagesToFetch.includes(tab));
-      
+
       // After filtering tabs, update the active tab based on what's left
       setActiveTab((prevActiveTab: string) => {
         // If the active tab was one of the ones removed, pick a new one
@@ -277,10 +277,10 @@ export const useWorklist = () => {
     const newOriginalResults: any = {};
     const newSaveStatus: any = {};
     const newEditingState: any = {};
-    
+
     data.forEach((item: any) => {
       const lang = item.requested_language;
-      
+
       newPerLanguageCommonData[lang] = {
         object_name_en: item.object_name_en || '',
         object_category: item.object_category || '',
@@ -309,6 +309,7 @@ export const useWorklist = () => {
         object_description: item.object_description || '',
         object_hint: item.object_hint || '',
         object_short_hint: item.object_short_hint || '',
+        quiz_qa: item.quiz_qa || [],
         translation_status: item.translation_status || '',
         translation_id: item.translation_id || '',
         isLoading: false,
@@ -380,10 +381,10 @@ export const useWorklist = () => {
     if (allLanguages.length > 0) {
       const tabToActivate = allLanguages[0];
       setActiveTab(tabToActivate);
-      
+
       const commonDataToUse = processedData.newPerLanguageCommonData[tabToActivate];
       const fileInfoToUse = processedData.newPerLanguageFileInfo[tabToActivate];
-        
+
       if (commonDataToUse) {
         setCurrentCommonData(commonDataToUse);
         if (isFullRefresh) {

@@ -72,13 +72,20 @@ export const useLanguageResults = () => {
     key: K,
     value: LanguageResult[K]
   ) => {
-    setLanguageResults(prev => ({
-      ...prev,
-      [language]: {
-        ...prev[language],
-        [key]: value,
-      },
-    }));
+    console.log(`Updating language result for ${language}, key: ${String(key)}`, value);
+    setLanguageResults(prev => {
+      if (!prev[language]) {
+        console.warn(`Language result for ${language} not found when updating ${String(key)}`);
+        return prev;
+      }
+      return {
+        ...prev,
+        [language]: {
+          ...prev[language],
+          [key]: value,
+        },
+      };
+    });
   }, []);
 
   const updateCommonData = useCallback((key: keyof CommonData, value: any) => {
@@ -186,6 +193,7 @@ export const useLanguageResults = () => {
           object_description: languageResults[currentTab].object_description || "",
           object_hint: languageResults[currentTab].object_hint || "",
           object_short_hint: languageResults[currentTab].object_short_hint || "",
+          quiz_qa: languageResults[currentTab].quiz_qa || [],
           translation_status: languageResults[currentTab].translation_status || "",
           translation_id: languageResults[currentTab].translation_id || "",
           flag_translation: languageResults[currentTab].flag_translation || "",
@@ -331,6 +339,7 @@ export const useLanguageResults = () => {
           object_description: data.translations?.object_description || "",
           object_hint: data.translations?.object_hint || "",
           object_short_hint: data.translations?.object_short_hint || "",
+          quiz_qa: data.translations?.quiz_qa || [],
           translation_status: data.translations?.translation_status || "",
           translation_id: data.translations?._id || "",
           isLoading: false,
@@ -348,6 +357,7 @@ export const useLanguageResults = () => {
           object_description: data.translations?.object_description || "",
           object_hint: data.translations?.object_hint || "",
           object_short_hint: data.translations?.object_short_hint || "",
+          quiz_qa: data.translations?.quiz_qa || [],
           translation_status: data.translations?.translation_status || "",
           translation_id: data.translations?._id || "",
           flag_translation: data.flag_translation || false,
@@ -402,18 +412,12 @@ export const useLanguageResults = () => {
     console.log('languageResults[currentTab]:', languageResults[currentTab]);
     console.log('originalResults[currentTab]:', originalResults[currentTab]);
 
-    // If currently in edit mode, revert changes and exit edit mode
+    // If currently in edit mode, exit edit mode but KEEP changes (act as Preview)
     if (isEditing[currentTab]) {
-      console.log('EXITING edit mode - reverting to original');
-      // Revert common data if it's the 'English' tab
-      if (currentTab === 'English') {
-        setCurrentCommonData(originalCommonData);
-      }
-      // Revert language-specific data
-      setLanguageResults(prev => ({
-        ...prev,
-        [currentTab]: originalResults[currentTab] || prev[currentTab]
-      }));
+      console.log('EXITING edit mode - keeping changes');
+      // Do NOT revert data here. This allows users to switch to View mode to preview changes.
+      // To cancel, they would need to reload or re-select the item.
+
       // Exit edit mode
       setIsEditing(prev => ({ ...prev, [currentTab]: false }));
       return;

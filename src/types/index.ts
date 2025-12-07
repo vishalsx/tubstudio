@@ -11,15 +11,22 @@ export interface CommonData {
   flag_object?: boolean;
 }
 
+export interface QuizQAItem {
+  question: string;
+  answer: string;
+  difficulty_level?: string;
+}
+
 export interface LanguageResult {
   object_name: string;
   object_description: string;
   object_hint: string;
   object_short_hint: string;
+  quiz_qa?: QuizQAItem[];
   translation_status?: string;
   translation_id?: string;
   isLoading?: boolean;
-  error?: string; 
+  error?: string;
   flag_translation?: boolean;
 }
 
