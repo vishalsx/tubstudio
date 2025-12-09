@@ -60,6 +60,12 @@ export class TranslationService {
     return apiClient.get(`worklist/queue?languages=${languages.join(",")}`);
   }
 
+  async updateQuizQA(translationId: string): Promise<any> {
+    const formData = new FormData();
+    formData.append("translation_id_str", translationId);
+    return apiClient.post('translations/update-quiz-qa', formData);
+  }
+
   async fetchThumbnails(username: string): Promise<any> {
     const formData = new FormData();
     formData.append("username", username);

@@ -383,6 +383,7 @@ export const MainApp: React.FC<MainAppProps> = ({ authData }) => {
     languageResults.setLanguageResults(initialResults);
     languageResults.setAvailableTabs(languagesToUse);
     languageResults.setActiveTab(languagesToUse[0]);
+    languageResults.setIsEditing({}); // Reset to view mode for all languages
     try {
       let sharedCommonData: any = null, sharedFileInfo: any = null, commonDataMapped = false;
       const identifyPromises = languagesToUse.map(async (language: string) => {

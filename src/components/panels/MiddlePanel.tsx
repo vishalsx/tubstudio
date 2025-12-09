@@ -7,6 +7,7 @@ import { StatusWorkflow } from '../common/StatusWorkflow';
 import { ImageSearchModal } from '../common/ImageSearchModal';
 import { QuizQAModal } from '../common/QuizQAModal';
 import { LoadingSpinner } from '../common/LoadingSpinner';
+import { translationService } from '../../services/translation.service';
 
 interface MiddlePanelProps {
   leftPanelView: 'upload' | 'database' | 'curriculum';
@@ -103,6 +104,7 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = (props) => {
 
   const [isImageSearchModalOpen, setIsImageSearchModalOpen] = useState(false);
   const [isQuizModalOpen, setIsQuizModalOpen] = useState(false);
+  const [isRefreshingQuizQA, setIsRefreshingQuizQA] = useState(false);
   const [userComments, setUserComments] = useState('');
   const [validationErrors, setValidationErrors] = useState<Set<string>>(new Set());
 
@@ -275,6 +277,30 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = (props) => {
     e.stopPropagation(); // Prevent triggering other key handlers
   };
 
+  const handleRefreshQuizQA = async () => {
+    if (!activeTab || !languageResults[activeTab]?.translation_id) {
+      console.error('No translation_id available for refresh');
+      return;
+    }
+
+    setIsRefreshingQuizQA(true);
+    try {
+      const data = await translationService.updateQuizQA(
+        languageResults[activeTab].translation_id!
+      );
+
+      // Update quiz_qa field with response
+      if (data.quiz_qa) {
+        onUpdateLanguageResult(activeTab, 'quiz_qa', data.quiz_qa);
+      }
+    } catch (error) {
+      console.error('Failed to refresh quiz QA:', error);
+      // Error is logged, user will see no update if it fails
+    } finally {
+      setIsRefreshingQuizQA(false);
+    }
+  };
+
   const renderTranslationEditor = () => (
     <div className="flex flex-col h-full overflow-y-auto">
       <h2 className="text-lg font-semibold mb-4">Object Details</h2>
@@ -330,7 +356,23 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = (props) => {
                   <button onClick={onSkip} disabled={isCurrentTabSaving || isWorklistLoading || !permissions.canSkiptData.language || isLoading || hasError} title="Skip to Next" className={`p-2 rounded transition ${!permissions.canSkiptData.language ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'text-gray-600 hover:text-orange-600 hover:bg-orange-50'} disabled:opacity-50`}>
                     {isWorklistLoading ? <div className="w-5 h-5 border-2 border-gray-400 border-t-orange-400 rounded-full animate-spin"></div> : <ArrowRightCircleIcon className="w-5 h-5" />}
                   </button>
-                  <button onClick={() => setIsQuizModalOpen(true)} disabled={isLoading || hasError} title={isFieldInvalid('quiz_qa') ? "Quiz QA has errors (empty fields)" : "View Quiz Q&A"} className={`p-2 rounded transition ${isFieldInvalid('quiz_qa') ? 'text-red-600 bg-red-50 hover:bg-red-100' : 'text-gray-600 hover:text-[#00AEEF] hover:bg-gray-100'} disabled:opacity-50`}>
+                  <button
+                    onClick={() => setIsQuizModalOpen(true)}
+                    disabled={isLoading || hasError}
+                    title={
+                      isFieldInvalid('quiz_qa')
+                        ? "Quiz QA has errors (empty fields)"
+                        : (currentResult.quiz_qa && currentResult.quiz_qa.length > 0)
+                          ? `View Quiz Q&A (${currentResult.quiz_qa.length} questions)`
+                          : "View Quiz Q&A (empty)"
+                    }
+                    className={`p-2 rounded transition ${isFieldInvalid('quiz_qa')
+                        ? 'text-red-600 bg-red-50 hover:bg-red-100'
+                        : (currentResult.quiz_qa && currentResult.quiz_qa.length > 0)
+                          ? 'text-green-600 bg-green-50 hover:bg-green-100 hover:text-green-700'
+                          : 'text-gray-600 hover:text-[#00AEEF] hover:bg-gray-100'
+                      } disabled:opacity-50`}
+                  >
                     <AcademicCapIcon className="w-5 h-5" />
                   </button>
                 </div>
@@ -636,6 +678,9 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = (props) => {
           isEditing={isEditing[activeTab]}
           onUpdate={(newQuizQA) => onUpdateLanguageResult(activeTab, 'quiz_qa', newQuizQA)}
           hasValidationErrors={isFieldInvalid('quiz_qa')}
+          translationId={languageResults[activeTab]?.translation_id}
+          onRefreshQuizQA={handleRefreshQuizQA}
+          isRefreshing={isRefreshingQuizQA}
         />
       )}
     </div>

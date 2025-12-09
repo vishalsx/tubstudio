@@ -1,5 +1,5 @@
-import React from 'react';
-import { XMarkIcon } from '@heroicons/react/24/solid';
+import React, { useState } from 'react';
+import { XMarkIcon, ArrowPathIcon } from '@heroicons/react/24/solid';
 import { QuizQAItem } from '../../types';
 
 interface QuizQAModalProps {
@@ -10,9 +10,14 @@ interface QuizQAModalProps {
     isEditing: boolean;
     onUpdate: (newQuizQA: QuizQAItem[]) => void;
     hasValidationErrors?: boolean;
+    translationId?: string;
+    onRefreshQuizQA?: () => Promise<void>;
+    isRefreshing?: boolean;
 }
 
-export const QuizQAModal: React.FC<QuizQAModalProps> = ({ isOpen, onClose, quizQA, language, isEditing, onUpdate, hasValidationErrors }) => {
+export const QuizQAModal: React.FC<QuizQAModalProps> = ({ isOpen, onClose, quizQA, language, isEditing, onUpdate, hasValidationErrors, translationId, onRefreshQuizQA, isRefreshing = false }) => {
+    const [showConfirmation, setShowConfirmation] = useState(false);
+
     if (!isOpen) return null;
 
     const handleQuestionChange = (index: number, value: string) => {
@@ -43,6 +48,21 @@ export const QuizQAModal: React.FC<QuizQAModalProps> = ({ isOpen, onClose, quizQ
     const handleDeleteQuestion = (index: number) => {
         const updatedQuizQA = quizQA.filter((_, i) => i !== index);
         onUpdate(updatedQuizQA);
+    };
+
+    const handleRefreshClick = () => {
+        setShowConfirmation(true);
+    };
+
+    const handleConfirmRefresh = async () => {
+        setShowConfirmation(false);
+        if (onRefreshQuizQA) {
+            await onRefreshQuizQA();
+        }
+    };
+
+    const handleCancelRefresh = () => {
+        setShowConfirmation(false);
     };
 
     return (
@@ -134,7 +154,7 @@ export const QuizQAModal: React.FC<QuizQAModalProps> = ({ isOpen, onClose, quizQ
                             )}
 
                             {isEditing && (
-                                <div className="mt-4 text-center">
+                                <div className="mt-4 flex justify-center gap-2">
                                     <button
                                         type="button"
                                         onClick={handleAddQuestion}
@@ -145,6 +165,27 @@ export const QuizQAModal: React.FC<QuizQAModalProps> = ({ isOpen, onClose, quizQ
                                         </svg>
                                         Add New Question
                                     </button>
+                                    {onRefreshQuizQA && (
+                                        <button
+                                            type="button"
+                                            onClick={handleRefreshClick}
+                                            disabled={!translationId || isRefreshing}
+                                            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-[#F15A29] hover:bg-[#D14A23] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#F15A29] disabled:opacity-50 disabled:cursor-not-allowed"
+                                            title={!translationId ? "Translation must be saved first" : "Refresh Quiz Q&A from backend"}
+                                        >
+                                            {isRefreshing ? (
+                                                <>
+                                                    <div className="-ml-1 mr-2 h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                                    Refreshing...
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <ArrowPathIcon className="-ml-1 mr-2 h-5 w-5" />
+                                                    Refresh Quiz Q&A
+                                                </>
+                                            )}
+                                        </button>
+                                    )}
                                 </div>
                             )}
                         </div>
@@ -159,6 +200,32 @@ export const QuizQAModal: React.FC<QuizQAModalProps> = ({ isOpen, onClose, quizQ
                         </button>
                     </div>
                 </div>
+
+                {/* Confirmation Dialog */}
+                {showConfirmation && (
+                    <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                        <div className="bg-white rounded-lg p-6 max-w-sm mx-4 shadow-xl">
+                            <h4 className="text-lg font-semibold text-gray-900 mb-2">Refresh Quiz Q&A?</h4>
+                            <p className="text-sm text-gray-600 mb-4">
+                                Existing questions will be lost. Are you sure you want to continue?
+                            </p>
+                            <div className="flex justify-end gap-2">
+                                <button
+                                    onClick={handleCancelRefresh}
+                                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleConfirmRefresh}
+                                    className="px-4 py-2 text-sm font-medium text-white bg-[#F15A29] rounded-md hover:bg-[#D14A23] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#F15A29]"
+                                >
+                                    Yes, Refresh
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );
