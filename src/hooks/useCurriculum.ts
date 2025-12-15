@@ -14,10 +14,10 @@
 //   const [searchQuery, setSearchQuery] = useState('');
 //   const [searchLanguage, setSearchLanguage] = useState('');
 //   const [searchAttempted, setSearchAttempted] = useState(false);
-  
+
 //   const [activeBook, setActiveBook] = useState<Book | null>(null);
 //   const [isDirty, setIsDirty] = useState(false);
-  
+
 //   // State to hold the counters for new ID generation
 //   const [idCounters, setIdCounters] = useState({ chapter: 0, page: 0, image: 0 });
 
@@ -99,7 +99,7 @@
 //       setIsLoading(false);
 //     }
 //   }, [username]);
-  
+
 //   const selectBook = useCallback(async (bookId: string) => {
 //     setIsLoading(true);
 //     try {
@@ -109,7 +109,7 @@
 //         fullBook.chapters.forEach(c => c.pages.forEach(p => p.imagesLoaded = false));
 
 //         setBooks(prevBooks => prevBooks.map(b => (b._id === bookId ? fullBook : b)));
-        
+
 //         setActiveBook(fullBook);
 //         setSelectedPage(null);
 //         setIdCounters({
@@ -130,13 +130,13 @@
 //   const updateActiveBook = useCallback((updater: (book: Book) => Book, options: { markDirty: boolean } = { markDirty: true }) => {
 //     setActiveBook(currentBook => {
 //       if (!currentBook) return null;
-      
+
 //       const updatedBook = updater(deepClone(currentBook));
-      
+
 //       setBooks(currentBooks =>
 //         currentBooks.map(b => (b._id === updatedBook._id ? updatedBook : b))
 //       );
-      
+
 //       if (options.markDirty) {
 //         setIsDirty(true);
 //       }
@@ -149,20 +149,20 @@
 //     const isBook = 'chapters' in node;
 //     const nodeId = isBook ? (node as Book)._id : (node as Chapter).chapter_id;
 //     if (!nodeId) return;
-  
+
 //     if (!isBook) {
 //       setExpansionState(prev => ({ ...prev, [nodeId]: !prev[nodeId] }));
 //       return;
 //     }
-  
+
 //     const bookNode = node as Book;
 //     const isCurrentlyExpanded = !!expansionState[nodeId];
-  
+
 //     if (isCurrentlyExpanded) {
 //       setExpansionState(prev => ({ ...prev, [nodeId]: false }));
 //       return;
 //     }
-    
+
 //     if (bookNode.chapters && bookNode.chapters.length > 0) {
 //       setExpansionState(prev => ({ ...prev, [nodeId]: true }));
 //       return;
@@ -171,9 +171,9 @@
 //     setIsLoading(true);
 //     try {
 //       const fullBook = await curriculumService.fetchBookDetails(bookNode._id);
-      
+
 //       setBooks(prevBooks => prevBooks.map(b => (b._id === fullBook._id ? fullBook : b)));
-      
+
 //       setActiveBook(fullBook);
 //       setIdCounters({
 //         chapter: fullBook.chapter_count || 0,
@@ -192,23 +192,23 @@
 //   const selectPage = useCallback(async (page: Page) => {
 //     // Increment and capture the ID for this specific page load operation.
 //     const currentLoadId = ++pageLoadIdRef.current;
-  
+
 //     if (!activeBook?._id || !page.page_id) return;
 //     const chapter = activeBook.chapters.find(c => c.pages.some(p => p.page_id === page.page_id));
-  
+
 //     if (!chapter || !chapter.chapter_id) {
 //         console.error("Could not find a valid chapter for the selected page.", { page, activeBook });
 //         setNotification({ message: "Error: Could not find parent chapter for the page.", type: 'error' });
 //         return;
 //     }
-  
+
 //     const chapterId = chapter.chapter_id;
-  
+
 //     if (page.imagesLoaded || page.isNew) {
 //         setSelectedPage(page);
 //         return;
 //     }
-  
+
 //     const imageStubsToLoad = (page.images || []).filter(stub => stub.image_id && !stub.isNew);
 //     if (imageStubsToLoad.length === 0) {
 //         updateActiveBook(book => {
@@ -221,7 +221,7 @@
 //         setSelectedPage(page);
 //         return;
 //     }
-  
+
 //     // 1. Set up initial loading state and placeholders
 //     setImageLoadingProgress({ loaded: 0, total: imageStubsToLoad.length });
 //     const pageWithPlaceholders = {
@@ -237,7 +237,7 @@
 //         }
 //         return book;
 //     }, { markDirty: false });
-  
+
 //     // 2. Fetch images incrementally
 //     const imageFetchPromises = imageStubsToLoad.map(imageStub =>
 //         curriculumService.fetchImageDetails(activeBook._id, chapterId, page.page_id!, imageStub.image_id!)
@@ -246,7 +246,7 @@
 //                 if (pageLoadIdRef.current !== currentLoadId) {
 //                     return; // If not, it means the user has navigated away. Do nothing.
 //                 }
-  
+
 //                 // If the load ID is current, proceed with state updates.
 //                 updateActiveBook(book => {
 //                     const c = book.chapters.find(c => c.chapter_id === chapterId);
@@ -257,7 +257,7 @@
 //                     }
 //                     return book;
 //                 }, { markDirty: false });
-  
+
 //                 setSelectedPage(current => {
 //                     if (!current || current.page_id !== page.page_id) return current;
 //                     const updatedImages = [...current.images];
@@ -265,7 +265,7 @@
 //                     if (imgIndex > -1) updatedImages[imgIndex] = { ...fetchedImage, isLoading: false };
 //                     return { ...current, images: updatedImages };
 //                 });
-  
+
 //                 setImageLoadingProgress(prev => {
 //                     if (pageLoadIdRef.current !== currentLoadId || !prev) return prev;
 //                     return { ...prev, loaded: prev.loaded + 1 };
@@ -281,7 +281,7 @@
 //                 }
 //             })
 //     );
-  
+
 //     // 3. Cleanup after all fetches are done
 //     Promise.all(imageFetchPromises).then(() => {
 //         if (pageLoadIdRef.current !== currentLoadId) {
@@ -301,11 +301,11 @@
 //     setIsLoading(true);
 //     try {
 //       let bookToUpdate = activeBook;
-      
+
 //       if (!bookToUpdate || bookToUpdate._id !== bookId || bookToUpdate.chapters.length < (bookToUpdate.chapter_count ?? 0)) {
 //         bookToUpdate = await curriculumService.fetchBookDetails(bookId);
 //       }
-      
+
 //       const updatedBook = action(deepClone(bookToUpdate!));
 
 //       setBooks(prev => prev.map(b => b._id === bookId ? updatedBook : b));
@@ -358,7 +358,7 @@
 //     });
 //     setIdCounters(prev => ({ ...prev, page: newPageNumber }));
 //   }, [performActionOnBook, idCounters]);
-  
+
 //   const deleteChapter = useCallback((chapterId: string) => {
 //     if (selectedPage && activeBook?.chapters.find(c => c.chapter_id === chapterId)?.pages.some(p => p.page_id === selectedPage.page_id)) {
 //       setSelectedPage(null);
@@ -380,7 +380,7 @@
 //         return book;
 //     });
 //   }, [updateActiveBook]);
-  
+
 //   const deletePage = useCallback((chapterId: string, pageId: string) => {
 //     updateActiveBook(book => {
 //       const chapter = book.chapters.find(c => c.chapter_id === chapterId);
@@ -395,7 +395,7 @@
 //       setSelectedPage(null);
 //     }
 //   }, [updateActiveBook, selectedPage]);
-  
+
 //   const updatePageTitle = useCallback((chapterId: string, pageId: string, newTitle: string) => {
 //     updateActiveBook(book => {
 //       const chapter = book.chapters.find(c => c.chapter_id === chapterId);
@@ -404,7 +404,7 @@
 //         page.title = newTitle;
 //         page.isModified = true;
 //         chapter.isModified = true;
-        
+
 //         // If the updated page is the currently selected one, update that state too.
 //         if (selectedPage?.page_id === pageId) {
 //           setSelectedPage({ ...page });
@@ -453,12 +453,12 @@
 //         setIsStoryLoading(false);
 //     }
 //   }, [activeBook, username, updateActiveBook]);
-  
+
 //   const addImageToPage = useCallback((dbImage: DatabaseImage) => {
 //     if (!selectedPage || !activeBook?._id) return;
 //     const newImageCount = idCounters.image + 1;
 //     let updatedPageData: Page | null = null;
-    
+
 //     updateActiveBook(book => {
 //       const chapter = book.chapters.find(c => c.pages.some(p => p.page_id === selectedPage.page_id));
 //       const page = chapter?.pages.find(p => p.page_id === selectedPage.page_id);
@@ -484,7 +484,7 @@
 //     if (updatedPageData) setSelectedPage(updatedPageData);
 //     setIdCounters(prev => ({ ...prev, image: newImageCount }));
 //   }, [updateActiveBook, activeBook, selectedPage, idCounters]);
-  
+
 //   const removeImageFromPage = useCallback((imageHash: string) => {
 //     const pageId = selectedPage?.page_id;
 //     if (!pageId) return;
@@ -533,11 +533,11 @@
 //             const reorderedImages = [...page.images];
 //             const [draggedItem] = reorderedImages.splice(draggedIndex, 1);
 //             reorderedImages.splice(targetIndex, 0, draggedItem);
-            
+
 //             page.images = reorderedImages.map((img, index) => ({ ...img, position: index + 1 }));
 //             page.isModified = true;
 //             chapter.isModified = true;
-            
+
 //             // Immediately update selectedPage state as well to sync the UI
 //             setSelectedPage({ ...page });
 //         }
@@ -570,7 +570,7 @@
 //             };
 //           }),
 //         };
-        
+
 //         const savedBook = await curriculumService.saveBook(payload, username);
 //         const fullRefreshedBook = await curriculumService.fetchBookDetails(savedBook._id);
 
@@ -648,10 +648,10 @@ export const useCurriculum = (userContext: UserContext | null) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchLanguage, setSearchLanguage] = useState('');
   const [searchAttempted, setSearchAttempted] = useState(false);
-  
+
   const [activeBook, setActiveBook] = useState<Book | null>(null);
   const [isDirty, setIsDirty] = useState(false);
-  
+
   // State to hold the counters for new ID generation
   const [idCounters, setIdCounters] = useState({ chapter: 0, page: 0, image: 0 });
 
@@ -681,6 +681,7 @@ export const useCurriculum = (userContext: UserContext | null) => {
     if (!searchQuery.trim()) {
       setBooks([]);
       setActiveBook(null);
+      setSelectedPage(null); // Clear selected page
       setSearchAttempted(false);
       return;
     }
@@ -689,6 +690,7 @@ export const useCurriculum = (userContext: UserContext | null) => {
     setSearchAttempted(true);
     setBooks([]);
     setActiveBook(null);
+    setSelectedPage(null); // Clear selected page
     try {
       const results = await curriculumService.searchBooks(searchQuery, searchLanguage);
       setBooks(results);
@@ -704,6 +706,8 @@ export const useCurriculum = (userContext: UserContext | null) => {
     if (!searchQuery.trim()) {
       setSearchAttempted(false);
       setBooks([]);
+      setSelectedPage(null); // Clear selected page
+      setActiveBook(null);
     }
   }, [searchQuery]);
 
@@ -733,44 +737,44 @@ export const useCurriculum = (userContext: UserContext | null) => {
       setIsLoading(false);
     }
   }, [username]);
-  
+
   const selectBook = useCallback(async (bookId: string) => {
     setIsLoading(true);
     try {
-        const fullBook = await curriculumService.fetchBookDetails(bookId);
+      const fullBook = await curriculumService.fetchBookDetails(bookId);
 
-        // Mark all pages as not having images loaded yet to force refetch on selection
-        fullBook.chapters.forEach(c => c.pages.forEach(p => p.imagesLoaded = false));
+      // Mark all pages as not having images loaded yet to force refetch on selection
+      fullBook.chapters.forEach(c => c.pages.forEach(p => p.imagesLoaded = false));
 
-        setBooks(prevBooks => prevBooks.map(b => (b._id === bookId ? fullBook : b)));
-        
-        setActiveBook(fullBook);
-        setSelectedPage(null);
-        setIdCounters({
-            chapter: fullBook.chapter_count || 0,
-            page: fullBook.page_count || 0,
-            image: fullBook.image_count || 0,
-        });
-        setExpansionState({ [bookId]: true });
-        setIsDirty(false);
+      setBooks(prevBooks => prevBooks.map(b => (b._id === bookId ? fullBook : b)));
+
+      setActiveBook(fullBook);
+      setSelectedPage(null);
+      setIdCounters({
+        chapter: fullBook.chapter_count || 0,
+        page: fullBook.page_count || 0,
+        image: fullBook.image_count || 0,
+      });
+      setExpansionState({ [bookId]: true });
+      setIsDirty(false);
     } catch (error) {
-        console.error("Failed to select and fetch book:", error);
-        setNotification({ message: `Error loading book: ${(error as Error).message}`, type: 'error' });
+      console.error("Failed to select and fetch book:", error);
+      setNotification({ message: `Error loading book: ${(error as Error).message}`, type: 'error' });
     } finally {
-        setIsLoading(false);
+      setIsLoading(false);
     }
   }, []);
 
   const updateActiveBook = useCallback((updater: (book: Book) => Book, options: { markDirty: boolean } = { markDirty: true }) => {
     setActiveBook(currentBook => {
       if (!currentBook) return null;
-      
+
       const updatedBook = updater(deepClone(currentBook));
-      
+
       setBooks(currentBooks =>
         currentBooks.map(b => (b._id === updatedBook._id ? updatedBook : b))
       );
-      
+
       if (options.markDirty) {
         setIsDirty(true);
       }
@@ -783,20 +787,20 @@ export const useCurriculum = (userContext: UserContext | null) => {
     const isBook = 'chapters' in node;
     const nodeId = isBook ? (node as Book)._id : (node as Chapter).chapter_id;
     if (!nodeId) return;
-  
+
     if (!isBook) {
       setExpansionState(prev => ({ ...prev, [nodeId]: !prev[nodeId] }));
       return;
     }
-  
+
     const bookNode = node as Book;
     const isCurrentlyExpanded = !!expansionState[nodeId];
-  
+
     if (isCurrentlyExpanded) {
       setExpansionState(prev => ({ ...prev, [nodeId]: false }));
       return;
     }
-    
+
     if (bookNode.chapters && bookNode.chapters.length > 0) {
       setExpansionState(prev => ({ ...prev, [nodeId]: true }));
       return;
@@ -805,9 +809,9 @@ export const useCurriculum = (userContext: UserContext | null) => {
     setIsLoading(true);
     try {
       const fullBook = await curriculumService.fetchBookDetails(bookNode._id);
-      
+
       setBooks(prevBooks => prevBooks.map(b => (b._id === fullBook._id ? fullBook : b)));
-      
+
       setActiveBook(fullBook);
       setIdCounters({
         chapter: fullBook.chapter_count || 0,
@@ -826,108 +830,108 @@ export const useCurriculum = (userContext: UserContext | null) => {
   const selectPage = useCallback(async (page: Page) => {
     // Increment and capture the ID for this specific page load operation.
     const currentLoadId = ++pageLoadIdRef.current;
-  
+
     if (!activeBook?._id || !page.page_id) return;
     const chapter = activeBook.chapters.find(c => c.pages.some(p => p.page_id === page.page_id));
-  
+
     if (!chapter || !chapter.chapter_id) {
-        console.error("Could not find a valid chapter for the selected page.", { page, activeBook });
-        setNotification({ message: "Error: Could not find parent chapter for the page.", type: 'error' });
-        return;
+      console.error("Could not find a valid chapter for the selected page.", { page, activeBook });
+      setNotification({ message: "Error: Could not find parent chapter for the page.", type: 'error' });
+      return;
     }
-  
+
     const chapterId = chapter.chapter_id;
-  
+
     if (page.imagesLoaded || page.isNew) {
-        setSelectedPage(page);
-        return;
+      setSelectedPage(page);
+      return;
     }
-  
+
     const imageStubsToLoad = (page.images || []).filter(stub => stub.image_id && !stub.isNew);
     if (imageStubsToLoad.length === 0) {
-        updateActiveBook(book => {
-            if (pageLoadIdRef.current !== currentLoadId) return book; // Guard against stale updates
-            const chapterToUpdate = book.chapters.find(c => c.chapter_id === chapterId);
-            const pageToUpdate = chapterToUpdate?.pages.find(p => p.page_id === page.page_id);
-            if (pageToUpdate) pageToUpdate.imagesLoaded = true;
-            return book;
-        }, { markDirty: false });
-        setSelectedPage(page);
-        return;
+      updateActiveBook(book => {
+        if (pageLoadIdRef.current !== currentLoadId) return book; // Guard against stale updates
+        const chapterToUpdate = book.chapters.find(c => c.chapter_id === chapterId);
+        const pageToUpdate = chapterToUpdate?.pages.find(p => p.page_id === page.page_id);
+        if (pageToUpdate) pageToUpdate.imagesLoaded = true;
+        return book;
+      }, { markDirty: false });
+      setSelectedPage(page);
+      return;
     }
-  
+
     // 1. Set up initial loading state and placeholders
     setImageLoadingProgress({ loaded: 0, total: imageStubsToLoad.length });
     const pageWithPlaceholders = {
-        ...page,
-        images: page.images.map(img => ({ ...img, isLoading: !!img.image_id && !img.isNew }))
+      ...page,
+      images: page.images.map(img => ({ ...img, isLoading: !!img.image_id && !img.isNew }))
     };
     setSelectedPage(pageWithPlaceholders);
     updateActiveBook(book => {
-        const c = book.chapters.find(c => c.chapter_id === chapterId);
-        if (c) {
-            const pIndex = c.pages.findIndex(p => p.page_id === page.page_id);
-            if (pIndex > -1) c.pages[pIndex] = pageWithPlaceholders;
-        }
-        return book;
+      const c = book.chapters.find(c => c.chapter_id === chapterId);
+      if (c) {
+        const pIndex = c.pages.findIndex(p => p.page_id === page.page_id);
+        if (pIndex > -1) c.pages[pIndex] = pageWithPlaceholders;
+      }
+      return book;
     }, { markDirty: false });
-  
+
     // 2. Fetch images incrementally
     const imageFetchPromises = imageStubsToLoad.map(imageStub =>
-        curriculumService.fetchImageDetails(activeBook._id, chapterId, page.page_id!, imageStub.image_id!)
-            .then(fetchedImage => {
-                // *** THE FIX: Check if we are still loading the same page. ***
-                if (pageLoadIdRef.current !== currentLoadId) {
-                    return; // If not, it means the user has navigated away. Do nothing.
-                }
-  
-                // If the load ID is current, proceed with state updates.
-                updateActiveBook(book => {
-                    const c = book.chapters.find(c => c.chapter_id === chapterId);
-                    const p = c?.pages.find(p => p.page_id === page.page_id);
-                    if (p?.images) {
-                        const imgIndex = p.images.findIndex(i => i.image_id === fetchedImage.image_id);
-                        if (imgIndex > -1) p.images[imgIndex] = { ...fetchedImage, isLoading: false };
-                    }
-                    return book;
-                }, { markDirty: false });
-  
-                setSelectedPage(current => {
-                    if (!current || current.page_id !== page.page_id) return current;
-                    const updatedImages = [...current.images];
-                    const imgIndex = updatedImages.findIndex(i => i.image_id === fetchedImage.image_id);
-                    if (imgIndex > -1) updatedImages[imgIndex] = { ...fetchedImage, isLoading: false };
-                    return { ...current, images: updatedImages };
-                });
-  
-                setImageLoadingProgress(prev => {
-                    if (pageLoadIdRef.current !== currentLoadId || !prev) return prev;
-                    return { ...prev, loaded: prev.loaded + 1 };
-                });
-            })
-            .catch(error => {
-                console.error(`Failed to fetch image ${imageStub.image_id}:`, error);
-                if (pageLoadIdRef.current === currentLoadId) {
-                    setImageLoadingProgress(prev => {
-                        if (!prev) return prev;
-                        return { ...prev, loaded: prev.loaded + 1 };
-                    });
-                }
-            })
-    );
-  
-    // 3. Cleanup after all fetches are done
-    Promise.all(imageFetchPromises).then(() => {
-        if (pageLoadIdRef.current !== currentLoadId) {
-            return; // Stale operation, do nothing.
-        }
-        setImageLoadingProgress(null);
-        updateActiveBook(book => {
+      curriculumService.fetchImageDetails(activeBook._id, chapterId, page.page_id!, imageStub.image_id!)
+        .then(fetchedImage => {
+          // *** THE FIX: Check if we are still loading the same page. ***
+          if (pageLoadIdRef.current !== currentLoadId) {
+            return; // If not, it means the user has navigated away. Do nothing.
+          }
+
+          // If the load ID is current, proceed with state updates.
+          updateActiveBook(book => {
             const c = book.chapters.find(c => c.chapter_id === chapterId);
             const p = c?.pages.find(p => p.page_id === page.page_id);
-            if (p) p.imagesLoaded = true;
+            if (p?.images) {
+              const imgIndex = p.images.findIndex(i => i.image_id === fetchedImage.image_id);
+              if (imgIndex > -1) p.images[imgIndex] = { ...fetchedImage, isLoading: false };
+            }
             return book;
-        }, { markDirty: false });
+          }, { markDirty: false });
+
+          setSelectedPage(current => {
+            if (!current || current.page_id !== page.page_id) return current;
+            const updatedImages = [...current.images];
+            const imgIndex = updatedImages.findIndex(i => i.image_id === fetchedImage.image_id);
+            if (imgIndex > -1) updatedImages[imgIndex] = { ...fetchedImage, isLoading: false };
+            return { ...current, images: updatedImages };
+          });
+
+          setImageLoadingProgress(prev => {
+            if (pageLoadIdRef.current !== currentLoadId || !prev) return prev;
+            return { ...prev, loaded: prev.loaded + 1 };
+          });
+        })
+        .catch(error => {
+          console.error(`Failed to fetch image ${imageStub.image_id}:`, error);
+          if (pageLoadIdRef.current === currentLoadId) {
+            setImageLoadingProgress(prev => {
+              if (!prev) return prev;
+              return { ...prev, loaded: prev.loaded + 1 };
+            });
+          }
+        })
+    );
+
+    // 3. Cleanup after all fetches are done
+    Promise.all(imageFetchPromises).then(() => {
+      if (pageLoadIdRef.current !== currentLoadId) {
+        return; // Stale operation, do nothing.
+      }
+      setImageLoadingProgress(null);
+      updateActiveBook(book => {
+        const c = book.chapters.find(c => c.chapter_id === chapterId);
+        const p = c?.pages.find(p => p.page_id === page.page_id);
+        if (p) p.imagesLoaded = true;
+        return book;
+      }, { markDirty: false });
     });
   }, [activeBook, updateActiveBook, setNotification]);
 
@@ -935,11 +939,11 @@ export const useCurriculum = (userContext: UserContext | null) => {
     setIsLoading(true);
     try {
       let bookToUpdate = activeBook;
-      
+
       if (!bookToUpdate || bookToUpdate._id !== bookId || bookToUpdate.chapters.length < (bookToUpdate.chapter_count ?? 0)) {
         bookToUpdate = await curriculumService.fetchBookDetails(bookId);
       }
-      
+
       const updatedBook = action(deepClone(bookToUpdate!));
 
       setBooks(prev => prev.map(b => b._id === bookId ? updatedBook : b));
@@ -956,17 +960,17 @@ export const useCurriculum = (userContext: UserContext | null) => {
   const addChapter = useCallback(async (bookId: string) => {
     const newChapterNumber = idCounters.chapter + 1;
     await performActionOnBook(bookId, (book) => {
-        const newChapter: Chapter = {
-            chapter_id: `${book._id}-${pad(newChapterNumber, 3)}`,
-            chapter_number: newChapterNumber,
-            chapter_name: `New Chapter ${newChapterNumber}`,
-            pages: [],
-            isNew: true,
-            isModified: true,
-        };
-        book.chapters.push(newChapter);
-        setExpansionState(prev => ({ ...prev, [book._id]: true, [newChapter.chapter_id!]: true }));
-        return book;
+      const newChapter: Chapter = {
+        chapter_id: `${book._id}-${pad(newChapterNumber, 3)}`,
+        chapter_number: newChapterNumber,
+        chapter_name: `New Chapter ${newChapterNumber}`,
+        pages: [],
+        isNew: true,
+        isModified: true,
+      };
+      book.chapters.push(newChapter);
+      setExpansionState(prev => ({ ...prev, [book._id]: true, [newChapter.chapter_id!]: true }));
+      return book;
     });
     setIdCounters(prev => ({ ...prev, chapter: newChapterNumber }));
   }, [performActionOnBook, idCounters]);
@@ -974,25 +978,25 @@ export const useCurriculum = (userContext: UserContext | null) => {
   const addPage = useCallback(async (bookId: string, chapterId: string) => {
     const newPageNumber = idCounters.page + 1;
     await performActionOnBook(bookId, (book) => {
-        const chapter = book.chapters.find(c => c.chapter_id === chapterId);
-        if (chapter) {
-            const newPage: Page = {
-                page_id: `${chapterId}-${pad(newPageNumber, 4)}`,
-                page_number: newPageNumber,
-                title: `New Page ${newPageNumber}`,
-                images: [],
-                isNew: true,
-                isModified: true,
-            };
-            chapter.pages.push(newPage);
-            chapter.isModified = true;
-            setExpansionState(prev => ({ ...prev, [chapterId]: true }));
-        }
-        return book;
+      const chapter = book.chapters.find(c => c.chapter_id === chapterId);
+      if (chapter) {
+        const newPage: Page = {
+          page_id: `${chapterId}-${pad(newPageNumber, 4)}`,
+          page_number: newPageNumber,
+          title: `New Page ${newPageNumber}`,
+          images: [],
+          isNew: true,
+          isModified: true,
+        };
+        chapter.pages.push(newPage);
+        chapter.isModified = true;
+        setExpansionState(prev => ({ ...prev, [chapterId]: true }));
+      }
+      return book;
     });
     setIdCounters(prev => ({ ...prev, page: newPageNumber }));
   }, [performActionOnBook, idCounters]);
-  
+
   const deleteChapter = useCallback((chapterId: string) => {
     if (selectedPage && activeBook?.chapters.find(c => c.chapter_id === chapterId)?.pages.some(p => p.page_id === selectedPage.page_id)) {
       setSelectedPage(null);
@@ -1006,15 +1010,15 @@ export const useCurriculum = (userContext: UserContext | null) => {
 
   const updateChapterName = useCallback((chapterId: string, newName: string) => {
     updateActiveBook(book => {
-        const chapter = book.chapters.find(c => c.chapter_id === chapterId);
-        if (chapter) {
-            chapter.chapter_name = newName;
-            chapter.isModified = true;
-        }
-        return book;
+      const chapter = book.chapters.find(c => c.chapter_id === chapterId);
+      if (chapter) {
+        chapter.chapter_name = newName;
+        chapter.isModified = true;
+      }
+      return book;
     });
   }, [updateActiveBook]);
-  
+
   const deletePage = useCallback((chapterId: string, pageId: string) => {
     updateActiveBook(book => {
       const chapter = book.chapters.find(c => c.chapter_id === chapterId);
@@ -1029,7 +1033,7 @@ export const useCurriculum = (userContext: UserContext | null) => {
       setSelectedPage(null);
     }
   }, [updateActiveBook, selectedPage]);
-  
+
   const updatePageTitle = useCallback((chapterId: string, pageId: string, newTitle: string) => {
     updateActiveBook(book => {
       const chapter = book.chapters.find(c => c.chapter_id === chapterId);
@@ -1038,7 +1042,7 @@ export const useCurriculum = (userContext: UserContext | null) => {
         page.title = newTitle;
         page.isModified = true;
         chapter.isModified = true;
-        
+
         // If the updated page is the currently selected one, update that state too.
         if (selectedPage?.page_id === pageId) {
           setSelectedPage({ ...page });
@@ -1053,46 +1057,46 @@ export const useCurriculum = (userContext: UserContext | null) => {
 
     let chapterId: string | undefined;
     for (const chapter of activeBook.chapters) {
-        if (chapter.pages.some(p => p.page_id === pageId)) {
-            chapterId = chapter.chapter_id;
-            break;
-        }
+      if (chapter.pages.some(p => p.page_id === pageId)) {
+        chapterId = chapter.chapter_id;
+        break;
+      }
     }
 
     if (!chapterId || !username) {
-        setNotification({ message: 'Could not generate story. Missing required information.', type: 'error' });
-        return;
+      setNotification({ message: 'Could not generate story. Missing required information.', type: 'error' });
+      return;
     }
 
     setIsStoryLoading(true);
     setNotification(null);
     try {
-        const result = await curriculumService.createStory(activeBook._id, chapterId, pageId, userComments);
-        updateActiveBook(book => {
-            const chapter = book.chapters.find(c => c.chapter_id === chapterId);
-            const page = chapter?.pages.find(p => p.page_id === pageId);
-            if (page) {
-                page.story = result.story;
-                page.moral = result.moral;
-                page.isModified = true;
-                if (chapter) chapter.isModified = true;
-                setSelectedPage(currentPage => (currentPage?.page_id === pageId ? { ...page } : currentPage));
-            }
-            return book;
-        });
-        setNotification({ message: 'Story generated successfully!', type: 'success' });
+      const result = await curriculumService.createStory(activeBook._id, chapterId, pageId, userComments);
+      updateActiveBook(book => {
+        const chapter = book.chapters.find(c => c.chapter_id === chapterId);
+        const page = chapter?.pages.find(p => p.page_id === pageId);
+        if (page) {
+          page.story = result.story;
+          page.moral = result.moral;
+          page.isModified = true;
+          if (chapter) chapter.isModified = true;
+          setSelectedPage(currentPage => (currentPage?.page_id === pageId ? { ...page } : currentPage));
+        }
+        return book;
+      });
+      setNotification({ message: 'Story generated successfully!', type: 'success' });
     } catch (error) {
-        setNotification({ message: `Error generating story: ${(error as Error).message}`, type: 'error' });
+      setNotification({ message: `Error generating story: ${(error as Error).message}`, type: 'error' });
     } finally {
-        setIsStoryLoading(false);
+      setIsStoryLoading(false);
     }
   }, [activeBook, username, updateActiveBook]);
-  
+
   const addImageToPage = useCallback((dbImage: DatabaseImage) => {
     if (!selectedPage || !activeBook?._id) return;
     const newImageCount = idCounters.image + 1;
     let updatedPageData: Page | null = null;
-    
+
     updateActiveBook(book => {
       const chapter = book.chapters.find(c => c.pages.some(p => p.page_id === selectedPage.page_id));
       const page = chapter?.pages.find(p => p.page_id === selectedPage.page_id);
@@ -1118,7 +1122,7 @@ export const useCurriculum = (userContext: UserContext | null) => {
     if (updatedPageData) setSelectedPage(updatedPageData);
     setIdCounters(prev => ({ ...prev, image: newImageCount }));
   }, [updateActiveBook, activeBook, selectedPage, idCounters]);
-  
+
   const removeImageFromPage = useCallback((imageHash: string) => {
     const pageId = selectedPage?.page_id;
     if (!pageId) return;
@@ -1152,30 +1156,30 @@ export const useCurriculum = (userContext: UserContext | null) => {
     if (!pageId) return;
 
     updateActiveBook(book => {
-        const chapter = book.chapters.find(c => c.pages.some(p => p.page_id === pageId));
-        const page = chapter?.pages.find(p => p.page_id === pageId);
+      const chapter = book.chapters.find(c => c.pages.some(p => p.page_id === pageId));
+      const page = chapter?.pages.find(p => p.page_id === pageId);
 
-        if (page?.images && chapter) {
-            const draggedIndex = page.images.findIndex(img => img.image_hash === draggedImageHash);
-            const targetIndex = page.images.findIndex(img => img.image_hash === targetImageHash);
+      if (page?.images && chapter) {
+        const draggedIndex = page.images.findIndex(img => img.image_hash === draggedImageHash);
+        const targetIndex = page.images.findIndex(img => img.image_hash === targetImageHash);
 
-            if (draggedIndex === -1 || targetIndex === -1) {
-              console.error("Could not find dragged or target image for reordering.");
-              return book;
-            }
-
-            const reorderedImages = [...page.images];
-            const [draggedItem] = reorderedImages.splice(draggedIndex, 1);
-            reorderedImages.splice(targetIndex, 0, draggedItem);
-            
-            page.images = reorderedImages.map((img, index) => ({ ...img, position: index + 1 }));
-            page.isModified = true;
-            chapter.isModified = true;
-            
-            // Immediately update selectedPage state as well to sync the UI
-            setSelectedPage({ ...page });
+        if (draggedIndex === -1 || targetIndex === -1) {
+          console.error("Could not find dragged or target image for reordering.");
+          return book;
         }
-        return book;
+
+        const reorderedImages = [...page.images];
+        const [draggedItem] = reorderedImages.splice(draggedIndex, 1);
+        reorderedImages.splice(targetIndex, 0, draggedItem);
+
+        page.images = reorderedImages.map((img, index) => ({ ...img, position: index + 1 }));
+        page.isModified = true;
+        chapter.isModified = true;
+
+        // Immediately update selectedPage state as well to sync the UI
+        setSelectedPage({ ...page });
+      }
+      return book;
     });
   }, [selectedPage, updateActiveBook, setSelectedPage]);
 
@@ -1189,19 +1193,19 @@ export const useCurriculum = (userContext: UserContext | null) => {
         // Use image_hash to find the image.
         const image = page.images.find(img => img.image_hash === imageHash);
         if (image) {
-            image.object_name = newName;
-            page.isModified = true;
-            chapter.isModified = true;
-            
-            if (selectedPage?.page_id === pageId) {
-                 setSelectedPage(prev => {
-                     if (!prev) return prev;
-                     const newImages = prev.images.map(img => 
-                         img.image_hash === imageHash ? { ...img, object_name: newName } : img
-                     );
-                     return { ...prev, images: newImages };
-                 });
-            }
+          image.object_name = newName;
+          page.isModified = true;
+          chapter.isModified = true;
+
+          if (selectedPage?.page_id === pageId) {
+            setSelectedPage(prev => {
+              if (!prev) return prev;
+              const newImages = prev.images.map(img =>
+                img.image_hash === imageHash ? { ...img, object_name: newName } : img
+              );
+              return { ...prev, images: newImages };
+            });
+          }
         }
       }
       return book;
@@ -1214,48 +1218,48 @@ export const useCurriculum = (userContext: UserContext | null) => {
     setIsLoading(true);
     setNotification(null);
     try {
-        const payload: BookSavePayload = {
-          ...activeBook,
-          chapters: activeBook.chapters.map(chapter => {
-            const { isNew, isEditing, isModified, ...chapterToSave } = chapter;
-            return {
-              ...chapterToSave,
-              pages: chapter.pages.map(page => {
-                const { isNew, isEditing, isModified, imagesLoaded, ...pageToSave } = page;
-                return {
-                  ...pageToSave,
-                  images: (page.images || []).map(image => {
-                    const { isNew, thumbnail, isLoading, ...imageToSave } = image;
-                    return imageToSave;
-                  }),
-                };
-              }),
-            };
-          }),
-        };
-        
-        const savedBook = await curriculumService.saveBook(payload, username);
-        const fullRefreshedBook = await curriculumService.fetchBookDetails(savedBook._id);
+      const payload: BookSavePayload = {
+        ...activeBook,
+        chapters: activeBook.chapters.map(chapter => {
+          const { isNew, isEditing, isModified, ...chapterToSave } = chapter;
+          return {
+            ...chapterToSave,
+            pages: chapter.pages.map(page => {
+              const { isNew, isEditing, isModified, imagesLoaded, ...pageToSave } = page;
+              return {
+                ...pageToSave,
+                images: (page.images || []).map(image => {
+                  const { isNew, thumbnail, isLoading, ...imageToSave } = image;
+                  return imageToSave;
+                }),
+              };
+            }),
+          };
+        }),
+      };
 
-        setBooks(prev => {
-            const exists = prev.some(b => b._id === fullRefreshedBook._id);
-            if (exists) return prev.map(b => (b._id === fullRefreshedBook._id ? fullRefreshedBook : b));
-            return [fullRefreshedBook, ...prev.filter(b => b._id !== activeBook._id)];
-        });
+      const savedBook = await curriculumService.saveBook(payload, username);
+      const fullRefreshedBook = await curriculumService.fetchBookDetails(savedBook._id);
 
-        setActiveBook(fullRefreshedBook);
+      setBooks(prev => {
+        const exists = prev.some(b => b._id === fullRefreshedBook._id);
+        if (exists) return prev.map(b => (b._id === fullRefreshedBook._id ? fullRefreshedBook : b));
+        return [fullRefreshedBook, ...prev.filter(b => b._id !== activeBook._id)];
+      });
 
-        const newExpansionState: Record<string, boolean> = { [fullRefreshedBook._id]: true };
-        fullRefreshedBook.chapters.forEach(c => c.chapter_id && (newExpansionState[c.chapter_id] = !!expansionState[c.chapter_id]));
-        setExpansionState(newExpansionState);
+      setActiveBook(fullRefreshedBook);
 
-        setIdCounters({ chapter: fullRefreshedBook.chapter_count || 0, page: fullRefreshedBook.page_count || 0, image: fullRefreshedBook.image_count || 0 });
-        setIsDirty(false);
-        setSelectedPage(null);
-        setNotification({ message: 'Book saved successfully!', type: 'success' });
+      const newExpansionState: Record<string, boolean> = { [fullRefreshedBook._id]: true };
+      fullRefreshedBook.chapters.forEach(c => c.chapter_id && (newExpansionState[c.chapter_id] = !!expansionState[c.chapter_id]));
+      setExpansionState(newExpansionState);
+
+      setIdCounters({ chapter: fullRefreshedBook.chapter_count || 0, page: fullRefreshedBook.page_count || 0, image: fullRefreshedBook.image_count || 0 });
+      setIsDirty(false);
+      setSelectedPage(null);
+      setNotification({ message: 'Book saved successfully!', type: 'success' });
 
     } catch (error) {
-        setNotification({ message: `Error saving book: ${(error as Error).message}`, type: 'error' });
+      setNotification({ message: `Error saving book: ${(error as Error).message}`, type: 'error' });
     } finally {
       setIsLoading(false);
     }

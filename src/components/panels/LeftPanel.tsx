@@ -223,33 +223,45 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
     } else if (leftPanelView === 'curriculum') {
       return (
         <>
-          <div className="border-2 border-dashed border-gray-300 rounded-lg p-3 mb-3 flex items-center gap-2">
-            <select
-              id="curriculum-language-select"
-              value={curriculumProps.searchLanguage}
-              onChange={(e) => curriculumProps.setSearchLanguage(e.target.value)}
-              className="p-1.5 border border-gray-300 rounded-md text-sm focus:ring-[#00AEEF] focus:border-[#00AEEF]"
-              disabled={languageOptions.length === 0}
-              aria-label="Language for Book Search"
-            >
-              <option value="">All Languages</option>
-              {languageOptions.map(lang => <option key={lang} value={lang}>{lang}</option>)}
-            </select>
-            <input
-              type="text"
-              placeholder="Search books..."
-              value={curriculumProps.searchQuery}
-              onChange={(e) => curriculumProps.setSearchQuery(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') handleCurriculumSearch(); }}
-              className="flex-grow p-1.5 border border-gray-300 rounded-md text-sm focus:ring-[#00AEEF] focus:border-[#00AEEF]"
-            />
+          <div className="border-2 border-dashed border-gray-300 rounded-lg p-3 mb-3 flex flex-col gap-2">
+            <div className="flex items-center gap-2 w-full">
+              <select
+                id="curriculum-language-select"
+                value={curriculumProps.searchLanguage}
+                onChange={(e) => curriculumProps.setSearchLanguage(e.target.value)}
+                className="w-32 flex-shrink-0 p-1.5 border border-gray-300 rounded-md text-sm focus:ring-[#00AEEF] focus:border-[#00AEEF]"
+                disabled={languageOptions.length === 0}
+                aria-label="Language for Book Search"
+              >
+                <option value="">All Languages</option>
+                {languageOptions.map(lang => <option key={lang} value={lang}>{lang}</option>)}
+              </select>
+              <input
+                type="text"
+                placeholder="Search books..."
+                value={curriculumProps.searchQuery}
+                onChange={(e) => curriculumProps.setSearchQuery(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleCurriculumSearch(); }}
+                className="flex-1 min-w-0 p-1.5 border border-gray-300 rounded-md text-sm focus:ring-[#00AEEF] focus:border-[#00AEEF]"
+              />
+            </div>
             <button
               onClick={handleCurriculumSearch}
               disabled={curriculumProps.isLoading}
-              className="p-2 bg-[#00AEEF] text-white rounded-lg hover:bg-[#0096CC] transition disabled:opacity-50"
+              className="w-full px-3 py-2 bg-[#00AEEF] text-white rounded-lg hover:bg-[#0096CC] transition disabled:opacity-50 flex items-center justify-center gap-2"
               aria-label="Search curriculum"
             >
-              {curriculumProps.isLoading ? <LoadingSpinner size="sm" color="white" /> : <MagnifyingGlassIcon className="w-4 h-4" />}
+              {curriculumProps.isLoading ? (
+                <>
+                  <LoadingSpinner size="sm" color="white" />
+                  <span>Searching...</span>
+                </>
+              ) : (
+                <>
+                  <MagnifyingGlassIcon className="w-4 h-4" />
+                  <span>Search</span>
+                </>
+              )}
             </button>
           </div>
           <div className="border-2 border-dashed border-gray-300 rounded-lg p-3 flex-1 min-h-0 bg-gray-50/50">
@@ -482,7 +494,7 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
             )}
 
             <div className="mt-auto">
-              <h3 className="font-medium mb-2">Latest Edits</h3>
+              <h3 className="font-medium mb-2">Recent Edits</h3>
               <div className="flex space-x-3 overflow-x-auto pb-2 -mx-1 px-1">
                 {recentTranslations.length > 0 ? (
                   recentTranslations.map((item, idx) => (
