@@ -636,6 +636,13 @@ export const MainApp: React.FC<MainAppProps> = ({ authData }) => {
     }
   };
 
+  // NEW: Handle update story in curriculum view
+  const handleUpdateStory = (newStory: string, newMoral?: string) => {
+    if (curriculum.selectedPageData?.page_id) {
+      curriculum.updateStory(curriculum.selectedPageData.page_id, newStory, newMoral);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#FFFFFF] via-[#E6F7FC] to-[#FDE6E0] text-gray-900 font-sans antialiased">
       <Header userContext={userContext} onLogout={logout} />
@@ -764,6 +771,7 @@ export const MainApp: React.FC<MainAppProps> = ({ authData }) => {
           isDirty={curriculum.isDirty}
           onSaveBook={curriculum.saveBook}
           isStoryLoading={curriculum.isStoryLoading}
+          onUpdateStory={handleUpdateStory}
         />
       </main>
     </div>

@@ -1,7 +1,7 @@
-// src/components/panels/RightPanel.tsx
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { CommonData, FileInfo, LanguageResult, PermissionCheck, Book, Chapter, Page } from '../../types';
 import { StatusWorkflow } from '../common/StatusWorkflow';
+import { PencilIcon, CheckIcon, XMarkIcon } from '@heroicons/react/24/solid';
 
 // Define the new spinner component locally
 const StoryLoadingSpinner: React.FC = () => {
@@ -43,6 +43,7 @@ interface RightPanelProps {
   isDirty?: boolean;
   onSaveBook?: () => void;
   isStoryLoading?: boolean; // New prop
+  onUpdateStory?: (newStory: string, newMoral?: string) => void;
 }
 
 export const RightPanel: React.FC<RightPanelProps> = ({
@@ -61,7 +62,21 @@ export const RightPanel: React.FC<RightPanelProps> = ({
   isDirty,
   onSaveBook,
   isStoryLoading,
+  onUpdateStory,
 }) => {
+  const [isStoryEditing, setIsStoryEditing] = useState(false);
+  const [editedStory, setEditedStory] = useState('');
+  const [editedMoral, setEditedMoral] = useState('');
+
+  // Update local edit state when selected node changes
+  useEffect(() => {
+    if (selectedCurriculumNode && 'story' in selectedCurriculumNode) {
+      setEditedStory(selectedCurriculumNode.story || '');
+      setEditedMoral(selectedCurriculumNode.moral || '');
+    }
+    setIsStoryEditing(false);
+  }, [selectedCurriculumNode]);
+
   const hasResults = Object.keys(languageResults).length > 0;
 
   const getEditCondition = () => {
@@ -208,14 +223,68 @@ export const RightPanel: React.FC<RightPanelProps> = ({
             <p className="text-gray-900">{page.page_number}</p>
           </div>
           {page.story && (
-            <div className="bg-blue-50 p-3 rounded-lg mt-4 space-y-3">
-              <h3 className="font-medium text-gray-700">Generated Story</h3>
-              <p className="text-gray-800 whitespace-pre-wrap text-sm leading-relaxed">{page.story}</p>
-              {page.moral && (
-                <div>
-                  <h4 className="font-semibold text-gray-700 text-sm">Moral of the Story</h4>
-                  <p className="text-gray-800 italic text-sm mt-1">{page.moral}</p>
+            <div className="bg-blue-50 p-3 rounded-lg mt-4 space-y-3 relative group/story">
+              <div className="flex justify-between items-center">
+                <h3 className="font-medium text-gray-700">Generated Story</h3>
+                {!isStoryEditing && onUpdateStory && (
+                  <button
+                    onClick={() => setIsStoryEditing(true)}
+                    className="p-1 text-gray-400 hover:text-[#00AEEF] transition-colors"
+                    title="Edit Story"
+                  >
+                    <PencilIcon className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+
+              {isStoryEditing ? (
+                <div className="space-y-3">
+                  <textarea
+                    value={editedStory}
+                    onChange={(e) => setEditedStory(e.target.value)}
+                    className="w-full p-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-[#00AEEF] focus:border-[#00AEEF] min-h-[150px]"
+                    placeholder="Enter story text..."
+                  />
+                  <div>
+                    <h4 className="font-semibold text-gray-700 text-sm mb-1">Moral of the Story</h4>
+                    <input
+                      type="text"
+                      value={editedMoral}
+                      onChange={(e) => setEditedMoral(e.target.value)}
+                      className="w-full p-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-[#00AEEF] focus:border-[#00AEEF]"
+                      placeholder="Enter moral..."
+                    />
+                  </div>
+                  <div className="flex justify-end space-x-2">
+                    <button
+                      onClick={() => setIsStoryEditing(false)}
+                      className="px-2 py-1 text-xs font-medium text-gray-600 hover:text-gray-800 flex items-center"
+                    >
+                      <XMarkIcon className="w-3 h-3 mr-1" />
+                      Cancel
+                    </button>
+                    <button
+                      onClick={() => {
+                        onUpdateStory?.(editedStory, editedMoral);
+                        setIsStoryEditing(false);
+                      }}
+                      className="px-2 py-1 text-xs font-medium bg-[#00AEEF] text-white rounded hover:bg-[#0096CC] flex items-center"
+                    >
+                      <CheckIcon className="w-3 h-3 mr-1" />
+                      Save
+                    </button>
+                  </div>
                 </div>
+              ) : (
+                <>
+                  <p className="text-gray-800 whitespace-pre-wrap text-sm leading-relaxed">{page.story}</p>
+                  {page.moral && (
+                    <div>
+                      <h4 className="font-semibold text-gray-700 text-sm">Moral of the Story</h4>
+                      <p className="text-gray-800 italic text-sm mt-1">{page.moral}</p>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           )}

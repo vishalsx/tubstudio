@@ -367,10 +367,10 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = (props) => {
                           : "View Quiz Q&A (empty)"
                     }
                     className={`p-2 rounded transition ${isFieldInvalid('quiz_qa')
-                        ? 'text-red-600 bg-red-50 hover:bg-red-100'
-                        : (currentResult.quiz_qa && currentResult.quiz_qa.length > 0)
-                          ? 'text-green-600 bg-green-50 hover:bg-green-100 hover:text-green-700'
-                          : 'text-gray-600 hover:text-[#00AEEF] hover:bg-gray-100'
+                      ? 'text-red-600 bg-red-50 hover:bg-red-100'
+                      : (currentResult.quiz_qa && currentResult.quiz_qa.length > 0)
+                        ? 'text-green-600 bg-green-50 hover:bg-green-100 hover:text-green-700'
+                        : 'text-gray-600 hover:text-[#00AEEF] hover:bg-gray-100'
                       } disabled:opacity-50`}
                   >
                     <AcademicCapIcon className="w-5 h-5" />
@@ -493,14 +493,14 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = (props) => {
                 )}
                 <button
                   onClick={onCreateStory}
-                  disabled={isStoryLoading || !!isPageDirty || !!selectedPageData.story || (selectedPageData.images?.length || 0) < 5}
+                  disabled={isStoryLoading || !!isPageDirty || !!selectedPageData.story || (selectedPageData.images?.length || 0) < 1}
                   title={
                     isPageDirty
                       ? "Save page changes before creating a story"
                       : !!selectedPageData.story
                         ? "Story already exists for this page"
-                        : (selectedPageData.images?.length || 0) < 5
-                          ? "Add at least 5 images to create a story"
+                        : (selectedPageData.images?.length || 0) < 1
+                          ? "Add at least 1 image to create a story"
                           : "Create Story"
                   }
                   className="p-2 rounded-lg transition text-gray-600 hover:text-purple-600 hover:bg-purple-50 disabled:opacity-50 disabled:cursor-not-allowed disabled:text-gray-400 disabled:bg-transparent"
