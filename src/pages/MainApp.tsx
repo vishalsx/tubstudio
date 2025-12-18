@@ -691,6 +691,7 @@ export const MainApp: React.FC<MainAppProps> = ({ authData }) => {
           onSelectBook={curriculum.selectBook}
           onSelectPage={curriculum.selectPage}
           onSelectNode={setSelectedCurriculumNode}
+          onCollapseAll={curriculum.collapseAll}
           languageForImageSearch={effectiveLanguageForImageSearch}
           notification={curriculum.notification}
           showWorklistCallout={showWorklistCallout}
@@ -753,6 +754,8 @@ export const MainApp: React.FC<MainAppProps> = ({ authData }) => {
           imageLoadingProgress={curriculum.imageLoadingProgress}
           onUpdateImageName={handleUpdateImageName}
           onReIdentify={handleReIdentify}
+          isDirty={curriculum.isDirty}
+          onSaveBook={curriculum.saveBook}
         />
 
         <RightPanel

@@ -64,7 +64,7 @@
 //       setIsEditingName(false);
 //     }
 //   };
-  
+
 //   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
 //     if (e.key === 'Enter') handleCommit();
 //     if (e.key === 'Escape') setIsEditingName(false);
@@ -83,7 +83,7 @@
 //     if (type === 'book') {
 //       canProceed = await onSelectBook((node as Book)._id);
 //     }
-    
+
 //     if (canProceed) {
 //       onNodeExpansion(node as Book | Chapter);
 //     }
@@ -114,7 +114,7 @@
 
 //   const children = (node as Book).chapters || (node as Chapter).pages;
 //   const canExpand = type !== 'page';
-  
+
 //   const icon = type === 'book' ? <BookOpenIcon className="w-5 h-5 text-blue-600" /> :
 //              type === 'chapter' ? <FolderIcon className="w-5 h-5 text-yellow-600" /> :
 //              <DocumentIcon className="w-5 h-5 text-gray-600" />;
@@ -248,7 +248,7 @@
 // src/components/panels/CurriculumPanel.tsx
 import React, { useState, useEffect, useRef } from 'react';
 import { Book, Chapter, Page } from '../../types';
-import { PencilIcon, PlusCircleIcon, TrashIcon, BookOpenIcon, FolderIcon, DocumentIcon, CloudArrowUpIcon, PlusIcon, MinusIcon } from '@heroicons/react/24/outline';
+import { PencilIcon, PlusCircleIcon, TrashIcon, BookOpenIcon, FolderIcon, DocumentIcon, CloudArrowUpIcon, PlusIcon, MinusIcon, ChevronRightIcon, ChevronDownIcon, MagnifyingGlassIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { LoadingSpinner } from '../common/LoadingSpinner';
 import { useConfirmation } from '../../contexts/ConfirmationContext';
 
@@ -271,6 +271,7 @@ interface CurriculumPanelProps {
   onAddPage: (bookId: string, chapterId: string) => void;
   onDeletePage: (chapterId: string, pageId: string) => void;
   onUpdatePageTitle: (chapterId: string, pageId: string, newTitle: string) => void;
+  onCollapseAll: () => void;
 }
 
 interface TreeNodeProps extends Omit<CurriculumPanelProps, 'books' | 'searchAttempted' | 'onOpenCreateBookModal' | 'onSelectBook'> {
@@ -284,8 +285,8 @@ interface TreeNodeProps extends Omit<CurriculumPanelProps, 'books' | 'searchAtte
 }
 
 const TreeNode: React.FC<TreeNodeProps> = (props) => {
-  const { node, type, level, isExpanded, expansionState, isDirty, onSelectNode, onSelectPage, 
-    onSaveBook, onNodeExpansion, onAddChapter, onDeleteChapter, onUpdateChapterName, 
+  const { node, type, level, isExpanded, expansionState, isDirty, onSelectNode, onSelectPage,
+    onSaveBook, onNodeExpansion, onAddChapter, onDeleteChapter, onUpdateChapterName,
     onAddPage, onDeletePage, onUpdatePageTitle, parentChapter, onSelectBook, bookId } = props;
 
   const [isEditingName, setIsEditingName] = useState(false);
@@ -311,7 +312,7 @@ const TreeNode: React.FC<TreeNodeProps> = (props) => {
       setIsEditingName(false);
     }
   };
-  
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') handleCommit();
     if (e.key === 'Escape') setIsEditingName(false);
@@ -330,7 +331,7 @@ const TreeNode: React.FC<TreeNodeProps> = (props) => {
     if (type === 'book') {
       canProceed = await onSelectBook((node as Book)._id);
     }
-    
+
     if (canProceed) {
       onNodeExpansion(node as Book | Chapter);
     }
@@ -361,44 +362,52 @@ const TreeNode: React.FC<TreeNodeProps> = (props) => {
 
   const children = (node as Book).chapters || (node as Chapter).pages;
   const canExpand = type !== 'page';
-  
-  const icon = type === 'book' ? <BookOpenIcon className="w-5 h-5 text-blue-600" /> :
-             type === 'chapter' ? <FolderIcon className="w-5 h-5 text-yellow-600" /> :
-             <DocumentIcon className="w-5 h-5 text-gray-600" />;
+
+  const icon = type === 'book' ? <BookOpenIcon className="w-4 h-4 text-blue-600" /> :
+    type === 'chapter' ? <FolderIcon className="w-4 h-4 text-amber-500" /> :
+      <DocumentIcon className="w-4 h-4 text-gray-500" />;
 
   const isSaveable = isDirty && props.activeBook?._id === (node as Book)._id;
 
+  const bgStyles = type === 'book' ? 'hover:bg-blue-50' :
+    type === 'chapter' ? 'hover:bg-amber-50' :
+      'hover:bg-gray-100';
+
+  const textStyles = type === 'book' ? 'font-semibold text-gray-800' :
+    type === 'chapter' ? 'font-medium text-gray-700' :
+      'text-gray-600';
+
   return (
-    <div className="text-sm">
-      <div 
-        className="flex items-center space-x-2 p-1.5 rounded-md hover:bg-gray-100 group cursor-pointer"
-        style={{ paddingLeft: `${level * 1.25}rem` }}
+    <div className="text-xs">
+      <div
+        className={`flex items-center space-x-2 py-1 px-1.5 rounded-lg transition-colors group cursor-pointer ${bgStyles}`}
+        style={{ paddingLeft: `${level * 1}rem` }}
         onClick={handleNodeClick}
       >
         <div className="w-4 h-4 flex items-center justify-center">
           {canExpand && (
-            <button onClick={(e) => { e.stopPropagation(); onNodeExpansion(node as Book | Chapter); }} className="p-0.5 rounded-sm hover:bg-gray-200">
-              {isExpanded ? <MinusIcon className="w-3 h-3" /> : <PlusIcon className="w-3 h-3" />}
+            <button onClick={(e) => { e.stopPropagation(); onNodeExpansion(node as Book | Chapter); }} className="p-0.5 rounded text-gray-400 hover:text-gray-600 transition">
+              {isExpanded ? <ChevronDownIcon className="w-3 h-3" /> : <ChevronRightIcon className="w-3 h-3" />}
             </button>
           )}
         </div>
-        {icon}
-        <span className="flex-1 truncate flex items-center">
+        <div className="flex-shrink-0">{icon}</div>
+        <span className={`flex-1 truncate flex items-center ${textStyles}`}>
           {isEditingName ? (
             <input
               ref={inputRef} type="text" value={editValue} onChange={(e) => setEditValue(e.target.value)}
               onBlur={handleCommit} onKeyDown={handleKeyDown} onClick={e => e.stopPropagation()}
-              className="w-full bg-white border border-blue-400 rounded px-1 -my-0.5 text-sm"
+              className="w-full bg-white border border-[#00AEEF] rounded px-1.5 py-0.5 text-xs outline-none shadow-sm"
+              autoFocus
             />
           ) : name}
-          {type === 'book' && isSaveable && <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 ml-2" title="Unsaved changes"></div>}
-          {(type === 'chapter' || type === 'page') && isNodeDirty && <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 ml-2" title="Unsaved changes"></div>}
+          {type === 'book' && isSaveable && <div className="w-1.5 h-1.5 bg-[#00AEEF] rounded-full flex-shrink-0 ml-1.5 animate-pulse" title="Unsaved changes"></div>}
+          {(type === 'chapter' || type === 'page') && isNodeDirty && <div className="w-1.5 h-1.5 bg-[#00AEEF] rounded-full flex-shrink-0 ml-1.5 animate-pulse" title="Unsaved changes"></div>}
         </span>
-        <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100">
-          {type === 'book' && <button onClick={(e) => {e.stopPropagation(); onSaveBook()}} title={isSaveable ? "Save Book" : "No changes to save"} disabled={!isSaveable} className="p-1 rounded text-gray-500 hover:bg-blue-100 disabled:text-gray-300"><CloudArrowUpIcon className="w-4 h-4" /></button>}
-          {type !== 'page' && <button onClick={handleAdd} title={`Add ${type === 'book' ? 'Chapter' : 'Page'}`} className="p-1 rounded text-gray-500 hover:bg-green-100"><PlusCircleIcon className="w-4 h-4" /></button>}
-          {(type === 'chapter' || type === 'page') && <button onClick={(e) => { e.stopPropagation(); setIsEditingName(true); }} title="Edit" className="p-1 rounded text-gray-500 hover:bg-yellow-100"><PencilIcon className="w-4 h-4" /></button>}
-          {(type === 'chapter' || type === 'page') && <button onClick={handleDelete} title="Delete" className="p-1 rounded text-gray-500 hover:bg-red-100"><TrashIcon className="w-4 h-4" /></button>}
+        <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          {type !== 'page' && <button onClick={handleAdd} title={`Add ${type === 'book' ? 'Chapter' : 'Page'}`} className="p-1 rounded text-gray-400 hover:text-green-600 hover:bg-white transition-colors"><PlusCircleIcon className="w-3.5 h-3.5" /></button>}
+          {(type === 'chapter' || type === 'page') && <button onClick={(e) => { e.stopPropagation(); setIsEditingName(true); }} title="Edit" className="p-1 rounded text-gray-400 hover:text-amber-600 hover:bg-white transition-colors"><PencilIcon className="w-3.5 h-3.5" /></button>}
+          {(type === 'chapter' || type === 'page') && <button onClick={handleDelete} title="Delete" className="p-1 rounded text-gray-400 hover:text-red-600 hover:bg-white transition-colors"><TrashIcon className="w-3.5 h-3.5" /></button>}
         </div>
       </div>
       {isExpanded && children && children.map((child: Chapter | Page) => {
@@ -422,6 +431,7 @@ const TreeNode: React.FC<TreeNodeProps> = (props) => {
   );
 };
 
+
 export const CurriculumPanel: React.FC<CurriculumPanelProps> = (props) => {
   const { books, isLoading, onSelectBook, onOpenCreateBookModal, isDirty, searchAttempted } = props;
   const confirm = useConfirmation();
@@ -442,53 +452,107 @@ export const CurriculumPanel: React.FC<CurriculumPanelProps> = (props) => {
     return true;
   };
 
+  const [filterText, setFilterText] = useState('');
+
+  const filteredBooks = React.useMemo(() => {
+    if (!filterText.trim()) return books;
+    const lowerFilter = filterText.toLowerCase();
+
+    return books.filter(book => {
+      const bookMatches = book.title.toLowerCase().includes(lowerFilter) ||
+        book.subject?.toLowerCase().includes(lowerFilter) ||
+        book.author?.toLowerCase().includes(lowerFilter);
+
+      const chapterMatches = book.chapters?.some(chapter =>
+        chapter.chapter_name.toLowerCase().includes(lowerFilter) ||
+        chapter.pages?.some(page => page.title?.toLowerCase().includes(lowerFilter))
+      );
+
+      return bookMatches || chapterMatches;
+    });
+  }, [books, filterText]);
+
   const renderContent = () => {
     if (isLoading && books.length === 0) {
-        return <div className="flex items-center justify-center h-full"><LoadingSpinner text="Searching for books..." /></div>;
+      return <div className="flex items-center justify-center h-full"><LoadingSpinner text="Searching for books..." /></div>;
     }
 
-    if (books.length > 0) {
-        return books.map(book => {
-            const bookNodeId = book._id;
-            return (
-                <TreeNode 
-                    {...props}
-                    key={bookNodeId} 
-                    node={book} 
-                    type="book" 
-                    level={0} 
-                    isExpanded={!!props.expansionState[bookNodeId]}
-                    onSelectBook={handleBookSelect}
-                    bookId={book._id}
-                />
-            );
-        });
+    if (filteredBooks.length > 0) {
+      return filteredBooks.map(book => {
+        const bookNodeId = book._id;
+        return (
+          <TreeNode
+            {...props}
+            key={bookNodeId}
+            node={book}
+            type="book"
+            level={0}
+            isExpanded={!!props.expansionState[bookNodeId]}
+            onSelectBook={handleBookSelect}
+            bookId={book._id}
+          />
+        );
+      });
     }
 
     if (searchAttempted) {
-        return (
-            <div className="flex items-center justify-center h-full text-sm text-gray-500 italic">
-                No books found for your search.
-            </div>
-        );
+      return (
+        <div className="flex items-center justify-center h-full text-sm text-gray-500 italic">
+          No books found for your search.
+        </div>
+      );
     }
 
     return (
-        <div className="flex items-center justify-center h-full text-sm text-gray-500 italic">
-            Search for a book or create a new one.
-        </div>
+      <div className="flex items-center justify-center h-full text-sm text-gray-500 italic">
+        Search for a book or create a new one.
+      </div>
     );
   };
 
   return (
     <div className="flex flex-col h-full relative">
       <div className="flex justify-between items-center mb-2 flex-shrink-0">
-        <h3 className="font-medium text-gray-700">Curriculum</h3>
-        <button onClick={onOpenCreateBookModal} className="text-xs flex items-center text-gray-500 hover:text-green-600">
-          <PlusCircleIcon className="w-4 h-4 mr-1" /> Add Book
-        </button>
+        <h3 className="font-semibold text-gray-800 text-sm">Curriculum</h3>
+        <div className="flex items-center space-x-2">
+          <button
+            onClick={props.onCollapseAll}
+            className="text-[10px] px-1.5 py-0.5 border border-gray-300 rounded text-gray-500 hover:bg-gray-100 transition"
+            title="Collapse All"
+          >
+            Collapse All
+          </button>
+          <button onClick={onOpenCreateBookModal} className="text-xs flex items-center text-[#00AEEF] hover:text-[#0096CC] font-medium transition" title="Create New Book">
+            <PlusCircleIcon className="w-4 h-4 mr-1" /> Add Book
+          </button>
+        </div>
       </div>
-      <div className="flex-1 overflow-y-auto pr-1">
+
+      {/* Local Filter Bar */}
+      {books.length > 0 && (
+        <div className="mb-3 relative group">
+          <div className="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none">
+            <MagnifyingGlassIcon className="h-3.5 w-3.5 text-gray-400 group-focus-within:text-[#00AEEF] transition-colors" />
+          </div>
+          <input
+            type="text"
+            placeholder="Filter current view..."
+            value={filterText}
+            onChange={(e) => setFilterText(e.target.value)}
+            className="block w-full pl-8 pr-8 py-1.5 text-xs border border-gray-200 rounded-lg focus:ring-1 focus:ring-[#00AEEF] focus:border-[#00AEEF] bg-gray-50/50 hover:bg-gray-50 transition-colors"
+          />
+          {filterText && (
+            <button
+              onClick={() => setFilterText('')}
+              className="absolute inset-y-0 right-0 pr-2 flex items-center text-gray-400 hover:text-gray-600"
+            >
+              <XMarkIcon className="h-3 w-3" />
+            </button>
+          )}
+        </div>
+      )}
+
+      <div className="flex-1 overflow-y-auto pr-1 custom-scrollbar">
         {renderContent()}
       </div>
     </div>

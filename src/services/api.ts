@@ -29,18 +29,41 @@ const formatUserFriendlyError = (status: number, errorDetail: string): string =>
   let message = errorMessages[status] || "An unexpected error occurred.";
 
   // If backend provides a meaningful detail message, use it
-  // Check if errorDetail is meaningful (not just HTTP status text)
-  if (errorDetail &&
-    errorDetail.length > 0 &&
-    !errorDetail.match(/^(Internal Server Error|Bad Request|Not Found|Forbidden)$/i)) {
-    // Extract meaningful part from common backend error formats
-    const cleanDetail = errorDetail
-      .replace(/^\d+:\s*/, '')  // Remove status code prefix like "500: "
-      .replace(/Processing error\.?/i, 'Processing failed.')  // Make generic errors more specific
+  if (errorDetail && errorDetail.length > 0) {
+    // 1. Internal status text check (if it's just repeating the status code label, skip it)
+    const isGenericSystemError = /^(Internal Server Error|Bad Request|Not Found|Forbidden|Unauthorized)$/i.test(errorDetail.trim());
+    if (isGenericSystemError) return message;
+
+    // 2. Clean common technical prefixes and jargon
+    let cleanDetail = errorDetail
+      .replace(/^\d+:\s*/, '')           // Remove status code prefix like "500: "
+      .replace(/ObjectId\('([^']+)'\)/g, '$1') // Strip ObjectId wrapper
+      .replace(/image_lexicon\.\w+ /g, '')      // Strip collection names
+      .replace(/(AttributeError|TypeError|KeyError|ValueError|JSONDecodeError|ClientError|JWTError|PNGErr):\s*/gi, '') // Strip Python/AWS error types
+      .replace(/Processing error[:\s]*/i, 'Processing failed. ')
+      .replace(/Database error[:\s]*/i, 'Storage error: ')
+      .replace(/image_hash/g, 'reference ID')
+      .replace(/user_comments/g, 'comments')
+      .replace(/object_key/g, 'storage path')
+      .replace(/sequence number/g, 'ID sequence')
       .trim();
 
+    // 3. Catch specific technical patterns and translate to user-friendly text
+    if (cleanDetail.includes('E11000 duplicate key error')) {
+      cleanDetail = "The item you're trying to save already exists. Please check if this ID or title is already in use.";
+    } else if (cleanDetail.includes('validation error') || cleanDetail.includes('value_error')) {
+      cleanDetail = "The information provided is in an incorrect format. Please check your entries.";
+    } else if (cleanDetail.includes('Nologged-in user found') || cleanDetail.includes('Invalid authentication token')) {
+      cleanDetail = "Your session has expired or is invalid. Please log in again.";
+    }
+
+    // 4. Final aggregation
     if (cleanDetail && cleanDetail.length > 3) {
-      message = `${message} ${cleanDetail}`;
+      // If the base message is empty or generic, use the detail as primary
+      if (message.includes('unexpected error') || message === "Server error. Please try again later.") {
+        return cleanDetail;
+      }
+      return `${message} ${cleanDetail}`;
     }
   }
 

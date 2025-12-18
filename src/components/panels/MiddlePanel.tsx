@@ -1,7 +1,7 @@
 // components/panels/MiddlePanel.tsx
 import React, { useState, useEffect } from 'react';
-import { XMarkIcon, StarIcon, ArrowUpCircleIcon, CheckCircleIcon, CheckBadgeIcon, XCircleIcon, ArrowRightCircleIcon, PencilIcon, EyeIcon, ArrowDownTrayIcon } from '@heroicons/react/24/solid';
-import { PlusCircleIcon, TrashIcon, SparklesIcon, ArrowPathIcon, AcademicCapIcon } from '@heroicons/react/24/outline';
+import { XMarkIcon, StarIcon, ArrowUpCircleIcon, CheckCircleIcon, CheckBadgeIcon, XCircleIcon, ArrowRightCircleIcon, PencilIcon, EyeIcon, ArrowDownTrayIcon, ChevronRightIcon } from '@heroicons/react/24/solid';
+import { PlusCircleIcon, TrashIcon, SparklesIcon, ArrowPathIcon, AcademicCapIcon, PhotoIcon, BookOpenIcon, FolderIcon, DocumentIcon, InformationCircleIcon } from '@heroicons/react/24/outline';
 import { LanguageResult, SaveStatus, PermissionCheck, CurriculumImage, DatabaseImage, CommonData, Page, Book } from '../../types';
 import { StatusWorkflow } from '../common/StatusWorkflow';
 import { ImageSearchModal } from '../common/ImageSearchModal';
@@ -61,6 +61,8 @@ interface MiddlePanelProps {
   imageLoadingProgress: { loaded: number, total: number } | null;
   onUpdateImageName?: (imageHash: string, newName: string) => void;
   onReIdentify?: (language: string, context: string) => void;
+  isDirty?: boolean;
+  onSaveBook?: () => void;
 }
 
 export const MiddlePanel: React.FC<MiddlePanelProps> = (props) => {
@@ -100,6 +102,8 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = (props) => {
     imageLoadingProgress,
     onUpdateImageName,
     onReIdentify,
+    isDirty,
+    onSaveBook,
   } = props;
 
   const [isImageSearchModalOpen, setIsImageSearchModalOpen] = useState(false);
@@ -473,8 +477,9 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = (props) => {
     return (
       <div className="h-full flex flex-col">
         {!selectedPageData ? (
-          <div className="flex items-center justify-center h-full text-gray-500 italic">
-            Select a page from the curriculum tree to view its images.
+          <div className="flex flex-col items-center justify-center h-full text-gray-400">
+            <PhotoIcon className="w-16 h-16 mb-4 opacity-20" />
+            <p className="italic">Select a page from the curriculum tree to view its images.</p>
           </div>
         ) : isCurriculumLoading && !imageLoadingProgress ? (
           <div className="flex items-center justify-center h-full">
@@ -482,9 +487,38 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = (props) => {
           </div>
         ) : (
           <>
-            <div className="flex justify-between items-center mb-2">
-              <h3 className="font-medium text-gray-700 truncate pr-4">{chapterName} ({pageTitle})</h3>
+            {/* Breadcrumbs */}
+            <div className="flex items-center space-x-1 text-xs text-gray-400 mb-4 bg-gray-50/50 p-2 rounded-lg">
+              <BookOpenIcon className="w-3.5 h-3.5 text-blue-500" />
+              <span className="hover:text-gray-600 cursor-default">{activeBook?.title}</span>
+              <ChevronRightIcon className="w-3 h-3" />
+              <FolderIcon className="w-3.5 h-3.5 text-amber-500" />
+              <span className="hover:text-gray-600 cursor-default">{chapterName}</span>
+              <ChevronRightIcon className="w-3 h-3" />
+              <DocumentIcon className="w-3.5 h-3.5 text-gray-500" />
+              <span className="font-semibold text-gray-700">{pageTitle}</span>
+              {selectedPageData.story && (
+                <div className="ml-auto flex items-center bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full text-[10px] font-medium animate-pulse">
+                  <SparklesIcon className="w-3 h-3 mr-1" /> Story Ready
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-between items-center mb-4">
               <div className="flex items-center space-x-2">
+                <h2 className="text-xl font-bold text-gray-800">{pageTitle}</h2>
+                {isPageDirty && <span className="text-[10px] bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full font-medium">Unsaved Changes</span>}
+              </div>
+              <div className="flex items-center space-x-3">
+                {isDirty && (
+                  <button
+                    onClick={onSaveBook}
+                    className="flex items-center space-x-2 bg-green-600 hover:bg-green-700 text-white px-4 py-1.5 rounded-lg text-sm font-bold shadow-md shadow-green-500/20 transition-all active:scale-95"
+                  >
+                    <CheckCircleIcon className="w-4 h-4" />
+                    <span>Save Changes</span>
+                  </button>
+                )}
                 {imageLoadingProgress && (
                   <div className="text-sm text-gray-500 flex items-center">
                     <LoadingSpinner size="sm" color="gray" className="mr-2" />
@@ -506,20 +540,6 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = (props) => {
                   className="p-2 rounded-lg transition text-gray-600 hover:text-purple-600 hover:bg-purple-50 disabled:opacity-50 disabled:cursor-not-allowed disabled:text-gray-400 disabled:bg-transparent"
                 >
                   <SparklesIcon className="w-5 h-5" />
-                </button>
-                <button
-                  onClick={() => onGenerateStory?.(selectedPageData!.page_id!, userComments)}
-                  disabled={isStoryLoading || !selectedPageData?.story || !!isPageDirty}
-                  title={
-                    !selectedPageData?.story
-                      ? "A story must be generated first"
-                      : !!isPageDirty
-                        ? "Save new images before regenerating the story"
-                        : "Regenerate story with new comments"
-                  }
-                  className="p-2 rounded-lg transition text-gray-600 hover:text-blue-600 hover:bg-blue-50 disabled:opacity-50 disabled:cursor-not-allowed disabled:text-gray-400 disabled:bg-transparent"
-                >
-                  <ArrowPathIcon className="w-5 h-5" />
                 </button>
               </div>
             </div>
@@ -550,23 +570,25 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = (props) => {
                       onDrop={(e) => handleDrop(e, image.image_hash)}
                       onDragEnd={handleDragEnd}
                       onDoubleClick={() => onCurriculumImageDoubleClick(image, activeBook?.language || languageForImageSearch)}
-                      className={`relative group rounded-xl overflow-hidden shadow-md cursor-grab active:cursor-grabbing aspect-square transition-all
-                        ${isDraggingThis ? 'opacity-40 scale-95' : 'opacity-100 scale-100'}
-                        ${isDropTarget ? 'ring-4 ring-[#00AEEF] ring-offset-2 scale-105' : ''}
-                        ${draggedImageHash !== null && !isDraggingThis ? 'hover:scale-105' : ''}`}
+                      className={`relative group rounded-2xl overflow-hidden bg-white shadow-sm ring-1 ring-gray-200 aspect-square transition-all duration-300
+                        ${isDraggingThis ? 'opacity-40 scale-90' : 'opacity-100 scale-100'}
+                        ${isDropTarget ? 'ring-4 ring-[#00AEEF] ring-offset-4 z-30' : 'hover:shadow-xl hover:-translate-y-1'}`}
                     >
                       {/* Position indicator badge */}
-                      <div className="absolute top-1 left-1 z-20 bg-gray-900 bg-opacity-75 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center border-2 border-white">
+                      <div className="absolute top-2 left-2 z-20 bg-white/90 backdrop-blur-sm text-gray-800 text-[10px] font-bold rounded-lg px-1.5 py-0.5 flex items-center justify-center shadow-sm border border-gray-100">
                         {image.position || index + 1}
                       </div>
 
-                      <img
-                        src={image.thumbnail}
-                        alt={image.object_name}
-                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110 pointer-events-none"
+                      <div className="w-full h-full relative overflow-hidden">
+                        <img
+                          src={image.thumbnail}
+                          alt={image.object_name}
+                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110 pointer-events-none"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                      </div>
 
-                      />
-                      <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/80 via-black/40 to-transparent transition-all duration-200">
+                      <div className="absolute bottom-0 left-0 right-0 p-2 transform translate-y-1 group-hover:translate-y-0 transition-transform duration-300">
                         {editingImageHash === image.image_hash ? (
                           <input
                             type="text"
@@ -575,28 +597,30 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = (props) => {
                             onBlur={() => saveImageName(image.image_hash)}
                             onKeyDown={(e) => handleNameKeyDown(e, image.image_hash)}
                             onClick={(e) => e.stopPropagation()}
-                            className="w-full text-xs px-1 py-0.5 rounded border-none focus:ring-1 focus:ring-[#00AEEF] text-black pointer-events-auto"
+                            className="w-full text-xs px-2 py-1 rounded-lg border-2 border-[#00AEEF] focus:ring-0 text-gray-800 bg-white pointer-events-auto shadow-lg"
                             autoFocus
                           />
                         ) : (
-                          <div className="flex items-center justify-center group/name cursor-text pointer-events-auto" onClick={(e) => startEditingImageName(e, image)}>
-                            <p className="text-white font-bold text-xs text-center drop-shadow-md truncate px-1 select-none flex-1">
+                          <div className="flex items-center justify-between bg-white/10 backdrop-blur-md rounded-lg px-2 py-1 border border-white/20 cursor-text pointer-events-auto" onClick={(e) => startEditingImageName(e, image)}>
+                            <p className="text-white font-semibold text-xs truncate select-none flex-1">
                               {image.object_name}
                             </p>
-                            <PencilIcon className="w-3 h-3 text-white opacity-0 group-hover/name:opacity-100 ml-1 flex-shrink-0 shadow-sm" />
+                            <PencilIcon className="w-3 h-3 text-white/70 ml-1 flex-shrink-0" />
                           </div>
                         )}
                       </div>
+
                       {image.isNew && (
-                        <div className="absolute top-1 right-8 w-2.5 h-2.5 bg-blue-500 rounded-full border-2 border-white pointer-events-none" title="Not saved"></div>
+                        <div className="absolute top-2 right-10 w-2 h-2 bg-[#00AEEF] rounded-full border-2 border-white pointer-events-none shadow-sm" title="Not saved"></div>
                       )}
+
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
                           onRemoveImageFromCurriculumPage(image.image_hash);
                         }}
-                        className="absolute top-1 right-1 p-1 bg-black bg-opacity-40 rounded-full text-white opacity-0 group-hover:opacity-100 hover:bg-red-600 transition-all z-10"
-                        title="Remove image from page"
+                        className="absolute top-2 right-2 p-1.5 bg-white/90 backdrop-blur-sm rounded-lg text-gray-400 opacity-0 group-hover:opacity-100 hover:text-red-500 hover:bg-white transition-all z-10 shadow-sm border border-gray-100"
+                        title="Remove image"
                       >
                         <TrashIcon className="w-4 h-4" />
                       </button>
@@ -605,27 +629,75 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = (props) => {
                 })}
                 {/* Add Image Box */}
                 <div
-                  className="relative group rounded-xl border-2 border-dashed border-gray-400 hover:border-[#00AEEF] bg-gray-50 flex flex-col items-center justify-center cursor-pointer aspect-square transition-colors"
+                  className="relative group rounded-2xl border-2 border-dashed border-gray-200 hover:border-[#00AEEF] hover:bg-blue-50/50 flex flex-col items-center justify-center cursor-pointer aspect-square transition-all duration-300 shadow-sm hover:shadow-md"
                   onClick={() => setIsImageSearchModalOpen(true)}
                   title="Add a new image to this page"
                 >
-                  <PlusCircleIcon className="w-8 h-8 text-gray-400 group-hover:text-[#00AEEF] transition-colors" />
-                  <p className="text-xs text-gray-500 group-hover:text-[#00AEEF] mt-1 text-center">Add new image</p>
+                  <PlusCircleIcon className="w-10 h-10 text-gray-300 group-hover:text-[#00AEEF] group-hover:scale-110 transition-all duration-300" />
+                  <p className="text-[10px] font-bold text-gray-400 group-hover:text-[#00AEEF] mt-2 uppercase tracking-wider">Add Image</p>
                 </div>
               </div>
             </div>
             {!!selectedPageData?.story && (
-              <div className="mt-4 pt-4 border-t border-gray-200 flex-shrink-0">
-                <label htmlFor="userComments" className="block text-sm font-medium text-gray-700 mb-1">Add instruction and regenerate the story</label>
-                <textarea
-                  id="userComments"
-                  rows={2}
-                  value={userComments}
-                  onChange={(e) => setUserComments(e.target.value)}
-                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm"
-                  placeholder="e.g., Make the story funnier, mention the red car..."
-                  disabled={isStoryLoading}
-                />
+              <div className="mt-6 pt-6 border-t border-gray-100 flex-shrink-0">
+                <div className="bg-gradient-to-br from-indigo-50/50 to-blue-50/50 p-4 rounded-2xl border border-blue-100/50 shadow-sm relative overflow-hidden group/prompt">
+                  <div className="absolute top-0 right-0 w-32 h-32 -mr-16 -mt-16 bg-[#00AEEF] opacity-[0.03] rounded-full pointer-events-none transition-transform duration-700 group-hover/prompt:scale-110"></div>
+
+                  <div className="relative">
+                    <div className="flex items-center justify-between mb-3">
+                      <label htmlFor="userComments" className="flex items-center text-xs font-bold text-gray-500 uppercase tracking-widest">
+                        <SparklesIcon className="w-3.5 h-3.5 mr-1.5 text-amber-500" />
+                        Regeneration Instructions
+                      </label>
+                      {userComments && (
+                        <button
+                          onClick={() => setUserComments('')}
+                          className="text-[10px] text-gray-400 hover:text-gray-600 font-medium transition-colors"
+                        >
+                          Clear
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="relative bg-white rounded-xl border border-blue-100 shadow-inner focus-within:ring-2 focus-within:ring-[#00AEEF]/10 focus-within:border-[#00AEEF] transition-all overflow-hidden">
+                      <textarea
+                        id="userComments"
+                        rows={2}
+                        value={userComments}
+                        onChange={(e) => setUserComments(e.target.value)}
+                        className="w-full p-4 pr-32 text-sm bg-transparent outline-none resize-none placeholder-gray-400 leading-relaxed min-h-[80px]"
+                        placeholder="e.g., Make the story more adventurous, mention the blue bird..."
+                        disabled={isStoryLoading}
+                      />
+
+                      <div className="absolute top-3 right-3 flex items-center space-x-2">
+                        <button
+                          onClick={() => onGenerateStory?.(selectedPageData!.page_id!, userComments)}
+                          disabled={isStoryLoading || !!isPageDirty}
+                          className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-xs font-bold transition-all active:scale-95 shadow-md shadow-blue-500/10 
+                            ${isPageDirty
+                              ? 'bg-gray-100 text-gray-400 cursor-not-allowed bg-transparent border border-gray-100'
+                              : 'bg-[#00AEEF] text-white hover:bg-[#0096CC] hover:shadow-blue-500/20 shadow-lg'}`}
+                          title={isPageDirty ? "Save changes before regenerating" : "Regenerate story"}
+                        >
+                          {isStoryLoading ? (
+                            <LoadingSpinner size="sm" color="white" className="mr-1" />
+                          ) : (
+                            <ArrowPathIcon className="w-4 h-4" />
+                          )}
+                          <span>{isStoryLoading ? 'Regenerating...' : 'Regenerate'}</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {isPageDirty && (
+                      <p className="mt-2 text-[10px] text-amber-600 flex items-center font-medium animate-pulse">
+                        <InformationCircleIcon className="w-3 h-3 mr-1" />
+                        Please save your image sequence changes before regenerating.
+                      </p>
+                    )}
+                  </div>
+                </div>
               </div>
             )}
           </>

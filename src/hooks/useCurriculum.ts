@@ -63,7 +63,7 @@ export const useCurriculum = (userContext: UserContext | null) => {
       setBooks(results);
     } catch (error) {
       console.error("Failed to search for books:", error);
-      setNotification({ message: `Error searching books: ${(error as Error).message}`, type: 'error' });
+      setNotification({ message: (error as Error).message, type: 'error' });
     } finally {
       setIsLoading(false);
     }
@@ -99,7 +99,7 @@ export const useCurriculum = (userContext: UserContext | null) => {
       setIsDirty(false); // A new book isn't dirty
     } catch (error) {
       console.error("Failed to create book:", error);
-      setNotification({ message: `Error creating book: ${(error as Error).message}`, type: 'error' });
+      setNotification({ message: (error as Error).message, type: 'error' });
     } finally {
       setIsLoading(false);
     }
@@ -126,7 +126,7 @@ export const useCurriculum = (userContext: UserContext | null) => {
       setIsDirty(false);
     } catch (error) {
       console.error("Failed to select and fetch book:", error);
-      setNotification({ message: `Error loading book: ${(error as Error).message}`, type: 'error' });
+      setNotification({ message: (error as Error).message, type: 'error' });
     } finally {
       setIsLoading(false);
     }
@@ -188,7 +188,7 @@ export const useCurriculum = (userContext: UserContext | null) => {
       setExpansionState(prev => ({ ...prev, [nodeId]: true }));
     } catch (error) {
       console.error("Failed to fetch book details on expansion:", error);
-      setNotification({ message: `Error fetching book: ${(error as Error).message}`, type: 'error' });
+      setNotification({ message: (error as Error).message, type: 'error' });
     } finally {
       setIsLoading(false);
     }
@@ -453,7 +453,7 @@ export const useCurriculum = (userContext: UserContext | null) => {
       });
       setNotification({ message: 'Story generated successfully!', type: 'success' });
     } catch (error) {
-      setNotification({ message: `Error generating story: ${(error as Error).message}`, type: 'error' });
+      setNotification({ message: (error as Error).message, type: 'error' });
     } finally {
       setIsStoryLoading(false);
     }
@@ -656,12 +656,15 @@ export const useCurriculum = (userContext: UserContext | null) => {
       setNotification({ message: 'Book saved successfully!', type: 'success' });
 
     } catch (error) {
-      setNotification({ message: `Error saving book: ${(error as Error).message}`, type: 'error' });
+      setNotification({ message: (error as Error).message, type: 'error' });
     } finally {
       setIsLoading(false);
     }
   }, [activeBook, username, expansionState]);
 
+  const collapseAll = useCallback(() => {
+    setExpansionState({});
+  }, []);
 
   return {
     books,
@@ -694,7 +697,8 @@ export const useCurriculum = (userContext: UserContext | null) => {
     removeImageFromPage,
     generateStoryForPage,
     reorderImagesOnPage,
-    updateImageName, // EXPORTED HERE
+    updateImageName,
     updateStory,
+    collapseAll,
   };
 };

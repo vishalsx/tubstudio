@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { CommonData, FileInfo, LanguageResult, PermissionCheck, Book, Chapter, Page } from '../../types';
 import { StatusWorkflow } from '../common/StatusWorkflow';
-import { PencilIcon, CheckIcon, XMarkIcon } from '@heroicons/react/24/solid';
+import { PencilIcon, CheckIcon, XMarkIcon, IdentificationIcon, AcademicCapIcon, BookOpenIcon, SparklesIcon, InformationCircleIcon } from '@heroicons/react/24/solid';
 
 // Define the new spinner component locally
 const StoryLoadingSpinner: React.FC = () => {
@@ -192,44 +192,77 @@ export const RightPanel: React.FC<RightPanelProps> = ({
     if ('chapters' in selectedCurriculumNode) { // It's a Book
       const book = selectedCurriculumNode as Book;
       details = (
-        <>
-          <div className="bg-gray-50 p-2 rounded-lg"><h3 className="font-medium text-gray-700">Book Title</h3><p className="text-gray-900">{book.title}</p></div>
-          <div className="bg-gray-50 p-2 rounded-lg"><h3 className="font-medium text-gray-700">Author</h3><p className="text-gray-900">{book.author}</p></div>
-          <div className="bg-gray-50 p-2 rounded-lg"><h3 className="font-medium text-gray-700">Subject</h3><p className="text-gray-900">{book.subject}</p></div>
-          <div className="bg-gray-50 p-2 rounded-lg"><h3 className="font-medium text-gray-700">Education Board</h3><p className="text-gray-900">{book.education_board}</p></div>
-          <div className="bg-gray-50 p-2 rounded-lg"><h3 className="font-medium text-gray-700">Grade Level</h3><p className="text-gray-900">{book.grade_level}</p></div>
-          <div className="bg-gray-50 p-2 rounded-lg"><h3 className="font-medium text-gray-700">Language</h3><p className="text-gray-900">{book.language}</p></div>
-        </>
+        <div className="space-y-4">
+          <div className="bg-white border border-gray-100 p-3 rounded-xl shadow-sm">
+            <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2 flex items-center">
+              <IdentificationIcon className="w-3 h-3 mr-1" /> Identity
+            </h4>
+            <div className="space-y-2">
+              <div><h3 className="text-xs font-semibold text-gray-500">Book Title</h3><p className="text-sm text-gray-900 font-medium">{book.title}</p></div>
+              <div><h3 className="text-xs font-semibold text-gray-500">Author</h3><p className="text-sm text-gray-900">{book.author}</p></div>
+            </div>
+          </div>
+          <div className="bg-white border border-gray-100 p-3 rounded-xl shadow-sm">
+            <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2 flex items-center">
+              <AcademicCapIcon className="w-3 h-3 mr-1" /> Education Info
+            </h4>
+            <div className="grid grid-cols-2 gap-3">
+              <div><h3 className="text-xs font-semibold text-gray-500">Subject</h3><p className="text-sm text-gray-900">{book.subject}</p></div>
+              <div><h3 className="text-xs font-semibold text-gray-500">Board</h3><p className="text-sm text-gray-900">{book.education_board}</p></div>
+              <div><h3 className="text-xs font-semibold text-gray-500">Grade</h3><p className="text-sm text-gray-900">{book.grade_level}</p></div>
+              <div><h3 className="text-xs font-semibold text-gray-500">Language</h3><p className="text-sm text-gray-900">{book.language}</p></div>
+            </div>
+          </div>
+        </div>
       );
     } else if ('pages' in selectedCurriculumNode) { // It's a Chapter
       const chapter = selectedCurriculumNode as Chapter;
       details = (
-        <>
-          <div className="bg-gray-50 p-2 rounded-lg"><h3 className="font-medium text-gray-700">Chapter Title</h3><p className="text-gray-900">{chapter.chapter_name}</p></div>
-          <div className="bg-gray-50 p-2 rounded-lg"><h3 className="font-medium text-gray-700">Chapter Number</h3><p className="text-gray-900">{chapter.chapter_number}</p></div>
-          <div className="bg-gray-50 p-2 rounded-lg"><h3 className="font-medium text-gray-700">Description</h3><p className="text-gray-900">{chapter.description}</p></div>
-        </>
+        <div className="space-y-4">
+          <div className="bg-white border border-gray-100 p-3 rounded-xl shadow-sm">
+            <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2 flex items-center">
+              <IdentificationIcon className="w-3 h-3 mr-1" /> Chapter Info
+            </h4>
+            <div className="space-y-3">
+              <div className="flex justify-between">
+                <div><h3 className="text-xs font-semibold text-gray-500">Chapter Title</h3><p className="text-sm text-gray-900 font-medium">{chapter.chapter_name}</p></div>
+                <div className="text-right"><h3 className="text-xs font-semibold text-gray-500">Number</h3><p className="text-sm text-gray-900">{chapter.chapter_number}</p></div>
+              </div>
+              <div className="pt-2 border-t border-gray-50">
+                <h3 className="text-xs font-semibold text-gray-500 mb-1">Description</h3>
+                <p className="text-sm text-gray-600 leading-relaxed">{chapter.description || "No description provided."}</p>
+              </div>
+            </div>
+          </div>
+        </div>
       );
     } else if (isPage) { // It's a Page
       const page = selectedCurriculumNode as Page;
       details = (
-        <>
-          <div className="bg-gray-50 p-2 rounded-lg">
-            <h3 className="font-medium text-gray-700 mb-1">Page Title</h3>
-            <p className="text-gray-900">{page.title}</p>
+        <div className="space-y-4">
+          <div className="bg-white border border-gray-100 p-3 rounded-xl shadow-sm">
+            <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2 flex items-center">
+              <IdentificationIcon className="w-3 h-3 mr-1" /> Page Info
+            </h4>
+            <div className="flex justify-between items-start">
+              <div><h3 className="text-xs font-semibold text-gray-500">Page Title</h3><p className="text-sm text-gray-900 font-medium">{page.title}</p></div>
+              <div className="text-right"><h3 className="text-xs font-semibold text-gray-500">Number</h3><p className="text-sm text-gray-900">{page.page_number}</p></div>
+            </div>
           </div>
-          <div className="bg-gray-50 p-2 rounded-lg">
-            <h3 className="font-medium text-gray-700 mb-1">Page Number</h3>
-            <p className="text-gray-900">{page.page_number}</p>
-          </div>
+
           {page.story && (
-            <div className="bg-blue-50 p-3 rounded-lg mt-4 space-y-3 relative group/story">
-              <div className="flex justify-between items-center">
-                <h3 className="font-medium text-gray-700">Generated Story</h3>
+            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100 p-4 rounded-2xl shadow-sm relative group/story overflow-hidden">
+              <div className="absolute top-0 right-0 w-24 h-24 -mr-8 -mt-8 bg-blue-400 opacity-5 rounded-full pointer-events-none"></div>
+
+              <div className="flex justify-between items-center mb-3">
+                <h3 className="font-bold text-gray-800 flex items-center text-sm">
+                  <SparklesIcon className="w-4 h-4 text-amber-500 mr-1.5" />
+                  Generated Story
+                </h3>
                 {!isStoryEditing && onUpdateStory && (
                   <button
                     onClick={() => setIsStoryEditing(true)}
-                    className="p-1 text-gray-400 hover:text-[#00AEEF] transition-colors"
+                    className="p-1.5 bg-white text-gray-400 hover:text-[#00AEEF] rounded-lg shadow-sm border border-gray-100 transition-all hover:shadow-md"
                     title="Edit Story"
                   >
                     <PencilIcon className="w-4 h-4" />
@@ -238,29 +271,33 @@ export const RightPanel: React.FC<RightPanelProps> = ({
               </div>
 
               {isStoryEditing ? (
-                <div className="space-y-3">
-                  <textarea
-                    value={editedStory}
-                    onChange={(e) => setEditedStory(e.target.value)}
-                    className="w-full p-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-[#00AEEF] focus:border-[#00AEEF] min-h-[150px]"
-                    placeholder="Enter story text..."
-                  />
-                  <div>
-                    <h4 className="font-semibold text-gray-700 text-sm mb-1">Moral of the Story</h4>
+                <div className="space-y-4">
+                  <div className="relative">
+                    <textarea
+                      value={editedStory}
+                      onChange={(e) => setEditedStory(e.target.value)}
+                      className="w-full p-3 text-sm border border-blue-200 rounded-xl focus:ring-2 focus:ring-[#00AEEF]/20 focus:border-[#00AEEF] outline-none min-h-[300px] bg-white transition-all shadow-inner"
+                      placeholder="Enter story text..."
+                    />
+                  </div>
+                  <div className="bg-white p-3 rounded-xl border border-blue-100 shadow-sm">
+                    <h4 className="font-bold text-gray-700 text-xs mb-2 flex items-center">
+                      <InformationCircleIcon className="w-3.5 h-3.5 text-blue-500 mr-1" />
+                      Moral of the Story
+                    </h4>
                     <input
                       type="text"
                       value={editedMoral}
                       onChange={(e) => setEditedMoral(e.target.value)}
-                      className="w-full p-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-[#00AEEF] focus:border-[#00AEEF]"
+                      className="w-full p-2 text-sm border border-gray-100 rounded-lg focus:ring-2 focus:ring-[#00AEEF]/20 focus:border-[#00AEEF] outline-none bg-gray-50"
                       placeholder="Enter moral..."
                     />
                   </div>
-                  <div className="flex justify-end space-x-2">
+                  <div className="flex justify-end space-x-2 pt-2">
                     <button
                       onClick={() => setIsStoryEditing(false)}
-                      className="px-2 py-1 text-xs font-medium text-gray-600 hover:text-gray-800 flex items-center"
+                      className="px-3 py-1.5 text-xs font-semibold text-gray-500 hover:text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
                     >
-                      <XMarkIcon className="w-3 h-3 mr-1" />
                       Cancel
                     </button>
                     <button
@@ -268,27 +305,31 @@ export const RightPanel: React.FC<RightPanelProps> = ({
                         onUpdateStory?.(editedStory, editedMoral);
                         setIsStoryEditing(false);
                       }}
-                      className="px-2 py-1 text-xs font-medium bg-[#00AEEF] text-white rounded hover:bg-[#0096CC] flex items-center"
+                      className="px-4 py-1.5 text-xs font-bold bg-[#00AEEF] text-white rounded-lg hover:bg-[#0096CC] shadow-md shadow-blue-500/20 transition-all active:scale-95"
                     >
-                      <CheckIcon className="w-3 h-3 mr-1" />
-                      Save
+                      Save Story
                     </button>
                   </div>
                 </div>
               ) : (
-                <>
-                  <p className="text-gray-800 whitespace-pre-wrap text-sm leading-relaxed">{page.story}</p>
+                <div className="space-y-4">
+                  <p className="text-gray-700 whitespace-pre-wrap text-sm leading-relaxed font-medium">
+                    {page.story}
+                  </p>
                   {page.moral && (
-                    <div>
-                      <h4 className="font-semibold text-gray-700 text-sm">Moral of the Story</h4>
-                      <p className="text-gray-800 italic text-sm mt-1">{page.moral}</p>
+                    <div className="bg-white/60 backdrop-blur-sm p-3 rounded-xl border border-blue-100 mt-2">
+                      <h4 className="font-bold text-gray-800 text-xs mb-1 flex items-center">
+                        <InformationCircleIcon className="w-3.5 h-3.5 text-blue-500 mr-1" />
+                        The Moral
+                      </h4>
+                      <p className="text-gray-700 italic text-sm">{page.moral}</p>
                     </div>
                   )}
-                </>
+                </div>
               )}
             </div>
           )}
-        </>
+        </div>
       );
     }
 

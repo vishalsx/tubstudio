@@ -1,6 +1,6 @@
 // components/panels/LeftPanel.tsx
 import React, { useState } from 'react';
-import { Bars3Icon, ChevronDownIcon, XMarkIcon, SparklesIcon, ListBulletIcon, ArrowUpTrayIcon, PhotoIcon, MagnifyingGlassIcon, BookOpenIcon, StarIcon, StopIcon } from '@heroicons/react/24/solid';
+import { Bars3Icon, ChevronDownIcon, XMarkIcon, SparklesIcon, ListBulletIcon, ArrowUpTrayIcon, PhotoIcon, MagnifyingGlassIcon, BookOpenIcon, StarIcon, StopIcon, CloudArrowUpIcon } from '@heroicons/react/24/solid';
 import { CommonData, RecentTranslation, PermissionCheck, DatabaseImage, Book, Chapter, Page } from '../../types';
 import { CurriculumPanel } from './CurriculumPanel';
 import { useCurriculum } from '../../hooks/useCurriculum';
@@ -66,6 +66,7 @@ interface LeftPanelProps {
   onSelectBook: (bookId: string) => void;
   onSelectPage: (page: Page) => void;
   onSelectNode: (node: Book | Chapter | Page) => void;
+  onCollapseAll: () => void;
 
   // Collapse functionality
   className?: string;
@@ -124,6 +125,7 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
   onSelectBook,
   onSelectPage,
   onSelectNode,
+  onCollapseAll,
   className = '',
   isCollapsed,
   onToggleCollapse,
@@ -264,6 +266,18 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
               )}
             </button>
           </div>
+
+          {curriculumProps.isDirty && (
+            <button
+              onClick={curriculumProps.saveBook}
+              disabled={curriculumProps.isLoading}
+              className="mb-3 w-full flex items-center justify-center space-x-2 bg-[#00AEEF] hover:bg-[#0096CC] text-white py-2 rounded-lg font-bold shadow-md shadow-blue-500/20 transition-all active:scale-95 disabled:opacity-50 disabled:pointer-events-none"
+            >
+              <CloudArrowUpIcon className="w-5 h-5" />
+              <span>Save Book Changes</span>
+            </button>
+          )}
+
           <div className="border-2 border-dashed border-gray-300 rounded-lg p-3 flex-1 min-h-0 bg-gray-50/50">
             <CurriculumPanel
               books={curriculumProps.books}
@@ -284,6 +298,7 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
               onAddPage={curriculumProps.addPage}
               onDeletePage={curriculumProps.deletePage}
               onUpdatePageTitle={curriculumProps.updatePageTitle}
+              onCollapseAll={onCollapseAll}
             />
           </div>
         </>
