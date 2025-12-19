@@ -14,7 +14,7 @@ export const StatusWorkflow: React.FC<StatusWorkflowProps> = ({ statuses, curren
   // Special handling for Rejected status
   if (normalizedCurrentStatus === 'rejected') {
     return (
-      <p className={`text-gray-900 bg-red-50 p-2 rounded-md font-semibold text-red-600 ${className}`}>
+      <p className={`bg-red-500/10 p-2 rounded-md font-semibold text-red-500 ${className}`}>
         ❌ Rejected
       </p>
     );
@@ -23,7 +23,7 @@ export const StatusWorkflow: React.FC<StatusWorkflowProps> = ({ statuses, curren
   // Special handling for Approved status
   if (normalizedCurrentStatus === 'approved') {
     return (
-      <p className={`text-gray-900 bg-green-50 p-2 rounded-md font-semibold text-green-600 ${className}`}>
+      <p className={`bg-green-500/10 p-2 rounded-md font-semibold text-green-500 ${className}`}>
         ✅ Approved
       </p>
     );
@@ -31,7 +31,7 @@ export const StatusWorkflow: React.FC<StatusWorkflowProps> = ({ statuses, curren
 
   if (currentIndex === -1 || !currentStatus) {
     // Fallback for unexpected statuses
-    return <p className={`text-gray-900 ${className}`}>{currentStatus || '-'}</p>;
+    return <p className={`text-[var(--text-main)] ${className}`}>{currentStatus || '-'}</p>;
   }
 
   return (
@@ -41,7 +41,7 @@ export const StatusWorkflow: React.FC<StatusWorkflowProps> = ({ statuses, curren
           <div className="flex flex-col items-center flex-shrink-0 w-20 text-center">
             <div
               className={`w-5 h-5 rounded-full flex items-center justify-center border-2 transition-colors duration-300
-                ${index <= currentIndex ? 'bg-green-500 border-green-500' : 'bg-white border-gray-300'}
+                ${index <= currentIndex ? 'bg-green-500 border-green-500' : 'bg-[var(--bg-panel)] border-[var(--border-main)]'}
               `}
             >
               {index < currentIndex && (
@@ -53,12 +53,12 @@ export const StatusWorkflow: React.FC<StatusWorkflowProps> = ({ statuses, curren
                 <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
               )}
             </div>
-            <span className={`mt-1 text-xs ${index === currentIndex ? 'font-bold text-gray-800' : 'text-gray-500'}`}>
+            <span className={`mt-1 text-xs ${index === currentIndex ? 'font-bold text-[var(--text-main)]' : 'text-[var(--text-muted)]'}`}>
               {status}
             </span>
           </div>
           {index < statuses.length - 1 && (
-            <div className={`flex-1 h-0.5 mt-[-1rem] transition-colors duration-300 ${index < currentIndex ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+            <div className={`flex-1 h-0.5 mt-[-1rem] transition-colors duration-300 ${index < currentIndex ? 'bg-green-500' : 'bg-[var(--border-main)]'}`}></div>
           )}
         </React.Fragment>
       ))}

@@ -37,7 +37,7 @@ export const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
     return (
       <div className="flex items-center space-x-2">
         <div className={spinnerClasses}></div>
-        <span className="text-gray-600">{text}</span>
+        <span className="text-[var(--text-muted)]">{text}</span>
       </div>
     );
   }

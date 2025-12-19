@@ -1,6 +1,6 @@
 // components/panels/LeftPanel.tsx
 import React, { useState } from 'react';
-import { Bars3Icon, ChevronDownIcon, XMarkIcon, SparklesIcon, ListBulletIcon, ArrowUpTrayIcon, PhotoIcon, MagnifyingGlassIcon, BookOpenIcon, StarIcon, StopIcon, CloudArrowUpIcon } from '@heroicons/react/24/solid';
+import { Bars3Icon, ChevronDownIcon, XMarkIcon, SparklesIcon, ListBulletIcon, ArrowUpTrayIcon, PhotoIcon, MagnifyingGlassIcon, BookOpenIcon, StarIcon, StopIcon, CloudArrowUpIcon, CircleStackIcon } from '@heroicons/react/24/solid';
 import { CommonData, RecentTranslation, PermissionCheck, DatabaseImage, Book, Chapter, Page } from '../../types';
 import { CurriculumPanel } from './CurriculumPanel';
 import { useCurriculum } from '../../hooks/useCurriculum';
@@ -157,15 +157,15 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
     if (leftPanelView === 'upload') {
       return (
         <div
-          className={`border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center p-4 mb-3 h-32 ${canUploadPicture.metadata ? "cursor-pointer hover:border-[#00AEEF]" : "cursor-not-allowed opacity-50"
+          className={`border-2 border-dashed border-[var(--border-main)] rounded-lg flex flex-col items-center justify-center p-4 mb-3 h-32 backdrop-blur-sm ${canUploadPicture.metadata ? "cursor-pointer hover:border-[var(--color-primary)] bg-[var(--bg-input)]/50" : "cursor-not-allowed opacity-50 bg-[var(--bg-panel)]/50"
             }`}
           onDragOver={(e) => canUploadPicture.metadata && e.preventDefault()}
           onDrop={(e) => canUploadPicture.metadata && onDrop(e)}
           onClick={() => canUploadPicture.metadata && onFileClick()}
         >
-          <p className="text-gray-500 text-sm mb-1">Drag & drop your image here</p>
-          <p className="text-xs text-gray-400 mb-2">or</p>
-          <button className="px-3 py-1 bg-[#00AEEF] text-white rounded text-sm hover:bg-[#0096CC] transition">
+          <p className="text-[var(--text-muted)] text-sm mb-1">Drag & drop your image here</p>
+          <p className="text-xs text-[var(--text-muted)] opacity-60 mb-2">or</p>
+          <button className="px-3 py-1 bg-[var(--color-primary)] text-white rounded text-sm hover:opacity-90 transition">
             Browse Files
           </button>
           <input
@@ -184,7 +184,7 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
       );
     } else if (leftPanelView === 'database') {
       return (
-        <div className="border-2 border-dashed border-gray-300 rounded-lg p-3 mb-3 flex flex-col">
+        <div className="border-2 border-dashed border-[var(--border-main)] rounded-lg p-3 mb-3 flex flex-col bg-[var(--bg-input)]/50 backdrop-blur-sm">
           <div className="mb-2">
             <input
               type="text"
@@ -193,14 +193,14 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
               onChange={(e) => onSearchQueryChange(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter' && !(isSearchLoading || isPopularImagesLoading)) onDatabaseSearch(searchQuery); }}
               disabled={isSearchLoading || isPopularImagesLoading}
-              className="w-full p-1.5 border border-gray-300 rounded-md text-sm focus:ring-[#00AEEF] focus:border-[#00AEEF] disabled:bg-gray-100"
+              className="w-full p-1.5 border border-[var(--border-main)] rounded-md text-sm focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] bg-[var(--bg-panel)] text-[var(--text-main)] disabled:opacity-50"
             />
           </div>
           <div className="flex items-center gap-2">
             <button
               onClick={() => onDatabaseSearch(searchQuery)}
               disabled={isSearchLoading || isPopularImagesLoading}
-              className="w-full px-2 py-1.5 bg-[#00AEEF] text-white rounded-lg hover:bg-[#0096CC] transition flex items-center justify-center text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full px-2 py-1.5 bg-[var(--color-primary)] text-white rounded-lg hover:opacity-90 transition flex items-center justify-center text-sm shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSearchLoading ? (
                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
@@ -211,7 +211,7 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
             <button
               onClick={onFetchPopularImages}
               disabled={isSearchLoading || isPopularImagesLoading}
-              className="w-full px-2 py-1.5 bg-[#F15A29] text-white rounded-lg hover:bg-[#D14A23] transition flex items-center justify-center text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full px-2 py-1.5 bg-[var(--color-secondary)] text-white rounded-lg hover:opacity-90 transition flex items-center justify-center text-sm shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isPopularImagesLoading ? (
                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
@@ -225,13 +225,13 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
     } else if (leftPanelView === 'curriculum') {
       return (
         <>
-          <div className="border-2 border-dashed border-gray-300 rounded-lg p-3 mb-3 flex flex-col gap-2">
+          <div className="border border-[var(--border-main)] rounded-lg p-3 mb-3 flex flex-col gap-2 bg-[var(--bg-input)]/50 backdrop-blur-sm">
             <div className="flex items-center gap-2 w-full">
               <select
                 id="curriculum-language-select"
                 value={curriculumProps.searchLanguage}
                 onChange={(e) => curriculumProps.setSearchLanguage(e.target.value)}
-                className="w-32 flex-shrink-0 p-1.5 border border-gray-300 rounded-md text-sm focus:ring-[#00AEEF] focus:border-[#00AEEF]"
+                className="w-32 flex-shrink-0 p-1.5 border border-[var(--border-main)] rounded-md text-sm focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] bg-[var(--bg-panel)] text-[var(--text-main)]"
                 disabled={languageOptions.length === 0}
                 aria-label="Language for Book Search"
               >
@@ -244,13 +244,13 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
                 value={curriculumProps.searchQuery}
                 onChange={(e) => curriculumProps.setSearchQuery(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') handleCurriculumSearch(); }}
-                className="flex-1 min-w-0 p-1.5 border border-gray-300 rounded-md text-sm focus:ring-[#00AEEF] focus:border-[#00AEEF]"
+                className="flex-1 min-w-0 p-1.5 border border-[var(--border-main)] rounded-md text-sm focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] bg-[var(--bg-panel)] text-[var(--text-main)]"
               />
             </div>
             <button
               onClick={handleCurriculumSearch}
               disabled={curriculumProps.isLoading}
-              className="w-full px-3 py-2 bg-[#00AEEF] text-white rounded-lg hover:bg-[#0096CC] transition disabled:opacity-50 flex items-center justify-center gap-2"
+              className="w-full py-2 bg-[var(--color-primary)] text-white rounded-lg font-bold hover:opacity-90 shadow-md shadow-[var(--color-primary)]/20 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
               aria-label="Search curriculum"
             >
               {curriculumProps.isLoading ? (
@@ -271,14 +271,14 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
             <button
               onClick={curriculumProps.saveBook}
               disabled={curriculumProps.isLoading}
-              className="mb-3 w-full flex items-center justify-center space-x-2 bg-[#00AEEF] hover:bg-[#0096CC] text-white py-2 rounded-lg font-bold shadow-md shadow-blue-500/20 transition-all active:scale-95 disabled:opacity-50 disabled:pointer-events-none"
+              className="w-full py-2 bg-[var(--color-primary)] text-white rounded-lg font-bold shadow-md shadow-[var(--color-primary)]/20 hover:opacity-90 transition-all active:scale-95 disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center gap-2 mb-3"
             >
               <CloudArrowUpIcon className="w-5 h-5" />
               <span>Save Book Changes</span>
             </button>
           )}
 
-          <div className="border-2 border-dashed border-gray-300 rounded-lg p-3 flex-1 min-h-0 bg-gray-50/50">
+          <div className="border border-[var(--border-main)] rounded-lg p-3 flex-1 min-h-0 bg-[var(--bg-input)]/50 backdrop-blur-sm">
             <CurriculumPanel
               books={curriculumProps.books}
               activeBook={curriculumProps.activeBook}
@@ -311,12 +311,12 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
   const isHorizontalScroll = leftPanelView === 'database' && databaseImages.length > 9;
 
   return (
-    <div className={`w-full bg-white rounded-lg shadow p-4 flex flex-col overflow-hidden ${className}`}>
+    <div className={`w-full bg-[var(--bg-panel)] bg-panel-texture text-[var(--text-main)] rounded-lg shadow-lg p-4 flex flex-col overflow-hidden transition-all duration-300 ${className}`}>
       {/* Header with Toggle */}
       <div className="flex items-center mb-4 flex-shrink-0">
         <button
           onClick={(e) => { e.stopPropagation(); onToggleCollapse(); }}
-          className="p-2 -ml-2 rounded-md text-gray-500 hover:bg-gray-100 transition md:block"
+          className="p-2 -ml-2 rounded-md text-[var(--text-muted)] hover:bg-[var(--bg-input)] transition md:block"
           title={isCollapsed ? "Expand Panel" : "Collapse Panel"}
         >
           <Bars3Icon className="w-5 h-5" />
@@ -324,48 +324,55 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
 
         {/* Header Content (conditionally rendered) */}
         <div className={`flex justify-between items-center w-full ml-2 transition-opacity duration-200 ${isCollapsed ? 'opacity-0' : 'opacity-100'}`}>
-          <h2 className="text-lg font-semibold flex items-center whitespace-nowrap">
-            <span className="text-[#00AEEF]">Take </span>
-            <span className="text-[#F15A29] ml-1">TUB</span>
-            <span className="text-[#00AEEF] ml-1"> Shot</span>
-          </h2>
-
-          <div className="flex items-center space-x-1">
-            <button
-              onClick={() => onViewChange('upload')}
-              title="Upload View"
-              className={`p-2 rounded-md transition ${leftPanelView === 'upload' ? 'bg-blue-100 text-[#00AEEF]' : 'text-gray-600 hover:bg-gray-100 hover:text-[#00AEEF]'}`}
-            >
-              <ArrowUpTrayIcon className="w-5 h-5" />
-            </button>
-            <button
-              onClick={() => onViewChange('database')}
-              disabled={!canUploadPicture.metadata || !canIdentifyImage.metadata}
-              title={!canUploadPicture.metadata || !canIdentifyImage.metadata ? "You need upload and identify permissions to view the database" : "Database View"}
-              className={`p-2 rounded-md transition ${leftPanelView === 'database' ? 'bg-blue-100 text-[#00AEEF]' : 'text-gray-600 hover:bg-gray-100 hover:text-[#00AEEF]'} disabled:opacity-50 disabled:cursor-not-allowed`}
-            >
-              <PhotoIcon className="w-5 h-5" />
-            </button>
-            <button
-              onClick={() => onViewChange('curriculum')}
-              title="Curriculum View"
-              className={`p-2 rounded-md transition ${leftPanelView === 'curriculum' ? 'bg-blue-100 text-[#00AEEF]' : 'text-gray-600 hover:bg-gray-100 hover:text-[#00AEEF]'}`}
-            >
-              <BookOpenIcon className="w-5 h-5" />
-            </button>
+          <div className="flex items-center space-x-2">
+            {/* Title changes based on view */}
+            <h2 className="text-lg font-semibold flex items-center whitespace-nowrap">
+              {leftPanelView === 'curriculum' ? (
+                <>
+                  <BookOpenIcon className="w-5 h-5 text-[var(--color-primary)] mr-2" />
+                  <span className="text-[var(--text-main)]">Curriculum</span>
+                </>
+              ) : (
+                <>
+                  <CircleStackIcon className="w-5 h-5 text-[var(--color-secondary)] mr-2" />
+                  <span className="text-[var(--text-main)]">Objects</span>
+                </>
+              )}
+            </h2>
           </div>
         </div>
       </div>
 
       {/* Main Content (conditionally rendered) */}
       <div className={`flex-1 flex flex-col overflow-y-auto transition-opacity duration-200 ${isCollapsed ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
+        {/* Internal Tabs for Objects View */}
+        {leftPanelView !== 'curriculum' && (
+          <div className="flex bg-[var(--bg-input)]/50 backdrop-blur-sm p-1 rounded-xl mb-4 border border-[var(--border-main)] transition-colors duration-300">
+            <button
+              onClick={() => onViewChange('upload')}
+              className={`flex-1 flex items-center justify-center space-x-2 py-1.5 rounded-lg text-xs font-bold transition-all ${leftPanelView === 'upload' ? 'bg-[var(--bg-panel)] text-[var(--color-primary)] shadow-sm' : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'}`}
+            >
+              <ArrowUpTrayIcon className="w-4 h-4" />
+              <span>File Upload</span>
+            </button>
+            <button
+              onClick={() => onViewChange('database')}
+              disabled={!canUploadPicture.metadata || !canIdentifyImage.metadata}
+              title={!canUploadPicture.metadata || !canIdentifyImage.metadata ? "You need upload and identify permissions to view the database" : "Database View"}
+              className={`flex-1 flex items-center justify-center space-x-2 py-1.5 rounded-lg text-xs font-bold transition-all ${leftPanelView === 'database' ? 'bg-[var(--bg-panel)] text-[var(--color-secondary)] shadow-sm' : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'} disabled:opacity-50 disabled:cursor-not-allowed`}
+            >
+              <MagnifyingGlassIcon className="w-4 h-4" />
+              <span>Gallery</span>
+            </button>
+          </div>
+        )}
         {renderViewSpecificControls()}
 
         {/* Content Area for Upload View */}
         {leftPanelView === 'upload' && (
           (previewUrl || currentCommonData?.image_base64) ? (
             <div className="mb-4">
-              <div className="flex-shrink-0 h-64 bg-gray-100 rounded-xl flex items-center justify-center overflow-hidden">
+              <div className="flex-shrink-0 h-64 bg-[var(--bg-input)]/50 backdrop-blur-sm rounded-xl flex items-center justify-center overflow-hidden border border-[var(--border-main)]">
                 {previewUrl ? (
                   <img src={previewUrl} alt="Uploaded" className="w-full h-full object-contain" />
                 ) : currentCommonData?.image_base64 ? (
@@ -374,7 +381,7 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
               </div>
             </div>
           ) : (
-            <div className="flex-1 flex items-center justify-center mb-4 min-h-64 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50 p-2 text-gray-500 italic">
+            <div className="flex-1 flex items-center justify-center mb-4 min-h-64 border border-[var(--border-main)] rounded-lg bg-[var(--bg-input)]/50 backdrop-blur-sm p-2 text-[var(--text-muted)] italic">
               Upload an image to see a preview.
             </div>
           )
@@ -382,28 +389,25 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
 
         {/* Content Area for Database View */}
         {leftPanelView === 'database' && (
-          // <div className="flex-1 overflow-y-auto mb-4 min-h-64 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50 p-2">
-          <div className={`flex-1 mb-4 min-h-64 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50 p-2 ${isHorizontalScroll ? 'overflow-x-auto' : 'overflow-y-auto'}`}>
+          <div className={`flex-1 mb-4 min-h-64 border border-[var(--border-main)] rounded-lg bg-[var(--bg-input)]/50 backdrop-blur-sm p-2 ${isHorizontalScroll ? 'overflow-x-auto' : 'overflow-y-auto'}`}>
 
             {databaseImages.length > 0 ? (
-              // <div className="grid grid-cols-3 gap-2 pr-2">
               <div className={isHorizontalScroll
                 ? "grid grid-rows-3 grid-flow-col gap-2 w-max" // Horizontal scroll layout
                 : "grid grid-cols-3 gap-2 pr-2" // Vertical scroll layout
               }>
                 {databaseImages.map((image, idx) => (
-                  // <div key={image.object.image_hash || idx} className="relative group rounded-xl overflow-hidden shadow-md cursor-pointer aspect-square" onClick={() => onDatabaseImageClick(image)} title={image.common_data.object_name_en || image.file_info.filename || ''}>
                   <div key={image.object.image_hash || idx} className={`relative group rounded-xl overflow-hidden shadow-md cursor-pointer aspect-square ${isHorizontalScroll ? 'w-28' : ''}`} onClick={() => onDatabaseImageClick(image)} title={image.common_data.object_name_en || image.file_info.filename || ''}>
                     <img src={`data:image/jpeg;base64,${image.object.thumbnail}`} alt={image.common_data.object_name_en || image.file_info.filename || ''} className="w-full h-full object-cover transition-transform duration-300 ease-in-out group-hover:scale-110" />
                     <div className="absolute bottom-0 left-0 right-0 p-1 bg-gradient-to-t from-black/60 to-transparent pointer-events-none">
                       <p className="text-white font-bold text-xs text-center drop-shadow-lg truncate">{image.common_data.object_name_en || (image.file_info.filename ? image.file_info.filename.split('.').slice(0, -1).join('.') : 'Untitled')}</p>
                     </div>
-                    {(image.popularity_stars !== undefined && image.total_vote_count !== undefined) && (<div className="absolute inset-0 flex flex-col items-center justify-center bg-black bg-opacity-0 group-hover:bg-opacity-60 transition-opacity duration-300 opacity-0 group-hover:opacity-100"><div className="flex items-center text-white"><StarIcon className="w-5 h-5 text-yellow-400" /><span className="ml-1 font-bold">{typeof image.popularity_stars === 'number' ? image.popularity_stars.toFixed(1) : ''}</span></div><span className="text-xs text-gray-200 mt-1">{image.total_vote_count} votes</span></div>)}
+                    {(image.popularity_stars !== undefined && image.total_vote_count !== undefined) && (<div className="absolute inset-0 flex flex-col items-center justify-center bg-black bg-opacity-0 group-hover:bg-opacity-60 transition-opacity duration-300 opacity-0 group-hover:opacity-100"><div className="flex items-center text-white"><StarIcon className="w-5 h-5 text-yellow-400" /><span className="ml-1 font-bold">{typeof image.popularity_stars === 'number' ? image.popularity_stars.toFixed(1) : ''}</span></div><span className="text-xs text-white/80 mt-1 font-medium">{image.total_vote_count} votes</span></div>)}
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="flex items-center justify-center h-full text-gray-500 italic">
+              <div className="flex items-center justify-center h-full text-[var(--text-muted)] italic">
                 {isSearchLoading || isPopularImagesLoading ? "Searching..." : searchAttempted ? 'No results found.' : 'Search results will appear here.'}
               </div>
             )}
@@ -417,7 +421,7 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
               <div className="relative flex-1" ref={languageDropdownRef as React.RefObject<HTMLDivElement>}>
                 <button
                   onClick={onLanguageDropdownToggle}
-                  className="px-3 py-1 border border-gray-300 bg-white text-gray-700 rounded text-sm flex items-center justify-between focus:ring-2 focus:ring-[#00AEEF] min-w-[180px] w-full"
+                  className="px-3 py-1 border border-[var(--border-main)] bg-[var(--bg-panel)] text-[var(--text-main)] rounded text-sm flex items-center justify-between focus:ring-2 focus:ring-[var(--color-primary)] transition min-w-[180px] w-full"
                 >
                   <span className="truncate">
                     {selectedLanguages.length === 0 ? 'Select Languages' : `${selectedLanguages.length} selected`}
@@ -425,16 +429,16 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
                   <ChevronDownIcon className={`w-4 h-4 ml-2 transition-transform ${isLanguageDropdownOpen ? 'rotate-180' : ''}`} />
                 </button>
                 {isLanguageDropdownOpen && (
-                  <div className="absolute bottom-full right-0 mb-1 bg-white border border-gray-300 rounded-lg shadow-lg z-10 max-h-60 overflow-y-auto min-w-[150px]">
+                  <div className="absolute bottom-full right-0 mb-1 bg-[var(--bg-panel)] border border-[var(--border-main)] rounded-lg shadow-lg z-10 max-h-60 overflow-y-auto min-w-[150px]">
                     {languageOptions.map((language) => (
-                      <label key={language} className="flex items-center px-3 py-2 hover:bg-gray-50 cursor-pointer">
+                      <label key={language} className="flex items-center px-3 py-2 hover:bg-[var(--bg-input)] cursor-pointer">
                         <input
                           type="checkbox"
                           checked={selectedLanguages.includes(language)}
                           onChange={() => onLanguageToggle(language)}
-                          className="mr-3 rounded border-gray-300 text-[#00AEEF] focus:ring-[#00AEEF]"
+                          className="mr-3 rounded border-[var(--border-main)] text-[var(--color-primary)] focus:ring-[var(--color-primary)]"
                         />
-                        <span className="text-gray-700">{language}</span>
+                        <span className="text-[var(--text-main)]">{language}</span>
                       </label>
                     ))}
                   </div>
@@ -445,8 +449,8 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
                   onClick={isLoading ? onCancelIdentify : onIdentify}
                   disabled={(!isLoading && !canIdentifyImage.metadata) || isRedirecting}
                   title={isLoading ? "Cancel Identification" : "Identify Object"}
-                  className={`px-4 py-2 rounded-lg transition flex-1 flex justify-center items-center ${(!isLoading && !canIdentifyImage.metadata) ? 'bg-gray-300 text-gray-500 cursor-not-allowed' :
-                    isLoading ? 'bg-red-500 text-white hover:bg-red-600' : 'bg-[#00AEEF] text-white hover:bg-[#0096CC]'
+                  className={`px-4 py-2 rounded-lg transition flex-1 flex justify-center items-center ${(!isLoading && !canIdentifyImage.metadata) ? 'bg-[var(--bg-input)] text-[var(--text-muted)] cursor-not-allowed border border-[var(--border-main)]' :
+                    isLoading ? 'bg-red-500 text-white hover:bg-red-600 shadow-md shadow-red-500/20' : 'bg-[var(--color-primary)] text-white hover:opacity-90 shadow-md shadow-blue-500/20'
                     }`}
                 >
                   {/* {isLoading ? <StopIcon className="w-5 h-5 animate-pulse" /> : <SparklesIcon className="w-5 h-5" />} */}
@@ -470,7 +474,7 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
                   onClick={onFetchWorklist}
                   disabled={!canViewWorkList.language || isWorklistLoading}
                   title="My Work Items"
-                  className={`px-4 py-2 rounded-lg transition flex-1 flex justify-center items-center ${!canViewWorkList.language || isWorklistLoading ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-[#F15A29] text-white hover:bg-[#D14A23]'}`}
+                  className={`px-4 py-2 rounded-lg transition flex-1 flex justify-center items-center ${!canViewWorkList.language || isWorklistLoading ? 'bg-[var(--bg-input)] text-[var(--text-muted)] cursor-not-allowed border border-[var(--border-main)]' : 'bg-[var(--color-secondary)] text-white hover:opacity-90 shadow-md shadow-orange-500/20'}`}
                 >
                   {isWorklistLoading ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : <ListBulletIcon className="w-5 h-5" />}
                 </button>
@@ -509,11 +513,11 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
             )}
 
             <div className="mt-auto">
-              <h3 className="font-medium mb-2">Recent Edits</h3>
-              <div className="flex space-x-3 overflow-x-auto pb-2 -mx-1 px-1">
+              <h3 className="font-semibold mb-2 text-[var(--text-main)] text-sm">Recent Edits</h3>
+              <div className="flex space-x-3 overflow-x-auto pb-2 -mx-1 px-1 custom-scrollbar">
                 {recentTranslations.length > 0 ? (
                   recentTranslations.map((item, idx) => (
-                    <div key={idx} className="flex-shrink-0 w-28 bg-gray-100 rounded-lg overflow-hidden flex flex-col items-center shadow-md transition-transform hover:scale-105">
+                    <div key={idx} className="flex-shrink-0 w-28 bg-[var(--bg-input)] rounded-lg overflow-hidden flex flex-col items-center shadow-md transition-transform hover:scale-105 border border-[var(--border-main)]">
                       <div className="h-24 w-full">
                         <img
                           src={`data:image/jpeg;base64,${item.object.thumbnail}`}
@@ -523,14 +527,14 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
                         />
                       </div>
                       <div className="p-1.5 text-center w-full">
-                        <p className="text-xs font-semibold text-gray-800 truncate" title={item.translation.requested_language}>{item.translation.requested_language}</p>
-                        <p className="text-xs text-gray-600 truncate" title={item.translation.translation_status}>{item.translation.translation_status}</p>
+                        <p className="text-xs font-semibold text-[var(--text-main)] truncate" title={item.translation.requested_language}>{item.translation.requested_language}</p>
+                        <p className="text-xs text-[var(--text-muted)] truncate" title={item.translation.translation_status}>{item.translation.translation_status}</p>
                       </div>
                     </div>
                   ))
                 ) : (
                   [...Array(3)].map((_, idx) => (
-                    <div key={idx} className="flex-shrink-0 w-28 h-36 bg-gray-200 rounded-lg animate-pulse"></div>
+                    <div key={idx} className="flex-shrink-0 w-28 h-36 bg-[var(--bg-input)] rounded-lg animate-pulse border border-[var(--border-main)]"></div>
                   ))
                 )}
               </div>
@@ -541,7 +545,7 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
 
       {/* Notification Area */}
       {notification && (
-        <div className={`mt-2 p-2 rounded-md text-sm transition-opacity duration-300 ${notification.type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+        <div className={`mt-2 p-2 rounded-md text-sm transition-opacity duration-300 font-medium ${notification.type === 'success' ? 'bg-green-500/20 text-green-500 border border-green-500/30' : 'bg-red-500/20 text-red-500 border border-red-500/30'}`}>
           {notification.message}
         </div>
       )}

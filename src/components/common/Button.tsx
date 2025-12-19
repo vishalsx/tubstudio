@@ -14,10 +14,10 @@ interface ButtonProps {
 }
 
 const variantClasses = {
-  primary: 'bg-[#00AEEF] text-white hover:bg-[#0096CC]',
-  secondary: 'bg-gray-300 text-gray-700 hover:bg-gray-400',
+  primary: 'bg-[var(--color-primary)] text-white hover:opacity-90',
+  secondary: 'bg-[var(--bg-input)] text-[var(--text-main)] border border-[var(--border-main)] hover:bg-[var(--color-primary-light)]/50',
   danger: 'bg-red-500 text-white hover:bg-red-600',
-  success: 'bg-green-500 text-white hover:bg-green-600',
+  success: 'bg-[var(--color-secondary)] text-white hover:opacity-90',
   warning: 'bg-orange-500 text-white hover:bg-orange-600'
 };
 
@@ -39,7 +39,7 @@ export const Button: React.FC<ButtonProps> = ({
   title
 }) => {
   const baseClasses = 'rounded-lg font-medium transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed';
-  
+
   const classes = [
     baseClasses,
     variantClasses[variant],

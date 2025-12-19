@@ -33,14 +33,14 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
       role="dialog"
     >
       <div
-        className="bg-white rounded-lg shadow-xl w-full max-w-md"
+        className="bg-[var(--bg-panel)] bg-panel-texture rounded-lg shadow-xl w-full max-w-md border border-[var(--border-main)]"
         onClick={e => e.stopPropagation()}
       >
         <div className="p-6">
-          <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
-          <p className="mt-2 text-sm text-gray-600">{message}</p>
+          <h3 className="text-lg font-semibold text-[var(--text-main)]">{title}</h3>
+          <p className="mt-2 text-sm text-[var(--text-muted)]">{message}</p>
         </div>
-        <div className="bg-gray-50 px-6 py-3 flex justify-end items-center space-x-3 rounded-b-lg">
+        <div className="bg-[var(--bg-input)] px-6 py-3 flex justify-end items-center space-x-3 rounded-b-lg border-t border-[var(--border-main)]">
           <Button variant="secondary" onClick={onCancel}>
             {cancelText}
           </Button>

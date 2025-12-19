@@ -15,11 +15,11 @@ interface ImageSearchModalProps {
   existingImageHashes: string[];
 }
 
-export const ImageSearchModal: React.FC<ImageSearchModalProps> = ({ 
-  isOpen, 
-  onClose, 
-  onImageSelect, 
-  language, 
+export const ImageSearchModal: React.FC<ImageSearchModalProps> = ({
+  isOpen,
+  onClose,
+  onImageSelect,
+  language,
   onAddNewImage,
   existingImageHashes,
 }) => {
@@ -28,7 +28,7 @@ export const ImageSearchModal: React.FC<ImageSearchModalProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchAttempted, setSearchAttempted] = useState(false);
-  
+
   const [addedHashes, setAddedHashes] = useState<Set<string>>(new Set());
   const [notification, setNotification] = useState<{ hash: string; message: string } | null>(null);
   const notificationTimeoutRef = useRef<number | null>(null);
@@ -65,7 +65,7 @@ export const ImageSearchModal: React.FC<ImageSearchModalProps> = ({
       setNotification(null);
     }, 1500);
   };
-  
+
   const handleImageClick = (image: DatabaseImage) => {
     const hash = image.object.image_hash;
     if (addedHashes.has(hash)) {
@@ -171,33 +171,33 @@ export const ImageSearchModal: React.FC<ImageSearchModalProps> = ({
     <div className="fixed inset-0 bg-black bg-opacity-10 z-50 flex items-center justify-center p-4 animate-fade-in" onClick={onClose}>
       <div
         ref={modalRef}
-        className="bg-white rounded-lg shadow-xl w-full max-w-2xl h-[90vh] flex flex-col"
+        className="bg-[var(--bg-panel)] bg-panel-texture text-[var(--text-main)] rounded-lg shadow-xl w-full max-w-2xl h-[90vh] flex flex-col border border-[var(--border-main)]"
         style={{ transform: `translate(${position.x}px, ${position.y}px)` }}
         onClick={e => e.stopPropagation()}
       >
         <div
           onMouseDown={handleMouseDown}
-          className="p-4 border-b flex justify-between items-center flex-shrink-0 cursor-move"
+          className="p-4 border-b border-[var(--border-main)] flex justify-between items-center flex-shrink-0 cursor-move"
         >
-          <h2 className="text-lg font-semibold">Search for an Image</h2>
-          <button onClick={onClose} className="p-1 rounded-full hover:bg-gray-200">
-            <XMarkIcon className="w-6 h-6 text-gray-600" />
+          <h2 className="text-lg font-semibold text-[var(--text-main)]">Search for an Image</h2>
+          <button onClick={onClose} className="p-1 rounded-full hover:bg-[var(--bg-input)] transition-colors">
+            <XMarkIcon className="w-6 h-6 text-[var(--text-muted)] hover:text-[var(--text-main)] transition-colors" />
           </button>
         </div>
-        
-        <div className="p-4 flex items-center gap-2 border-b flex-shrink-0">
+
+        <div className="p-4 flex items-center gap-2 border-b border-[var(--border-main)] flex-shrink-0 bg-[var(--bg-input)]/50">
           <input
             type="text"
             placeholder="Search by object name, category, etc..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') handleSearch(); }}
-            className="w-full p-2 border border-gray-300 rounded-md text-sm focus:ring-[#00AEEF] focus:border-[#00AEEF]"
+            className="w-full p-2 border border-[var(--border-main)] rounded-md text-sm focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] bg-[var(--bg-panel)] text-[var(--text-main)]"
           />
           <button
             onClick={handleSearch}
             disabled={isLoading}
-            className="px-4 py-2 bg-[#00AEEF] text-white rounded-lg hover:bg-[#0096CC] transition flex items-center justify-center text-sm disabled:opacity-50"
+            className="px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:opacity-90 transition flex items-center justify-center text-sm disabled:opacity-50"
           >
             {isLoading ? (
               <LoadingSpinner size="sm" color="white" />
@@ -207,24 +207,24 @@ export const ImageSearchModal: React.FC<ImageSearchModalProps> = ({
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-4">
+        <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
           {error && <p className="text-red-500 text-center">{error}</p>}
           {searchResults.length > 0 ? (
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-4 gap-3">
               {searchResults.map((image) => {
                 const isAdded = addedHashes.has(image.object.image_hash);
                 const showNotif = notification?.hash === image.object.image_hash;
                 return (
                   <div
                     key={image.object.image_hash || image.common_data.object_id}
-                    className={`relative group rounded-xl overflow-hidden shadow-md h-24 transition-opacity ${isAdded ? 'cursor-default' : 'cursor-pointer'}`}
+                    className={`relative group rounded-2xl overflow-hidden shadow-sm bg-[var(--bg-input)] aspect-square border border-[var(--border-main)] transition-opacity ${isAdded ? 'cursor-default' : 'cursor-pointer hover:shadow-lg'}`}
                     onClick={() => handleImageClick(image)}
                     title={image.common_data.object_name_en || image.file_info.filename}
                   >
                     <img
                       src={`data:image/jpeg;base64,${image.object.thumbnail}`}
                       alt={image.common_data.object_name_en || ''}
-                      className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+                      className="w-full h-full object-contain transition-transform duration-300 group-hover:scale-110"
                     />
                     <div className="absolute bottom-0 left-0 right-0 p-1 bg-gradient-to-t from-black/60 to-transparent pointer-events-none">
                       <p className="text-white font-bold text-xs text-center truncate">
@@ -234,7 +234,7 @@ export const ImageSearchModal: React.FC<ImageSearchModalProps> = ({
                     {(image.popularity_stars !== undefined && image.total_vote_count !== undefined) && (
                       <div className="absolute inset-0 flex flex-col items-center justify-center bg-black bg-opacity-0 group-hover:bg-opacity-60 transition-opacity duration-300 opacity-0 group-hover:opacity-100">
                         <div className="flex items-center text-white"><StarIcon className="w-5 h-5 text-yellow-400" /><span className="ml-1 font-bold">{typeof image.popularity_stars === 'number' ? image.popularity_stars.toFixed(1) : ''}</span></div>
-                        <span className="text-xs text-gray-200 mt-1">{image.total_vote_count} votes</span>
+                        <span className="text-xs text-white/90 font-medium mt-1">{image.total_vote_count} votes</span>
                       </div>
                     )}
                     {isAdded && !showNotif && (
@@ -256,16 +256,16 @@ export const ImageSearchModal: React.FC<ImageSearchModalProps> = ({
               })}
             </div>
           ) : (
-            <div className="flex items-center justify-center h-full text-gray-500 italic">
+            <div className="flex items-center justify-center h-full text-[var(--text-muted)] italic">
               {isLoading ? 'Searching...' : searchAttempted ? 'No images found.' : 'Enter a search term and click the search button.'}
             </div>
           )}
         </div>
-        
+
         {searchAttempted && !isLoading && searchQuery.trim() && (
-          <div className="p-3 mt-auto border-t bg-gray-50 flex-shrink-0">
+          <div className="p-3 mt-auto border-t border-[var(--border-main)] bg-[var(--bg-input)] flex-shrink-0">
             <div className="text-center">
-              <p className="text-sm text-gray-600 mb-2">Can't find what you're looking for?</p>
+              <p className="text-sm text-[var(--text-muted)] mb-2">Can't find what you're looking for?</p>
               <button
                 onClick={() => onAddNewImage(searchQuery)}
                 className="w-full inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition"

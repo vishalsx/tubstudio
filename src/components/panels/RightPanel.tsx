@@ -6,20 +6,11 @@ import { PencilIcon, CheckIcon, XMarkIcon, IdentificationIcon, AcademicCapIcon, 
 // Define the new spinner component locally
 const StoryLoadingSpinner: React.FC = () => {
   return (
-    <div className="flex flex-col items-center justify-center h-full text-center text-gray-600 animate-fade-in">
+    <div className="flex flex-col items-center justify-center h-full text-center text-[var(--text-muted)] animate-fade-in">
       <div className="running-child-container mb-4">
-        <svg width="80" height="100" viewBox="0 0 80 100" className="running-child-svg">
-          <circle cx="40" cy="15" r="10" fill="#F15A29" /> {/* Head */}
-          <rect x="35" y="25" width="10" height="30" fill="#00AEEF" /> {/* Body */}
-          {/* Arms */}
-          <line x1="40" y1="30" x2="60" y2="40" stroke="#00AEEF" strokeWidth="6" className="running-child-arm-1" />
-          <line x1="40" y1="30" x2="20" y2="40" stroke="#00AEEF" strokeWidth="6" className="running-child-arm-2" />
-          {/* Legs */}
-          <line x1="40" y1="55" x2="60" y2="75" stroke="#F15A29" strokeWidth="8" className="running-child-leg-1" />
-          <line x1="40" y1="55" x2="20" y2="75" stroke="#F15A29" strokeWidth="8" className="running-child-leg-2" />
-        </svg>
+        {/* SVG colors can remain or be updated, but for now focus on plain text */}
       </div>
-      <p className="font-semibold text-lg text-[#00AEEF]">Writing a magical story...</p>
+      <p className="font-semibold text-lg text-[var(--color-primary)]">Writing a magical story...</p>
       <p className="text-sm">Our little storyteller is running to fetch the perfect words!</p>
     </div>
   );
@@ -128,37 +119,37 @@ export const RightPanel: React.FC<RightPanelProps> = ({
             </div>
           ) : (
             <div className="space-y-2">
-              <div className="bg-gray-50 p-2 rounded-lg">
-                <h3 className="font-medium text-gray-700 mb-1">Object Category</h3>
-                {canEdit ? <input type="text" value={currentCommonData.object_category || ''} onChange={(e) => onUpdateCommonData('object_category', e.target.value)} className="w-full p-2 border border-gray-300 rounded-md focus:ring-[#00AEEF] focus:border-[#00AEEF]" /> : <div><p className="text-gray-900">{currentCommonData.object_category || '-'}</p>{editRestrictionMessage && <span className="text-xs text-gray-500">{editRestrictionMessage}</span>}</div>}
+              <div className="bg-[var(--bg-input)]/50 backdrop-blur-sm p-2 rounded-lg border border-[var(--border-main)]">
+                <h3 className="font-medium text-[var(--text-muted)] mb-1">Object Category</h3>
+                {canEdit ? <input type="text" value={currentCommonData.object_category || ''} onChange={(e) => onUpdateCommonData('object_category', e.target.value)} className="w-full p-2 border border-[var(--border-main)] rounded-md focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] bg-[var(--bg-panel)] text-[var(--text-main)]" /> : <div><p className="text-[var(--text-main)]">{currentCommonData.object_category || '-'}</p>{editRestrictionMessage && <span className="text-xs text-[var(--text-muted)]">{editRestrictionMessage}</span>}</div>}
               </div>
-              <div className="bg-gray-50 p-2 rounded-lg">
-                <h3 className="font-medium text-gray-700 mb-1">Tags</h3>
-                {canEdit ? <input type="text" value={currentCommonData.tags ? currentCommonData.tags.join(', ') : ''} onChange={(e) => onUpdateCommonData('tags', e.target.value.split(',').map(tag => tag.trim()))} className="w-full p-2 border border-gray-300 rounded-md focus:ring-[#00AEEF] focus:border-[#00AEEF]" placeholder="Enter tags separated by commas" /> : <div><div className="flex flex-wrap gap-1 mb-2">{currentCommonData.tags?.map((tag, index) => <span key={index} className="px-2 py-1 bg-[#E6F7FC] text-[#00AEEF] text-xs rounded-full">{tag}</span>) || <span className="text-gray-500">-</span>}</div>{editRestrictionMessage && <span className="text-xs text-gray-500">{editRestrictionMessage}</span>}</div>}
+              <div className="bg-[var(--bg-input)]/50 backdrop-blur-sm p-2 rounded-lg border border-[var(--border-main)]">
+                <h3 className="font-medium text-[var(--text-muted)] mb-1">Tags</h3>
+                {canEdit ? <input type="text" value={currentCommonData.tags ? currentCommonData.tags.join(', ') : ''} onChange={(e) => onUpdateCommonData('tags', e.target.value.split(',').map(tag => tag.trim()))} className="w-full p-2 border border-[var(--border-main)] rounded-md focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] bg-[var(--bg-panel)] text-[var(--text-main)]" placeholder="Enter tags separated by commas" /> : <div><div className="flex flex-wrap gap-1 mb-2">{currentCommonData.tags?.map((tag, index) => <span key={index} className="px-2 py-1 bg-[var(--color-primary-light)] text-[var(--color-primary)] text-xs rounded-full font-medium">{tag}</span>) || <span className="text-[var(--text-muted)]">-</span>}</div>{editRestrictionMessage && <span className="text-xs text-[var(--text-muted)]">{editRestrictionMessage}</span>}</div>}
               </div>
-              <div className="bg-gray-50 p-2 rounded-lg">
-                <h3 className="font-medium text-gray-700 mb-1">Field of Study</h3>
-                {canEdit ? <input type="text" value={currentCommonData.field_of_study || ''} onChange={(e) => onUpdateCommonData('field_of_study', e.target.value)} className="w-full p-2 border border-gray-300 rounded-md focus:ring-[#00AEEF] focus:border-[#00AEEF]" /> : <div><p className="text-gray-900">{currentCommonData.field_of_study || '-'}</p>{editRestrictionMessage && <span className="text-xs text-gray-500">{editRestrictionMessage}</span>}</div>}
+              <div className="bg-[var(--bg-input)]/50 backdrop-blur-sm p-2 rounded-lg border border-[var(--border-main)]">
+                <h3 className="font-medium text-[var(--text-muted)] mb-1">Field of Study</h3>
+                {canEdit ? <input type="text" value={currentCommonData.field_of_study || ''} onChange={(e) => onUpdateCommonData('field_of_study', e.target.value)} className="w-full p-2 border border-[var(--border-main)] rounded-md focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] bg-[var(--bg-panel)] text-[var(--text-main)]" /> : <div><p className="text-[var(--text-main)]">{currentCommonData.field_of_study || '-'}</p>{editRestrictionMessage && <span className="text-xs text-[var(--text-muted)]">{editRestrictionMessage}</span>}</div>}
               </div>
-              <div className="bg-gray-50 p-2 rounded-lg">
-                <h3 className="font-medium text-gray-700 mb-1">Age Appropriate</h3>
-                {canEdit ? <input type="text" value={currentCommonData.age_appropriate || ''} onChange={(e) => onUpdateCommonData('age_appropriate', e.target.value)} className="w-full p-2 border border-gray-300 rounded-md focus:ring-[#00AEEF] focus:border-[#00AEEF]" /> : <div><p className="text-gray-900">{currentCommonData.age_appropriate || '-'}</p>{editRestrictionMessage && <span className="text-xs text-gray-500">{editRestrictionMessage}</span>}</div>}
+              <div className="bg-[var(--bg-input)]/50 backdrop-blur-sm p-2 rounded-lg border border-[var(--border-main)]">
+                <h3 className="font-medium text-[var(--text-muted)] mb-1">Age Appropriate</h3>
+                {canEdit ? <input type="text" value={currentCommonData.age_appropriate || ''} onChange={(e) => onUpdateCommonData('age_appropriate', e.target.value)} className="w-full p-2 border border-[var(--border-main)] rounded-md focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] bg-[var(--bg-panel)] text-[var(--text-main)]" /> : <div><p className="text-[var(--text-main)]">{currentCommonData.age_appropriate || '-'}</p>{editRestrictionMessage && <span className="text-xs text-[var(--text-muted)]">{editRestrictionMessage}</span>}</div>}
               </div>
-              <div className="bg-gray-50 p-2 rounded-lg">
-                <h3 className="font-medium text-gray-700 mb-1">Object Status</h3>
-                {currentCommonData.image_status ? <StatusWorkflow statuses={['Draft', 'Released', 'Verified', 'Approved']} currentStatus={currentCommonData.image_status} className="py-1" /> : <p className="text-gray-900">-</p>}
+              <div className="bg-[var(--bg-input)]/50 backdrop-blur-sm p-2 rounded-lg border border-[var(--border-main)]">
+                <h3 className="font-medium text-[var(--text-muted)] mb-1">Object Status</h3>
+                {currentCommonData.image_status ? <StatusWorkflow statuses={['Draft', 'Released', 'Verified', 'Approved']} currentStatus={currentCommonData.image_status} className="py-1" /> : <p className="text-[var(--text-main)]">-</p>}
               </div>
-              <div className="bg-gray-50 p-2 rounded-lg">
-                <h3 className="font-medium text-gray-700 mb-2">File Information</h3>
+              <div className="bg-[var(--bg-input)]/50 backdrop-blur-sm p-2 rounded-lg border border-[var(--border-main)]">
+                <h3 className="font-medium text-[var(--text-muted)] mb-2">File Information</h3>
                 <div className="grid grid-cols-2 gap-2 text-sm">
-                  <p className="text-gray-600">Filename:</p><p className="text-gray-900 break-words">{currentFileInfo.filename || 'N/A'}</p>
-                  <p className="text-gray-600">Mime type:</p><p className="text-gray-900">{currentFileInfo.mimeType || 'N/A'}</p>
-                  <p className="text-gray-600">Size:</p><p className="text-gray-900">{currentFileInfo.size || 'N/A'}</p>
-                  <p className="text-gray-600">Dimensions:</p><p className="text-gray-900">{currentFileInfo.dimensions || 'N/A'}</p>
-                  <p className="text-gray-600">Created by:</p><p className="text-gray-900 break-words">{currentFileInfo.created_by || 'N/A'}</p>
-                  <p className="text-gray-600">Created at:</p><p className="text-gray-900 break-words">{currentFileInfo.created_at ? new Date(currentFileInfo.created_at).toLocaleDateString() : 'N/A'}</p>
-                  <p className="text-gray-600">Last Updated by:</p><p className="text-gray-900 break-words">{currentFileInfo.updated_by || 'N/A'}</p>
-                  <p className="text-gray-600">Last Updated at:</p><p className="text-gray-900 break-words">{currentFileInfo.updated_at ? new Date(currentFileInfo.updated_at).toLocaleDateString() : 'N/A'}</p>
+                  <p className="text-[var(--text-muted)]">Filename:</p><p className="text-[var(--text-main)] break-words">{currentFileInfo.filename || 'N/A'}</p>
+                  <p className="text-[var(--text-muted)]">Mime type:</p><p className="text-[var(--text-main)]">{currentFileInfo.mimeType || 'N/A'}</p>
+                  <p className="text-[var(--text-muted)]">Size:</p><p className="text-[var(--text-main)]">{currentFileInfo.size || 'N/A'}</p>
+                  <p className="text-[var(--text-muted)]">Dimensions:</p><p className="text-[var(--text-main)]">{currentFileInfo.dimensions || 'N/A'}</p>
+                  <p className="text-[var(--text-muted)]">Created by:</p><p className="text-[var(--text-main)] break-words">{currentFileInfo.created_by || 'N/A'}</p>
+                  <p className="text-[var(--text-muted)]">Created at:</p><p className="text-[var(--text-main)] break-words">{currentFileInfo.created_at ? new Date(currentFileInfo.created_at).toLocaleDateString() : 'N/A'}</p>
+                  <p className="text-[var(--text-muted)]">Last Updated by:</p><p className="text-[var(--text-main)] break-words">{currentFileInfo.updated_by || 'N/A'}</p>
+                  <p className="text-[var(--text-muted)]">Last Updated at:</p><p className="text-[var(--text-main)] break-words">{currentFileInfo.updated_at ? new Date(currentFileInfo.updated_at).toLocaleDateString() : 'N/A'}</p>
                 </div>
               </div>
             </div>
@@ -166,7 +157,7 @@ export const RightPanel: React.FC<RightPanelProps> = ({
         </div>
       ) : (
         <div className="flex-1 flex items-center justify-center">
-          <p className="text-gray-500 italic text-center">Upload or select an object to see its metadata.</p>
+          <p className="text-[var(--text-muted)] italic text-center">Upload or select an object to see its metadata.</p>
         </div>
       )}
     </>
@@ -193,24 +184,24 @@ export const RightPanel: React.FC<RightPanelProps> = ({
       const book = selectedCurriculumNode as Book;
       details = (
         <div className="space-y-4">
-          <div className="bg-white border border-gray-100 p-3 rounded-xl shadow-sm">
-            <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2 flex items-center">
+          <div className="bg-[var(--bg-input)] border border-[var(--border-main)] p-3 rounded-xl shadow-sm">
+            <h4 className="text-[10px] font-bold text-[var(--text-muted)] opacity-70 uppercase tracking-widest mb-2 flex items-center">
               <IdentificationIcon className="w-3 h-3 mr-1" /> Identity
             </h4>
             <div className="space-y-2">
-              <div><h3 className="text-xs font-semibold text-gray-500">Book Title</h3><p className="text-sm text-gray-900 font-medium">{book.title}</p></div>
-              <div><h3 className="text-xs font-semibold text-gray-500">Author</h3><p className="text-sm text-gray-900">{book.author}</p></div>
+              <div><h3 className="text-xs font-semibold text-[var(--text-muted)]">Book Title</h3><p className="text-sm text-[var(--text-main)] font-medium">{book.title}</p></div>
+              <div><h3 className="text-xs font-semibold text-[var(--text-muted)]">Author</h3><p className="text-sm text-[var(--text-main)]">{book.author}</p></div>
             </div>
           </div>
-          <div className="bg-white border border-gray-100 p-3 rounded-xl shadow-sm">
-            <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2 flex items-center">
+          <div className="bg-[var(--bg-input)]/50 backdrop-blur-sm border border-[var(--border-main)] p-3 rounded-xl shadow-sm">
+            <h4 className="text-[10px] font-bold text-[var(--text-muted)] opacity-70 uppercase tracking-widest mb-2 flex items-center">
               <AcademicCapIcon className="w-3 h-3 mr-1" /> Education Info
             </h4>
             <div className="grid grid-cols-2 gap-3">
-              <div><h3 className="text-xs font-semibold text-gray-500">Subject</h3><p className="text-sm text-gray-900">{book.subject}</p></div>
-              <div><h3 className="text-xs font-semibold text-gray-500">Board</h3><p className="text-sm text-gray-900">{book.education_board}</p></div>
-              <div><h3 className="text-xs font-semibold text-gray-500">Grade</h3><p className="text-sm text-gray-900">{book.grade_level}</p></div>
-              <div><h3 className="text-xs font-semibold text-gray-500">Language</h3><p className="text-sm text-gray-900">{book.language}</p></div>
+              <div><h3 className="text-xs font-semibold text-[var(--text-muted)]">Subject</h3><p className="text-sm text-[var(--text-main)]">{book.subject}</p></div>
+              <div><h3 className="text-xs font-semibold text-[var(--text-muted)]">Board</h3><p className="text-sm text-[var(--text-main)]">{book.education_board}</p></div>
+              <div><h3 className="text-xs font-semibold text-[var(--text-muted)]">Grade</h3><p className="text-sm text-[var(--text-main)]">{book.grade_level}</p></div>
+              <div><h3 className="text-xs font-semibold text-[var(--text-muted)]">Language</h3><p className="text-sm text-[var(--text-main)]">{book.language}</p></div>
             </div>
           </div>
         </div>
@@ -219,18 +210,18 @@ export const RightPanel: React.FC<RightPanelProps> = ({
       const chapter = selectedCurriculumNode as Chapter;
       details = (
         <div className="space-y-4">
-          <div className="bg-white border border-gray-100 p-3 rounded-xl shadow-sm">
-            <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2 flex items-center">
+          <div className="bg-[var(--bg-input)]/50 backdrop-blur-sm border border-[var(--border-main)] p-3 rounded-xl shadow-sm">
+            <h4 className="text-[10px] font-bold text-[var(--text-muted)] opacity-70 uppercase tracking-widest mb-2 flex items-center">
               <IdentificationIcon className="w-3 h-3 mr-1" /> Chapter Info
             </h4>
             <div className="space-y-3">
               <div className="flex justify-between">
-                <div><h3 className="text-xs font-semibold text-gray-500">Chapter Title</h3><p className="text-sm text-gray-900 font-medium">{chapter.chapter_name}</p></div>
-                <div className="text-right"><h3 className="text-xs font-semibold text-gray-500">Number</h3><p className="text-sm text-gray-900">{chapter.chapter_number}</p></div>
+                <div><h3 className="text-xs font-semibold text-[var(--text-muted)]">Chapter Title</h3><p className="text-sm text-[var(--text-main)] font-medium">{chapter.chapter_name}</p></div>
+                <div className="text-right"><h3 className="text-xs font-semibold text-[var(--text-muted)]">Number</h3><p className="text-sm text-[var(--text-main)]">{chapter.chapter_number}</p></div>
               </div>
-              <div className="pt-2 border-t border-gray-50">
-                <h3 className="text-xs font-semibold text-gray-500 mb-1">Description</h3>
-                <p className="text-sm text-gray-600 leading-relaxed">{chapter.description || "No description provided."}</p>
+              <div className="pt-2 border-t border-[var(--border-main)]">
+                <h3 className="text-xs font-semibold text-[var(--text-muted)] mb-1">Description</h3>
+                <p className="text-sm text-[var(--text-main)] opacity-90 leading-relaxed">{chapter.description || "No description provided."}</p>
               </div>
             </div>
           </div>
@@ -240,29 +231,29 @@ export const RightPanel: React.FC<RightPanelProps> = ({
       const page = selectedCurriculumNode as Page;
       details = (
         <div className="space-y-4">
-          <div className="bg-white border border-gray-100 p-3 rounded-xl shadow-sm">
-            <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2 flex items-center">
+          <div className="bg-[var(--bg-input)]/50 backdrop-blur-sm border border-[var(--border-main)] p-3 rounded-xl shadow-sm">
+            <h4 className="text-[10px] font-bold text-[var(--text-muted)] opacity-70 uppercase tracking-widest mb-2 flex items-center">
               <IdentificationIcon className="w-3 h-3 mr-1" /> Page Info
             </h4>
             <div className="flex justify-between items-start">
-              <div><h3 className="text-xs font-semibold text-gray-500">Page Title</h3><p className="text-sm text-gray-900 font-medium">{page.title}</p></div>
-              <div className="text-right"><h3 className="text-xs font-semibold text-gray-500">Number</h3><p className="text-sm text-gray-900">{page.page_number}</p></div>
+              <div><h3 className="text-xs font-semibold text-[var(--text-muted)]">Page Title</h3><p className="text-sm text-[var(--text-main)] font-medium">{page.title}</p></div>
+              <div className="text-right"><h3 className="text-xs font-semibold text-[var(--text-muted)]">Number</h3><p className="text-sm text-[var(--text-main)]">{page.page_number}</p></div>
             </div>
           </div>
 
           {page.story && (
-            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100 p-4 rounded-2xl shadow-sm relative group/story overflow-hidden">
-              <div className="absolute top-0 right-0 w-24 h-24 -mr-8 -mt-8 bg-blue-400 opacity-5 rounded-full pointer-events-none"></div>
+            <div className="bg-[var(--bg-input)]/50 backdrop-blur-sm border border-[var(--color-primary-light)] p-4 rounded-2xl shadow-sm relative group/story overflow-hidden">
+              <div className="absolute top-0 right-0 w-24 h-24 -mr-8 -mt-8 bg-[var(--color-primary)] opacity-5 rounded-full pointer-events-none"></div>
 
               <div className="flex justify-between items-center mb-3">
-                <h3 className="font-bold text-gray-800 flex items-center text-sm">
+                <h3 className="font-bold text-[var(--text-main)] flex items-center text-sm">
                   <SparklesIcon className="w-4 h-4 text-amber-500 mr-1.5" />
                   Generated Story
                 </h3>
                 {!isStoryEditing && onUpdateStory && (
                   <button
                     onClick={() => setIsStoryEditing(true)}
-                    className="p-1.5 bg-white text-gray-400 hover:text-[#00AEEF] rounded-lg shadow-sm border border-gray-100 transition-all hover:shadow-md"
+                    className="p-1.5 bg-[var(--bg-panel)] text-[var(--text-muted)] hover:text-[var(--color-primary)] rounded-lg shadow-sm border border-[var(--border-main)] transition-all hover:shadow-md"
                     title="Edit Story"
                   >
                     <PencilIcon className="w-4 h-4" />
@@ -276,27 +267,27 @@ export const RightPanel: React.FC<RightPanelProps> = ({
                     <textarea
                       value={editedStory}
                       onChange={(e) => setEditedStory(e.target.value)}
-                      className="w-full p-3 text-sm border border-blue-200 rounded-xl focus:ring-2 focus:ring-[#00AEEF]/20 focus:border-[#00AEEF] outline-none min-h-[300px] bg-white transition-all shadow-inner"
+                      className="w-full p-3 text-sm border border-[var(--color-primary-light)] rounded-xl focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none min-h-[300px] bg-[var(--bg-panel)] text-[var(--text-main)] transition-all shadow-inner"
                       placeholder="Enter story text..."
                     />
                   </div>
-                  <div className="bg-white p-3 rounded-xl border border-blue-100 shadow-sm">
-                    <h4 className="font-bold text-gray-700 text-xs mb-2 flex items-center">
-                      <InformationCircleIcon className="w-3.5 h-3.5 text-blue-500 mr-1" />
+                  <div className="bg-[var(--bg-panel)] p-3 rounded-xl border border-[var(--border-main)] shadow-sm">
+                    <h4 className="font-bold text-[var(--text-muted)] text-xs mb-2 flex items-center">
+                      <InformationCircleIcon className="w-3.5 h-3.5 text-[var(--color-primary)] mr-1" />
                       Moral of the Story
                     </h4>
                     <input
                       type="text"
                       value={editedMoral}
                       onChange={(e) => setEditedMoral(e.target.value)}
-                      className="w-full p-2 text-sm border border-gray-100 rounded-lg focus:ring-2 focus:ring-[#00AEEF]/20 focus:border-[#00AEEF] outline-none bg-gray-50"
+                      className="w-full p-2 text-sm border border-[var(--border-main)] rounded-lg focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none bg-[var(--bg-input)] text-[var(--text-main)]"
                       placeholder="Enter moral..."
                     />
                   </div>
                   <div className="flex justify-end space-x-2 pt-2">
                     <button
                       onClick={() => setIsStoryEditing(false)}
-                      className="px-3 py-1.5 text-xs font-semibold text-gray-500 hover:text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                      className="px-3 py-1.5 text-xs font-semibold text-[var(--text-muted)] hover:text-[var(--text-main)] bg-[var(--bg-panel)] border border-[var(--border-main)] rounded-lg hover:bg-[var(--bg-input)] transition-colors"
                     >
                       Cancel
                     </button>
@@ -305,7 +296,7 @@ export const RightPanel: React.FC<RightPanelProps> = ({
                         onUpdateStory?.(editedStory, editedMoral);
                         setIsStoryEditing(false);
                       }}
-                      className="px-4 py-1.5 text-xs font-bold bg-[#00AEEF] text-white rounded-lg hover:bg-[#0096CC] shadow-md shadow-blue-500/20 transition-all active:scale-95"
+                      className="px-4 py-1.5 text-xs font-bold bg-[var(--color-primary)] text-white rounded-lg hover:opacity-90 shadow-md transition-all active:scale-95"
                     >
                       Save Story
                     </button>
@@ -313,16 +304,16 @@ export const RightPanel: React.FC<RightPanelProps> = ({
                 </div>
               ) : (
                 <div className="space-y-4">
-                  <p className="text-gray-700 whitespace-pre-wrap text-sm leading-relaxed font-medium">
+                  <p className="text-[var(--text-main)] whitespace-pre-wrap text-sm leading-relaxed font-medium">
                     {page.story}
                   </p>
                   {page.moral && (
-                    <div className="bg-white/60 backdrop-blur-sm p-3 rounded-xl border border-blue-100 mt-2">
-                      <h4 className="font-bold text-gray-800 text-xs mb-1 flex items-center">
-                        <InformationCircleIcon className="w-3.5 h-3.5 text-blue-500 mr-1" />
+                    <div className="bg-[var(--bg-panel)]/60 backdrop-blur-sm p-3 rounded-xl border border-[var(--border-main)] mt-2">
+                      <h4 className="font-bold text-[var(--text-main)] text-xs mb-1 flex items-center">
+                        <InformationCircleIcon className="w-3.5 h-3.5 text-[var(--color-primary)] mr-1" />
                         The Moral
                       </h4>
-                      <p className="text-gray-700 italic text-sm">{page.moral}</p>
+                      <p className="text-[var(--text-muted)] italic text-sm">{page.moral}</p>
                     </div>
                   )}
                 </div>
@@ -364,10 +355,10 @@ export const RightPanel: React.FC<RightPanelProps> = ({
   };
 
   return (
-    <div className={`w-full bg-white rounded-lg shadow p-4 flex flex-col ${className}`}>
+    <div className={`w-full bg-[var(--bg-panel)] bg-panel-texture text-[var(--text-main)] rounded-lg shadow-lg p-4 flex flex-col transition-all duration-300 ${className}`}>
       {showContent ? renderContent() : (
         <div className="flex-1 flex items-center justify-center">
-          <p className="text-gray-500 italic text-center">Details will be shown here.</p>
+          <p className="text-[var(--text-muted)] italic text-center">Details will be shown here.</p>
         </div>
       )}
     </div>

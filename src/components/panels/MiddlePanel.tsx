@@ -311,7 +311,7 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = (props) => {
       {selectedLanguages.length > 0 && (
         <div className="flex flex-wrap gap-2 mb-4">
           {selectedLanguages.map((language) => (
-            <span key={language} className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-[#E6F7FC] text-[#00AEEF] border border-[#00AEEF]">
+            <span key={language} className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-[var(--color-primary-light)] text-[var(--color-primary)] border border-[var(--color-primary)]">
               {language}
               <button onClick={() => onRemoveTab(language)} className="ml-1 hover:text-red-500">
                 <XMarkIcon className="w-3 h-3" />
@@ -324,12 +324,12 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = (props) => {
         <div className="flex-1 flex flex-col">
           <div className="flex border-b border-gray-200 overflow-x-auto mb-4">
             {availableTabs.map((language) => (
-              <button key={language} onClick={() => onTabChange(language)} className={`px-3 py-2 font-medium text-sm whitespace-nowrap border-b-2 transition-colors ${activeTab === language ? 'border-[#00AEEF] text-[#00AEEF] bg-blue-50' : 'border-transparent text-gray-600 hover:text-gray-800 hover:border-gray-300'}`}>
+              <button key={language} onClick={() => onTabChange(language)} className={`px-3 py-2 font-medium text-sm whitespace-nowrap border-b-2 transition-colors ${activeTab === language ? 'border-[var(--color-primary)] text-[var(--color-primary)] bg-[var(--color-primary-light)]' : 'border-transparent text-[var(--text-muted)] hover:text-[var(--text-main)] hover:border-[var(--border-main)]'}`}>
                 <div className="flex items-center space-x-2">
                   <span>{language}</span>
                   {saveStatus[language] === 'saved' && <div className="w-2 h-2 bg-green-500 rounded-full" title="Saved"></div>}
                   {saveStatus[language] === 'unsaved' && <div className="w-2 h-2 bg-red-500 rounded-full" title="Not saved"></div>}
-                  {languageResults[language]?.isLoading && <div className="w-3 h-3 border-2 border-gray-300 border-t-[#00AEEF] rounded-full animate-spin"></div>}
+                  {languageResults[language]?.isLoading && <div className="w-3 h-3 border-2 border-[var(--border-main)] border-t-[var(--color-primary)] rounded-full animate-spin"></div>}
                   {language !== 'X' && (<button onClick={(e) => { e.stopPropagation(); onRemoveTab(language); }} className="hover:text-red-500"><XMarkIcon className="w-3 h-3" /></button>)}
                 </div>
               </button>
@@ -338,27 +338,27 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = (props) => {
           <div className="flex-1 overflow-y-auto">
             {activeTab && languageResults[activeTab] ? (
               <div className="space-y-4">
-                <div className="flex flex-wrap gap-2 pb-4 border-b border-gray-200">
-                  <button onClick={handleEditClick} disabled={!permissions.canSwitchToEditMode.language || isLoading || hasError || isCurrentTabSaving} title={!permissions.canSwitchToEditMode.language ? 'You do not have permission to switch edit mode' : (isEditing[activeTab] ? 'Switch to View Mode' : 'Switch to Edit Mode')} className={`p-2 rounded transition ${!permissions.canSwitchToEditMode.language ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'text-gray-600 hover:text-[#00AEEF] hover:bg-gray-100'} disabled:opacity-50`}>
+                <div className="flex flex-wrap gap-2 pb-4 border-b border-[var(--border-main)]">
+                  <button onClick={handleEditClick} disabled={!permissions.canSwitchToEditMode.language || isLoading || hasError || isCurrentTabSaving} title={!permissions.canSwitchToEditMode.language ? 'You do not have permission to switch edit mode' : (isEditing[activeTab] ? 'Switch to View Mode' : 'Switch to Edit Mode')} className={`p-2 rounded transition ${!permissions.canSwitchToEditMode.language ? 'bg-[var(--bg-input)] text-[var(--text-muted)] cursor-not-allowed' : 'text-[var(--text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--bg-input)]'} disabled:opacity-50`}>
                     {isEditing[activeTab] ? <EyeIcon className="w-5 h-5" /> : <PencilIcon className="w-5 h-5" />}
                   </button>
-                  <button onClick={() => handleActionClick("saveToDatabase")} disabled={isCurrentTabSaving || !permissions.canSaveToDatabase.language || isLoading || hasError} title={`Save ${activeTab} to Database`} className={`p-2 rounded transition ${!permissions.canSaveToDatabase.language ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'text-gray-600 hover:text-green-600 hover:bg-green-50'} disabled:opacity-50`}>
-                    {savingAction === 'saveToDatabase' ? <div className="w-5 h-5 border-2 border-gray-400 border-t-green-400 rounded-full animate-spin"></div> : <ArrowDownTrayIcon className="w-5 h-5" />}
+                  <button onClick={() => handleActionClick("saveToDatabase")} disabled={isCurrentTabSaving || !permissions.canSaveToDatabase.language || isLoading || hasError} title={`Save ${activeTab} to Database`} className={`p-2 rounded transition ${!permissions.canSaveToDatabase.language ? 'bg-[var(--bg-input)] text-[var(--text-muted)] cursor-not-allowed' : 'text-[var(--text-muted)] hover:text-green-500 hover:bg-green-500/10'} disabled:opacity-50`}>
+                    {savingAction === 'saveToDatabase' ? <div className="w-5 h-5 border-2 border-[var(--border-main)] border-t-green-400 rounded-full animate-spin"></div> : <ArrowDownTrayIcon className="w-5 h-5" />}
                   </button>
-                  <button onClick={() => handleActionClick("releaseToDatabase")} disabled={isCurrentTabSaving || !permissions.canReleaseToDatabase.language || isLoading || hasError} title="Release to Database" className={`p-2 rounded transition ${!permissions.canReleaseToDatabase.language ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'text-gray-600 hover:text-blue-600 hover:bg-blue-50'} disabled:opacity-50`}>
-                    {savingAction === 'releaseToDatabase' ? <div className="w-5 h-5 border-2 border-gray-400 border-t-blue-400 rounded-full animate-spin"></div> : <ArrowUpCircleIcon className="w-5 h-5" />}
+                  <button onClick={() => handleActionClick("releaseToDatabase")} disabled={isCurrentTabSaving || !permissions.canReleaseToDatabase.language || isLoading || hasError} title="Release to Database" className={`p-2 rounded transition ${!permissions.canReleaseToDatabase.language ? 'bg-[var(--bg-input)] text-[var(--text-muted)] cursor-not-allowed' : 'text-[var(--text-muted)] hover:text-blue-500 hover:bg-blue-500/10'} disabled:opacity-50`}>
+                    {savingAction === 'releaseToDatabase' ? <div className="w-5 h-5 border-2 border-[var(--border-main)] border-t-blue-400 rounded-full animate-spin"></div> : <ArrowUpCircleIcon className="w-5 h-5" />}
                   </button>
-                  <button onClick={() => handleActionClick("verifyData")} disabled={isCurrentTabSaving || !permissions.canVerifyData.language || isLoading || hasError} title="Verify Data" className={`p-2 rounded transition ${!permissions.canVerifyData.language ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'text-gray-600 hover:text-purple-600 hover:bg-purple-50'} disabled:opacity-50`}>
-                    {savingAction === 'verifyData' ? <div className="w-5 h-5 border-2 border-gray-400 border-t-purple-400 rounded-full animate-spin"></div> : <CheckCircleIcon className="w-5 h-5" />}
+                  <button onClick={() => handleActionClick("verifyData")} disabled={isCurrentTabSaving || !permissions.canVerifyData.language || isLoading || hasError} title="Verify Data" className={`p-2 rounded transition ${!permissions.canVerifyData.language ? 'bg-[var(--bg-input)] text-[var(--text-muted)] cursor-not-allowed' : 'text-[var(--text-muted)] hover:text-purple-500 hover:bg-purple-500/10'} disabled:opacity-50`}>
+                    {savingAction === 'verifyData' ? <div className="w-5 h-5 border-2 border-[var(--border-main)] border-t-purple-400 rounded-full animate-spin"></div> : <CheckCircleIcon className="w-5 h-5" />}
                   </button>
-                  <button onClick={() => handleActionClick("approveData")} disabled={isCurrentTabSaving || !permissions.canApproveData.language || isLoading || hasError} title="Approve Data" className={`p-2 rounded transition ${!permissions.canApproveData.language ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'text-gray-600 hover:text-teal-600 hover:bg-teal-50'} disabled:opacity-50`}>
-                    {savingAction === 'approveData' ? <div className="w-5 h-5 border-2 border-gray-400 border-t-teal-400 rounded-full animate-spin"></div> : <CheckBadgeIcon className="w-5 h-5" />}
+                  <button onClick={() => handleActionClick("approveData")} disabled={isCurrentTabSaving || !permissions.canApproveData.language || isLoading || hasError} title="Approve Data" className={`p-2 rounded transition ${!permissions.canApproveData.language ? 'bg-[var(--bg-input)] text-[var(--text-muted)] cursor-not-allowed' : 'text-[var(--text-muted)] hover:text-teal-500 hover:bg-teal-500/10'} disabled:opacity-50`}>
+                    {savingAction === 'approveData' ? <div className="w-5 h-5 border-2 border-[var(--border-main)] border-t-teal-400 rounded-full animate-spin"></div> : <CheckBadgeIcon className="w-5 h-5" />}
                   </button>
-                  <button onClick={() => handleActionClick("rejectData")} disabled={isCurrentTabSaving || !permissions.canRejectData.language || isLoading || hasError} title="Reject Data" className={`p-2 rounded transition ${!permissions.canRejectData.language ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'text-gray-600 hover:text-red-600 hover:bg-red-50'} disabled:opacity-50`}>
-                    {savingAction === 'rejectData' ? <div className="w-5 h-5 border-2 border-gray-400 border-t-red-400 rounded-full animate-spin"></div> : <XCircleIcon className="w-5 h-5" />}
+                  <button onClick={() => handleActionClick("rejectData")} disabled={isCurrentTabSaving || !permissions.canRejectData.language || isLoading || hasError} title="Reject Data" className={`p-2 rounded transition ${!permissions.canRejectData.language ? 'bg-[var(--bg-input)] text-[var(--text-muted)] cursor-not-allowed' : 'text-[var(--text-muted)] hover:text-red-500 hover:bg-red-500/10'} disabled:opacity-50`}>
+                    {savingAction === 'rejectData' ? <div className="w-5 h-5 border-2 border-[var(--border-main)] border-t-red-400 rounded-full animate-spin"></div> : <XCircleIcon className="w-5 h-5" />}
                   </button>
-                  <button onClick={onSkip} disabled={isCurrentTabSaving || isWorklistLoading || !permissions.canSkiptData.language || isLoading || hasError} title="Skip to Next" className={`p-2 rounded transition ${!permissions.canSkiptData.language ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'text-gray-600 hover:text-orange-600 hover:bg-orange-50'} disabled:opacity-50`}>
-                    {isWorklistLoading ? <div className="w-5 h-5 border-2 border-gray-400 border-t-orange-400 rounded-full animate-spin"></div> : <ArrowRightCircleIcon className="w-5 h-5" />}
+                  <button onClick={onSkip} disabled={isCurrentTabSaving || isWorklistLoading || !permissions.canSkiptData.language || isLoading || hasError} title="Skip to Next" className={`p-2 rounded transition ${!permissions.canSkiptData.language ? 'bg-[var(--bg-input)] text-[var(--text-muted)] cursor-not-allowed' : 'text-[var(--text-muted)] hover:text-orange-500 hover:bg-orange-500/10'} disabled:opacity-50`}>
+                    {isWorklistLoading ? <div className="w-5 h-5 border-2 border-[var(--border-main)] border-t-orange-400 rounded-full animate-spin"></div> : <ArrowRightCircleIcon className="w-5 h-5" />}
                   </button>
                   <button
                     onClick={() => setIsQuizModalOpen(true)}
@@ -371,23 +371,23 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = (props) => {
                           : "View Quiz Q&A (empty)"
                     }
                     className={`p-2 rounded transition ${isFieldInvalid('quiz_qa')
-                      ? 'text-red-600 bg-red-50 hover:bg-red-100'
+                      ? 'text-red-500 bg-red-500/10 hover:bg-red-500/20'
                       : (currentResult.quiz_qa && currentResult.quiz_qa.length > 0)
-                        ? 'text-green-600 bg-green-50 hover:bg-green-100 hover:text-green-700'
-                        : 'text-gray-600 hover:text-[#00AEEF] hover:bg-gray-100'
+                        ? 'text-green-500 bg-green-500/10 hover:bg-green-500/20'
+                        : 'text-[var(--text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--bg-input)]'
                       } disabled:opacity-50`}
                   >
                     <AcademicCapIcon className="w-5 h-5" />
                   </button>
                 </div>
-                {isLoading ? <div className="flex items-center justify-center py-8"><div className="flex items-center space-x-2"><div className="w-5 h-5 border-2 border-gray-300 border-t-[#00AEEF] rounded-full animate-spin"></div><span className="text-gray-600">Loading {activeTab} Details...</span></div></div> : hasError ? <div className="p-3 bg-red-50 text-red-700 rounded-lg"><p><strong>Error:</strong> {currentResult.error}</p></div> : <div className="space-y-4">{[{ label: 'Object Name', key: 'object_name' }, { label: 'Description', key: 'object_description', textarea: true }, { label: 'Hint', key: 'object_hint', textarea: true }, { label: 'Short Hint', key: 'object_short_hint', textarea: true }, { label: 'Translation Status', key: 'translation_status' }].map(({ label, key, textarea }) => {
+                {isLoading ? <div className="flex items-center justify-center py-8"><div className="flex items-center space-x-2"><div className="w-5 h-5 border-2 border-[var(--border-main)] border-t-[var(--color-primary)] rounded-full animate-spin"></div><span className="text-[var(--text-muted)]">Loading {activeTab} Details...</span></div></div> : hasError ? <div className="p-3 bg-red-500/10 text-red-500 rounded-lg border border-red-500/20"><p><strong>Error:</strong> {currentResult.error}</p></div> : <div className="space-y-4">{[{ label: 'Object Name', key: 'object_name' }, { label: 'Description', key: 'object_description', textarea: true }, { label: 'Hint', key: 'object_hint', textarea: true }, { label: 'Short Hint', key: 'object_short_hint', textarea: true }, { label: 'Translation Status', key: 'translation_status' }].map(({ label, key, textarea }) => {
                   // Check if field has validation error
                   const isInvalid = isFieldInvalid(key);
                   const displayLabel = key === 'translation_status' ? `${activeTab} Approval Status` : label;
 
                   return (
                     <div key={key}>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <label className="block text-sm font-medium text-[var(--text-main)] mb-1">
                         {displayLabel}:
                         {currentResult.flag_translation ? <span className="text-xs text-green-600 ml-2">⭐️</span> : <span className="text-xs text-blue-600 ml-2">✨</span>}
                       </label>
@@ -397,22 +397,22 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = (props) => {
                             rows={3}
                             value={currentResult[key as keyof LanguageResult] as string || ''}
                             onChange={(e) => onUpdateLanguageResult(activeTab, key as keyof LanguageResult, e.target.value)}
-                            className={`w-full p-2 border rounded-md focus:ring-[#00AEEF] focus:border-[#00AEEF] ${isInvalid ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : 'border-gray-300'}`}
+                            className={`w-full p-2 border rounded-md focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] bg-[var(--bg-input)] text-[var(--text-main)] ${isInvalid ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : 'border-[var(--border-main)]'}`}
                           />
                         ) : (
                           <input
                             type="text"
                             value={currentResult[key as keyof LanguageResult] as string || ''}
                             onChange={(e) => onUpdateLanguageResult(activeTab, key as keyof LanguageResult, e.target.value)}
-                            className={`w-full p-2 border rounded-md focus:ring-[#00AEEF] focus:border-[#00AEEF] ${isInvalid ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : 'border-gray-300'}`}
+                            className={`w-full p-2 border rounded-md focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] bg-[var(--bg-input)] text-[var(--text-main)] ${isInvalid ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : 'border-[var(--border-main)]'}`}
                           />
                         )
                       ) : key === 'translation_status' ? (
                         currentResult.translation_status ?
                           <StatusWorkflow statuses={['Draft', 'Released', 'Verified', 'Approved']} currentStatus={currentResult.translation_status} /> :
-                          <p className="text-gray-900 bg-gray-50 p-2 rounded-md">-</p>
+                          <p className="text-[var(--text-main)] bg-[var(--bg-input)] p-2 rounded-md">-</p>
                       ) : (
-                        <p className="text-gray-900 bg-gray-50 p-2 rounded-md">{currentResult[key as keyof LanguageResult] as string || '-'}</p>
+                        <p className="text-[var(--text-main)] bg-[var(--bg-input)] p-2 rounded-md">{currentResult[key as keyof LanguageResult] as string || '-'}</p>
                       )}
                     </div>
                   );
@@ -420,9 +420,9 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = (props) => {
 
                   {/* Refine Results Section - Only visible in View Mode */}
                   {!currentResult.flag_translation && saveStatus[activeTab] !== 'saved' && !isEditing[activeTab] && permissions.canSwitchToEditMode.language && onReIdentify && (
-                    <div className="mt-6 pt-4 border-t border-gray-200">
-                      <h3 className="text-sm font-medium text-gray-700 mb-2">Refine Object Details</h3>
-                      <p className="text-xs text-gray-500 mb-2">
+                    <div className="mt-6 pt-4 border-t border-[var(--border-main)]">
+                      <h3 className="text-sm font-medium text-[var(--text-main)] mb-2">Refine Object Details</h3>
+                      <p className="text-xs text-[var(--text-muted)] mb-2">
                         Not happy with the results? Provide additional context to get better details.
                       </p>
                       <div className="flex gap-2">
@@ -431,7 +431,7 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = (props) => {
                           value={refineContext[activeTab] || ''}
                           onChange={(e) => setRefineContext(prev => ({ ...prev, [activeTab]: e.target.value }))}
                           placeholder="e.g., This is a vintage car from the 1920s..."
-                          className="flex-1 p-2 border border-gray-300 rounded-md text-sm focus:ring-[#00AEEF] focus:border-[#00AEEF]"
+                          className="flex-1 p-2 border border-[var(--border-main)] rounded-md text-sm focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] bg-[var(--bg-input)] text-[var(--text-main)]"
                           onKeyDown={(e) => {
                             if (e.key === 'Enter' && refineContext[activeTab]?.trim() && !isLoading) {
                               onReIdentify(activeTab, refineContext[activeTab]);
@@ -447,7 +447,7 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = (props) => {
                             }
                           }}
                           disabled={!refineContext[activeTab]?.trim() || isLoading}
-                          className="px-3 py-2 bg-[#00AEEF] text-white text-sm font-medium rounded-md hover:bg-[#0096CC] disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                          className="px-3 py-2 bg-[var(--color-primary)] text-white text-sm font-medium rounded-md hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
                         >
                           {isLoading ? 'Updating...' : 'Get Details Again'}
                         </button>
@@ -461,7 +461,7 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = (props) => {
           </div>
         </div>
       ) : (
-        <p className="text-gray-500 italic text-center py-8">Select languages and click 'Identify Image' to see the object data.</p>
+        <p className="text-[var(--text-muted)] italic text-center py-8">Select languages and click 'Identify Image' to see the object data.</p>
       )}
     </div>
   );
@@ -477,7 +477,7 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = (props) => {
     return (
       <div className="h-full flex flex-col">
         {!selectedPageData ? (
-          <div className="flex flex-col items-center justify-center h-full text-gray-400">
+          <div className="flex flex-col items-center justify-center h-full text-[var(--text-muted)]">
             <PhotoIcon className="w-16 h-16 mb-4 opacity-20" />
             <p className="italic">Select a page from the curriculum tree to view its images.</p>
           </div>
@@ -488,15 +488,14 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = (props) => {
         ) : (
           <>
             {/* Breadcrumbs */}
-            <div className="flex items-center space-x-1 text-xs text-gray-400 mb-4 bg-gray-50/50 p-2 rounded-lg">
+            <div className="flex items-center space-x-1 text-xs text-[var(--text-muted)] mb-4 bg-[var(--bg-input)]/50 backdrop-blur-sm p-2 rounded-lg border border-[var(--border-main)]">
               <BookOpenIcon className="w-3.5 h-3.5 text-blue-500" />
-              <span className="hover:text-gray-600 cursor-default">{activeBook?.title}</span>
+              <span className="hover:text-[var(--text-main)] cursor-default">{activeBook?.title}</span>
               <ChevronRightIcon className="w-3 h-3" />
               <FolderIcon className="w-3.5 h-3.5 text-amber-500" />
-              <span className="hover:text-gray-600 cursor-default">{chapterName}</span>
+              <span className="hover:text-[var(--text-main)] cursor-default">{chapterName}</span>
               <ChevronRightIcon className="w-3 h-3" />
-              <DocumentIcon className="w-3.5 h-3.5 text-gray-500" />
-              <span className="font-semibold text-gray-700">{pageTitle}</span>
+              <span className="font-semibold text-[var(--text-main)]">{pageTitle}</span>
               {selectedPageData.story && (
                 <div className="ml-auto flex items-center bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full text-[10px] font-medium animate-pulse">
                   <SparklesIcon className="w-3 h-3 mr-1" /> Story Ready
@@ -506,21 +505,21 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = (props) => {
 
             <div className="flex justify-between items-center mb-4">
               <div className="flex items-center space-x-2">
-                <h2 className="text-xl font-bold text-gray-800">{pageTitle}</h2>
+                <h2 className="text-xl font-bold text-[var(--text-main)]">{pageTitle}</h2>
                 {isPageDirty && <span className="text-[10px] bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full font-medium">Unsaved Changes</span>}
               </div>
               <div className="flex items-center space-x-3">
                 {isDirty && (
                   <button
                     onClick={onSaveBook}
-                    className="flex items-center space-x-2 bg-green-600 hover:bg-green-700 text-white px-4 py-1.5 rounded-lg text-sm font-bold shadow-md shadow-green-500/20 transition-all active:scale-95"
+                    className="flex items-center space-x-2 bg-[var(--color-primary)] hover:opacity-90 text-white px-4 py-1.5 rounded-lg text-sm font-bold shadow-md shadow-[var(--color-primary)]/20 transition-all active:scale-95"
                   >
                     <CheckCircleIcon className="w-4 h-4" />
                     <span>Save Changes</span>
                   </button>
                 )}
                 {imageLoadingProgress && (
-                  <div className="text-sm text-gray-500 flex items-center">
+                  <div className="text-sm text-[var(--text-muted)] flex items-center">
                     <LoadingSpinner size="sm" color="gray" className="mr-2" />
                     <span>Loading... {imageLoadingProgress.loaded} / {imageLoadingProgress.total}</span>
                   </div>
@@ -537,19 +536,19 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = (props) => {
                           ? "Add at least 1 image to create a story"
                           : "Create Story"
                   }
-                  className="p-2 rounded-lg transition text-gray-600 hover:text-purple-600 hover:bg-purple-50 disabled:opacity-50 disabled:cursor-not-allowed disabled:text-gray-400 disabled:bg-transparent"
+                  className="p-2 rounded-lg transition text-[var(--text-muted)] hover:text-purple-600 hover:bg-purple-50 disabled:opacity-50 disabled:cursor-not-allowed disabled:text-[var(--text-muted)]/50 disabled:bg-transparent"
                 >
                   <SparklesIcon className="w-5 h-5" />
                 </button>
               </div>
             </div>
-            <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 flex-1 overflow-y-auto bg-gray-50/50">
+            <div className="border-2 border-dashed border-[var(--border-main)] rounded-lg p-4 flex-1 overflow-y-auto bg-transparent">
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                 {selectedPageData.images?.map((image, index) => {
                   if (image.isLoading) {
                     return (
-                      <div key={image.image_id || `loader-${index}`} className="relative group rounded-xl bg-gray-200 aspect-square animate-pulse">
-                        <div className="absolute top-1 left-1 z-20 bg-gray-400 bg-opacity-75 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center border-2 border-white">
+                      <div key={image.image_id || `loader-${index}`} className="relative group rounded-xl bg-[var(--bg-input)] aspect-square animate-pulse border border-[var(--border-main)]">
+                        <div className="absolute top-2 left-2 z-20 bg-[var(--color-primary)]/50 text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center border border-white/20">
                           {image.position || index + 1}
                         </div>
                       </div>
@@ -574,8 +573,8 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = (props) => {
                         ${isDraggingThis ? 'opacity-40 scale-90' : 'opacity-100 scale-100'}
                         ${isDropTarget ? 'ring-4 ring-[#00AEEF] ring-offset-4 z-30' : 'hover:shadow-xl hover:-translate-y-1'}`}
                     >
-                      {/* Position indicator badge */}
-                      <div className="absolute top-2 left-2 z-20 bg-white/90 backdrop-blur-sm text-gray-800 text-[10px] font-bold rounded-lg px-1.5 py-0.5 flex items-center justify-center shadow-sm border border-gray-100">
+                      {/* Position indicator badge - High contrast and encircled */}
+                      <div className="absolute top-2 left-2 z-20 bg-[var(--color-primary)] text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center shadow-md border border-white/20">
                         {image.position || index + 1}
                       </div>
 
@@ -583,7 +582,7 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = (props) => {
                         <img
                           src={image.thumbnail}
                           alt={image.object_name}
-                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110 pointer-events-none"
+                          className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-110 pointer-events-none"
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                       </div>
@@ -597,7 +596,7 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = (props) => {
                             onBlur={() => saveImageName(image.image_hash)}
                             onKeyDown={(e) => handleNameKeyDown(e, image.image_hash)}
                             onClick={(e) => e.stopPropagation()}
-                            className="w-full text-xs px-2 py-1 rounded-lg border-2 border-[#00AEEF] focus:ring-0 text-gray-800 bg-white pointer-events-auto shadow-lg"
+                            className="w-full text-xs px-2 py-1 rounded-lg border-2 border-[var(--color-primary)] focus:ring-0 text-[var(--text-main)] bg-[var(--bg-panel)] pointer-events-auto shadow-lg"
                             autoFocus
                           />
                         ) : (
@@ -619,7 +618,7 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = (props) => {
                           e.stopPropagation();
                           onRemoveImageFromCurriculumPage(image.image_hash);
                         }}
-                        className="absolute top-2 right-2 p-1.5 bg-white/90 backdrop-blur-sm rounded-lg text-gray-400 opacity-0 group-hover:opacity-100 hover:text-red-500 hover:bg-white transition-all z-10 shadow-sm border border-gray-100"
+                        className="absolute top-2 right-2 p-1.5 bg-[var(--bg-panel)]/90 backdrop-blur-sm rounded-lg text-[var(--text-muted)] opacity-0 group-hover:opacity-100 hover:text-red-500 hover:bg-[var(--bg-panel)] transition-all z-10 shadow-sm border border-[var(--border-main)]"
                         title="Remove image"
                       >
                         <TrashIcon className="w-4 h-4" />
@@ -629,43 +628,43 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = (props) => {
                 })}
                 {/* Add Image Box */}
                 <div
-                  className="relative group rounded-2xl border-2 border-dashed border-gray-200 hover:border-[#00AEEF] hover:bg-blue-50/50 flex flex-col items-center justify-center cursor-pointer aspect-square transition-all duration-300 shadow-sm hover:shadow-md"
+                  className="relative group rounded-2xl border-2 border-dashed border-[var(--border-main)] hover:border-[var(--color-primary)] hover:bg-[var(--color-primary-light)]/50 flex flex-col items-center justify-center cursor-pointer aspect-square transition-all duration-300 shadow-sm hover:shadow-md"
                   onClick={() => setIsImageSearchModalOpen(true)}
                   title="Add a new image to this page"
                 >
-                  <PlusCircleIcon className="w-10 h-10 text-gray-300 group-hover:text-[#00AEEF] group-hover:scale-110 transition-all duration-300" />
-                  <p className="text-[10px] font-bold text-gray-400 group-hover:text-[#00AEEF] mt-2 uppercase tracking-wider">Add Image</p>
+                  <PlusCircleIcon className="w-10 h-10 text-[var(--text-muted)] opacity-30 group-hover:text-[var(--color-primary)] group-hover:scale-110 transition-all duration-300" />
+                  <p className="text-[10px] font-bold text-[var(--text-muted)] group-hover:text-[var(--color-primary)] mt-2 uppercase tracking-wider">Add Image</p>
                 </div>
               </div>
             </div>
             {!!selectedPageData?.story && (
               <div className="mt-6 pt-6 border-t border-gray-100 flex-shrink-0">
-                <div className="bg-gradient-to-br from-indigo-50/50 to-blue-50/50 p-4 rounded-2xl border border-blue-100/50 shadow-sm relative overflow-hidden group/prompt">
-                  <div className="absolute top-0 right-0 w-32 h-32 -mr-16 -mt-16 bg-[#00AEEF] opacity-[0.03] rounded-full pointer-events-none transition-transform duration-700 group-hover/prompt:scale-110"></div>
+                <div className="bg-gradient-to-br from-[var(--color-primary-light)] via-[var(--bg-panel)] to-[var(--color-secondary-light)]/30 p-4 rounded-2xl border border-[var(--border-main)] shadow-sm relative overflow-hidden group/prompt">
+                  <div className="absolute top-0 right-0 w-32 h-32 -mr-16 -mt-16 bg-[var(--color-primary)] opacity-[0.05] rounded-full pointer-events-none transition-transform duration-700 group-hover/prompt:scale-110"></div>
 
                   <div className="relative">
                     <div className="flex items-center justify-between mb-3">
-                      <label htmlFor="userComments" className="flex items-center text-xs font-bold text-gray-500 uppercase tracking-widest">
+                      <label htmlFor="userComments" className="flex items-center text-xs font-bold text-[var(--text-muted)] uppercase tracking-widest">
                         <SparklesIcon className="w-3.5 h-3.5 mr-1.5 text-amber-500" />
                         Regeneration Instructions
                       </label>
                       {userComments && (
                         <button
                           onClick={() => setUserComments('')}
-                          className="text-[10px] text-gray-400 hover:text-gray-600 font-medium transition-colors"
+                          className="text-[10px] text-[var(--text-muted)] hover:text-[var(--text-main)] font-medium transition-colors"
                         >
                           Clear
                         </button>
                       )}
                     </div>
 
-                    <div className="relative bg-white rounded-xl border border-blue-100 shadow-inner focus-within:ring-2 focus-within:ring-[#00AEEF]/10 focus-within:border-[#00AEEF] transition-all overflow-hidden">
+                    <div className="relative bg-[var(--bg-panel)] rounded-xl border border-[var(--border-main)] shadow-inner focus-within:ring-2 focus-within:ring-[var(--color-primary)]/10 focus-within:border-[var(--color-primary)] transition-all overflow-hidden">
                       <textarea
                         id="userComments"
                         rows={2}
                         value={userComments}
                         onChange={(e) => setUserComments(e.target.value)}
-                        className="w-full p-4 pr-32 text-sm bg-transparent outline-none resize-none placeholder-gray-400 leading-relaxed min-h-[80px]"
+                        className="w-full p-4 pr-32 text-sm bg-transparent outline-none resize-none placeholder-[var(--text-muted)] opacity-60 leading-relaxed min-h-[80px]"
                         placeholder="e.g., Make the story more adventurous, mention the blue bird..."
                         disabled={isStoryLoading}
                       />
@@ -676,8 +675,8 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = (props) => {
                           disabled={isStoryLoading || !!isPageDirty}
                           className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-xs font-bold transition-all active:scale-95 shadow-md shadow-blue-500/10 
                             ${isPageDirty
-                              ? 'bg-gray-100 text-gray-400 cursor-not-allowed bg-transparent border border-gray-100'
-                              : 'bg-[#00AEEF] text-white hover:bg-[#0096CC] hover:shadow-blue-500/20 shadow-lg'}`}
+                              ? 'bg-[var(--bg-input)] text-[var(--text-muted)] cursor-not-allowed bg-transparent border border-[var(--border-main)]'
+                              : 'bg-[var(--color-primary)] text-white hover:opacity-90 shadow-lg'}`}
                           title={isPageDirty ? "Save changes before regenerating" : "Regenerate story"}
                         >
                           {isStoryLoading ? (
@@ -723,13 +722,13 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = (props) => {
 
     return (
       <div className="flex items-center justify-center h-full">
-        <p className="text-gray-500 italic text-center">{placeholderText}</p>
+        <p className="text-[var(--text-muted)] italic text-center">{placeholderText}</p>
       </div>
     );
   };
 
   return (
-    <div className={`w-full bg-white rounded-lg shadow p-4 flex flex-col ${className}`}>
+    <div className={`w-full bg-[var(--bg-panel)] bg-panel-texture text-[var(--text-main)] rounded-lg shadow-lg p-4 flex flex-col transition-all duration-300 ${className}`}>
       {renderContent()}
       {isImageSearchModalOpen && (
         <ImageSearchModal

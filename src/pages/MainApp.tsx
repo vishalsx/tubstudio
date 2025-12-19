@@ -644,8 +644,12 @@ export const MainApp: React.FC<MainAppProps> = ({ authData }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#FFFFFF] via-[#E6F7FC] to-[#FDE6E0] text-gray-900 font-sans antialiased">
-      <Header userContext={userContext} onLogout={logout} />
+    <div className="min-h-screen bg-[var(--bg-main)] text-[var(--text-main)] font-sans antialiased transition-colors duration-500">
+      <Header
+        userContext={userContext}
+        onLogout={logout}
+        onViewChange={(view) => setLeftPanelView(view)}
+      />
       <main className="flex-1 flex flex-col md:flex-row p-4 gap-4 min-h-[calc(100vh-80px)]">
         <LeftPanel
           leftPanelView={leftPanelView}

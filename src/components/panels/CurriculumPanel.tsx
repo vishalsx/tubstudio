@@ -363,19 +363,19 @@ const TreeNode: React.FC<TreeNodeProps> = (props) => {
   const children = (node as Book).chapters || (node as Chapter).pages;
   const canExpand = type !== 'page';
 
-  const icon = type === 'book' ? <BookOpenIcon className="w-4 h-4 text-blue-600" /> :
-    type === 'chapter' ? <FolderIcon className="w-4 h-4 text-amber-500" /> :
-      <DocumentIcon className="w-4 h-4 text-gray-500" />;
+  const icon = type === 'book' ? <BookOpenIcon className="w-4 h-4 text-[var(--color-primary)]" /> :
+    type === 'chapter' ? <FolderIcon className="w-4 h-4 text-[var(--color-secondary)]" /> :
+      <DocumentIcon className="w-4 h-4 text-[var(--text-muted)]" />;
 
   const isSaveable = isDirty && props.activeBook?._id === (node as Book)._id;
 
-  const bgStyles = type === 'book' ? 'hover:bg-blue-50' :
-    type === 'chapter' ? 'hover:bg-amber-50' :
-      'hover:bg-gray-100';
+  const bgStyles = type === 'book' ? 'hover:bg-[var(--color-primary-light)]/50' :
+    type === 'chapter' ? 'hover:bg-[var(--color-secondary-light)]/50' :
+      'hover:bg-[var(--bg-input)]';
 
-  const textStyles = type === 'book' ? 'font-semibold text-gray-800' :
-    type === 'chapter' ? 'font-medium text-gray-700' :
-      'text-gray-600';
+  const textStyles = type === 'book' ? 'font-semibold text-[var(--text-main)]' :
+    type === 'chapter' ? 'font-medium text-[var(--text-main)]' :
+      'text-[var(--text-muted)]';
 
   return (
     <div className="text-xs">
@@ -386,7 +386,7 @@ const TreeNode: React.FC<TreeNodeProps> = (props) => {
       >
         <div className="w-4 h-4 flex items-center justify-center">
           {canExpand && (
-            <button onClick={(e) => { e.stopPropagation(); onNodeExpansion(node as Book | Chapter); }} className="p-0.5 rounded text-gray-400 hover:text-gray-600 transition">
+            <button onClick={(e) => { e.stopPropagation(); onNodeExpansion(node as Book | Chapter); }} className="p-0.5 rounded text-[var(--text-muted)] hover:text-[var(--text-main)] transition">
               {isExpanded ? <ChevronDownIcon className="w-3 h-3" /> : <ChevronRightIcon className="w-3 h-3" />}
             </button>
           )}
@@ -397,17 +397,17 @@ const TreeNode: React.FC<TreeNodeProps> = (props) => {
             <input
               ref={inputRef} type="text" value={editValue} onChange={(e) => setEditValue(e.target.value)}
               onBlur={handleCommit} onKeyDown={handleKeyDown} onClick={e => e.stopPropagation()}
-              className="w-full bg-white border border-[#00AEEF] rounded px-1.5 py-0.5 text-xs outline-none shadow-sm"
+              className="w-full bg-[var(--bg-input)] border border-[var(--color-primary)] rounded px-1.5 py-0.5 text-xs text-[var(--text-main)] outline-none shadow-sm"
               autoFocus
             />
           ) : name}
-          {type === 'book' && isSaveable && <div className="w-1.5 h-1.5 bg-[#00AEEF] rounded-full flex-shrink-0 ml-1.5 animate-pulse" title="Unsaved changes"></div>}
-          {(type === 'chapter' || type === 'page') && isNodeDirty && <div className="w-1.5 h-1.5 bg-[#00AEEF] rounded-full flex-shrink-0 ml-1.5 animate-pulse" title="Unsaved changes"></div>}
+          {type === 'book' && isSaveable && <div className="w-1.5 h-1.5 bg-[var(--color-primary)] rounded-full flex-shrink-0 ml-1.5 animate-pulse" title="Unsaved changes"></div>}
+          {(type === 'chapter' || type === 'page') && isNodeDirty && <div className="w-1.5 h-1.5 bg-[var(--color-primary)] rounded-full flex-shrink-0 ml-1.5 animate-pulse" title="Unsaved changes"></div>}
         </span>
         <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
-          {type !== 'page' && <button onClick={handleAdd} title={`Add ${type === 'book' ? 'Chapter' : 'Page'}`} className="p-1 rounded text-gray-400 hover:text-green-600 hover:bg-white transition-colors"><PlusCircleIcon className="w-3.5 h-3.5" /></button>}
-          {(type === 'chapter' || type === 'page') && <button onClick={(e) => { e.stopPropagation(); setIsEditingName(true); }} title="Edit" className="p-1 rounded text-gray-400 hover:text-amber-600 hover:bg-white transition-colors"><PencilIcon className="w-3.5 h-3.5" /></button>}
-          {(type === 'chapter' || type === 'page') && <button onClick={handleDelete} title="Delete" className="p-1 rounded text-gray-400 hover:text-red-600 hover:bg-white transition-colors"><TrashIcon className="w-3.5 h-3.5" /></button>}
+          {type !== 'page' && <button onClick={handleAdd} title={`Add ${type === 'book' ? 'Chapter' : 'Page'}`} className="p-1 rounded text-[var(--text-muted)] hover:text-green-600 hover:bg-[var(--bg-panel)] transition-colors"><PlusCircleIcon className="w-3.5 h-3.5" /></button>}
+          {(type === 'chapter' || type === 'page') && <button onClick={(e) => { e.stopPropagation(); setIsEditingName(true); }} title="Edit" className="p-1 rounded text-[var(--text-muted)] hover:text-[var(--color-secondary)] hover:bg-[var(--bg-panel)] transition-colors"><PencilIcon className="w-3.5 h-3.5" /></button>}
+          {(type === 'chapter' || type === 'page') && <button onClick={handleDelete} title="Delete" className="p-1 rounded text-[var(--text-muted)] hover:text-red-500 hover:bg-[var(--bg-panel)] transition-colors"><TrashIcon className="w-3.5 h-3.5" /></button>}
         </div>
       </div>
       {isExpanded && children && children.map((child: Chapter | Page) => {
@@ -497,14 +497,14 @@ export const CurriculumPanel: React.FC<CurriculumPanelProps> = (props) => {
 
     if (searchAttempted) {
       return (
-        <div className="flex items-center justify-center h-full text-sm text-gray-500 italic">
+        <div className="flex items-center justify-center h-full text-sm text-[var(--text-muted)] italic">
           No books found for your search.
         </div>
       );
     }
 
     return (
-      <div className="flex items-center justify-center h-full text-sm text-gray-500 italic">
+      <div className="flex items-center justify-center h-full text-sm text-[var(--text-muted)] italic">
         Search for a book or create a new one.
       </div>
     );
@@ -513,16 +513,16 @@ export const CurriculumPanel: React.FC<CurriculumPanelProps> = (props) => {
   return (
     <div className="flex flex-col h-full relative">
       <div className="flex justify-between items-center mb-2 flex-shrink-0">
-        <h3 className="font-semibold text-gray-800 text-sm">Curriculum</h3>
+        <h3 className="font-semibold text-[var(--text-main)] text-sm">Curriculum</h3>
         <div className="flex items-center space-x-2">
           <button
             onClick={props.onCollapseAll}
-            className="text-[10px] px-1.5 py-0.5 border border-gray-300 rounded text-gray-500 hover:bg-gray-100 transition"
+            className="text-[10px] px-1.5 py-0.5 border border-[var(--border-main)] rounded text-[var(--text-muted)] hover:bg-[var(--bg-input)] transition"
             title="Collapse All"
           >
             Collapse All
           </button>
-          <button onClick={onOpenCreateBookModal} className="text-xs flex items-center text-[#00AEEF] hover:text-[#0096CC] font-medium transition" title="Create New Book">
+          <button onClick={onOpenCreateBookModal} className="text-xs flex items-center text-[var(--color-primary)] hover:opacity-80 font-semibold transition" title="Create New Book">
             <PlusCircleIcon className="w-4 h-4 mr-1" /> Add Book
           </button>
         </div>
@@ -532,19 +532,19 @@ export const CurriculumPanel: React.FC<CurriculumPanelProps> = (props) => {
       {books.length > 0 && (
         <div className="mb-3 relative group">
           <div className="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none">
-            <MagnifyingGlassIcon className="h-3.5 w-3.5 text-gray-400 group-focus-within:text-[#00AEEF] transition-colors" />
+            <MagnifyingGlassIcon className="h-3.5 w-3.5 text-[var(--text-muted)] group-focus-within:text-[var(--color-primary)] transition-colors" />
           </div>
           <input
             type="text"
             placeholder="Filter current view..."
             value={filterText}
             onChange={(e) => setFilterText(e.target.value)}
-            className="block w-full pl-8 pr-8 py-1.5 text-xs border border-gray-200 rounded-lg focus:ring-1 focus:ring-[#00AEEF] focus:border-[#00AEEF] bg-gray-50/50 hover:bg-gray-50 transition-colors"
+            className="block w-full pl-8 pr-8 py-1.5 text-xs border border-[var(--border-main)] rounded-lg focus:ring-1 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] bg-[var(--bg-input)]/50 backdrop-blur-sm text-[var(--text-main)] transition-colors"
           />
           {filterText && (
             <button
               onClick={() => setFilterText('')}
-              className="absolute inset-y-0 right-0 pr-2 flex items-center text-gray-400 hover:text-gray-600"
+              className="absolute inset-y-0 right-0 pr-2 flex items-center text-[var(--text-muted)] hover:text-[var(--text-main)]"
             >
               <XMarkIcon className="h-3 w-3" />
             </button>
