@@ -130,7 +130,7 @@ export const Header: React.FC<HeaderProps> = ({ userContext, onLogout, onViewCha
 
       {/* Right section: App logo */}
       <div className="flex items-center">
-        <div className="p-1 px-3 rounded-xl bg-gray-50/50">
+        <div className="p-1 px-3">
           <img
             src="/U-Logo.png"
             alt="alphaTUB - TUBShots with AI"
