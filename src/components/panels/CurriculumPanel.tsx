@@ -539,7 +539,7 @@ export const CurriculumPanel: React.FC<CurriculumPanelProps> = (props) => {
             placeholder="Filter current view..."
             value={filterText}
             onChange={(e) => setFilterText(e.target.value)}
-            className="block w-full pl-8 pr-8 py-1.5 text-xs border border-[var(--border-main)] rounded-lg focus:ring-1 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] bg-[var(--bg-input)]/50 backdrop-blur-sm text-[var(--text-main)] transition-colors"
+            className="block w-full pl-8 pr-8 py-1.5 text-xs border border-[var(--border-main)] rounded-lg focus:ring-2 focus:ring-[var(--color-primary)]/40 focus:border-[var(--color-primary)] bg-[var(--bg-panel)] text-[var(--text-main)] placeholder:text-[var(--text-muted)]/60 transition-all font-medium"
           />
           {filterText && (
             <button
