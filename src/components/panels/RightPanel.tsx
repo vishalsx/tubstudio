@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { CommonData, FileInfo, LanguageResult, PermissionCheck, Book, Chapter, Page } from '../../types';
+import { CommonData, FileInfo, LanguageResult, PermissionCheck, Book, Chapter, Page, UserContext } from '../../types';
 import { StatusWorkflow } from '../common/StatusWorkflow';
+import { ContestRightPanel } from './contest/ContestRightPanel';
+import { useContest } from '../../hooks/useContest';
 import { PencilIcon, CheckIcon, XMarkIcon, IdentificationIcon, AcademicCapIcon, BookOpenIcon, SparklesIcon, InformationCircleIcon } from '@heroicons/react/24/solid';
 
 // Define the new spinner component locally
@@ -8,7 +10,24 @@ const StoryLoadingSpinner: React.FC = () => {
   return (
     <div className="flex flex-col items-center justify-center h-full text-center text-[var(--text-muted)] animate-fade-in">
       <div className="running-child-container mb-4">
-        {/* SVG colors can remain or be updated, but for now focus on plain text */}
+        <svg
+          className="w-24 h-24 text-[var(--color-primary)] running-child-svg"
+          viewBox="0 0 80 80"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          {/* Back arm/leg */}
+          <path className="running-child-arm-1" d="M40 30 L20 40" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
+          <path className="running-child-leg-1" d="M40 55 L25 75" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
+
+          {/* Body and Head */}
+          <path d="M40 23 V 55" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
+          <circle cx="40" cy="15" r="8" fill="currentColor" />
+
+          {/* Front arm/leg */}
+          <path className="running-child-leg-2" d="M40 55 L55 75" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
+          <path className="running-child-arm-2" d="M40 30 L60 40" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
+        </svg>
       </div>
       <p className="font-semibold text-lg text-[var(--color-primary)]">Writing a magical story...</p>
       <p className="text-sm">Our little storyteller is running to fetch the perfect words!</p>
@@ -17,7 +36,7 @@ const StoryLoadingSpinner: React.FC = () => {
 };
 
 interface RightPanelProps {
-  leftPanelView: 'upload' | 'database' | 'curriculum';
+  leftPanelView: 'upload' | 'database' | 'curriculum' | 'contest';
   selectedCurriculumNode: Book | Chapter | Page | null;
   currentCommonData: CommonData;
   currentFileInfo: FileInfo;
@@ -35,6 +54,9 @@ interface RightPanelProps {
   onSaveBook?: () => void;
   isStoryLoading?: boolean; // New prop
   onUpdateStory?: (newStory: string, newMoral?: string) => void;
+  // Contest Props
+  contestProps: ReturnType<typeof useContest>;
+  userContext: UserContext | null;
 }
 
 export const RightPanel: React.FC<RightPanelProps> = ({
@@ -54,6 +76,8 @@ export const RightPanel: React.FC<RightPanelProps> = ({
   onSaveBook,
   isStoryLoading,
   onUpdateStory,
+  contestProps,
+  userContext
 }) => {
   const [isStoryEditing, setIsStoryEditing] = useState(false);
   const [editedStory, setEditedStory] = useState('');
@@ -346,6 +370,16 @@ export const RightPanel: React.FC<RightPanelProps> = ({
             <p className="text-gray-500 italic text-center">Select an item from the curriculum tree to see details.</p>
           </div>
         </div>
+      );
+    }
+
+    if (leftPanelView === 'contest') {
+      return (
+        <ContestRightPanel
+          contest={contestProps.activeContest}
+          onUpdate={contestProps.updateActiveContest}
+          userContext={userContext}
+        />
       );
     }
 

@@ -89,6 +89,10 @@ export class TranslationService {
 
     return apiClient.post(endpoint, null);
   }
+
+  async getTranslationByHash(imageHash: string, language: string): Promise<any> {
+    return apiClient.get(`translations/search?image_hash=${imageHash}&language=${language}`);
+  }
 }
 
 export const translationService = new TranslationService();

@@ -1,19 +1,21 @@
 // components/panels/LeftPanel.tsx
 import React, { useState } from 'react';
-import { Bars3Icon, ChevronDownIcon, XMarkIcon, SparklesIcon, ListBulletIcon, ArrowUpTrayIcon, PhotoIcon, MagnifyingGlassIcon, BookOpenIcon, StarIcon, StopIcon, CloudArrowUpIcon, CircleStackIcon } from '@heroicons/react/24/solid';
+import { Bars3Icon, ChevronDownIcon, XMarkIcon, SparklesIcon, ListBulletIcon, ArrowUpTrayIcon, PhotoIcon, MagnifyingGlassIcon, BookOpenIcon, StarIcon, StopIcon, CloudArrowUpIcon, CircleStackIcon, TrophyIcon } from '@heroicons/react/24/solid';
 import { CommonData, RecentTranslation, PermissionCheck, DatabaseImage, Book, Chapter, Page } from '../../types';
 import { CurriculumPanel } from './CurriculumPanel';
 import { useCurriculum } from '../../hooks/useCurriculum';
 import { CreateBookModal } from '../curriculum/CreateBookModal';
+import { ContestListPanel } from './contest/ContestListPanel';
 import { LoadingSpinner } from '../common/LoadingSpinner';
 import { ErrorMessage } from '../common/ErrorMessage';
 import { useConfirmation } from '../../contexts/ConfirmationContext';
 
 type CurriculumHookProps = ReturnType<typeof useCurriculum>;
+import { useContest } from '../../hooks/useContest';
 
 interface LeftPanelProps {
   // View state props
-  leftPanelView: 'upload' | 'database' | 'curriculum';
+  leftPanelView: 'upload' | 'database' | 'curriculum' | 'contest';
 
   // File upload props
   fileInputRef: React.RefObject<HTMLInputElement | null>;
@@ -83,6 +85,9 @@ interface LeftPanelProps {
   // Worklist callout
   showWorklistCallout?: boolean;
   onDismissCallout?: () => void;
+
+  // Contest props
+  contestProps: ReturnType<typeof useContest>;
 }
 
 export const LeftPanel: React.FC<LeftPanelProps> = ({
@@ -134,6 +139,7 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
   notification,
   showWorklistCallout = false,
   onDismissCallout,
+  contestProps,
 }) => {
   const [isCreateBookModalOpen, setIsCreateBookModalOpen] = useState(false);
   const confirm = useConfirmation();
@@ -303,6 +309,22 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
           </div>
         </>
       );
+    } else if (leftPanelView === 'contest') {
+      return (
+        <div className="flex-1 min-h-0 bg-[var(--bg-input)]/50 backdrop-blur-sm border border-[var(--border-main)] rounded-lg p-3">
+          <ContestListPanel
+            contests={contestProps.contests}
+            activeContest={contestProps.activeContest}
+            isLoading={contestProps.isLoading}
+            error={contestProps.error}
+            onSelectContest={contestProps.selectContest}
+            onCreateContest={contestProps.createNewContest}
+            searchQuery={contestProps.searchQuery}
+            onSearchChange={contestProps.setSearchQuery}
+            onSearch={contestProps.fetchContests}
+          />
+        </div>
+      );
     }
     return null;
   };
@@ -332,6 +354,11 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
                   <BookOpenIcon className="w-5 h-5 text-[var(--color-primary)] mr-2" />
                   <span className="text-[var(--text-main)]">Curriculum</span>
                 </>
+              ) : leftPanelView === 'contest' ? (
+                <>
+                  <TrophyIcon className="w-5 h-5 text-[var(--color-secondary)] mr-2" />
+                  <span className="text-[var(--text-main)]">Contests</span>
+                </>
               ) : (
                 <>
                   <CircleStackIcon className="w-5 h-5 text-[var(--color-secondary)] mr-2" />
@@ -346,7 +373,7 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
       {/* Main Content (conditionally rendered) */}
       <div className={`flex-1 flex flex-col overflow-y-auto transition-opacity duration-200 ${isCollapsed ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
         {/* Internal Tabs for Objects View */}
-        {leftPanelView !== 'curriculum' && (
+        {leftPanelView !== 'curriculum' && leftPanelView !== 'contest' && (
           <div className="flex bg-[var(--bg-input)]/50 backdrop-blur-sm p-1 rounded-xl mb-4 border border-[var(--border-main)] transition-colors duration-300">
             <button
               onClick={() => onViewChange('upload')}
@@ -415,7 +442,7 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
         )}
 
         {/* --- SHARED COMPONENTS (conditionally rendered) --- */}
-        {leftPanelView !== 'curriculum' && (
+        {leftPanelView !== 'curriculum' && leftPanelView !== 'contest' && (
           <>
             <div className="flex items-center gap-2 mb-4">
               <div className="relative flex-1" ref={languageDropdownRef as React.RefObject<HTMLDivElement>}>

@@ -1,6 +1,6 @@
 // components/panels/MiddlePanel.tsx
 import React, { useState, useEffect } from 'react';
-import { XMarkIcon, StarIcon, ArrowUpCircleIcon, CheckCircleIcon, CheckBadgeIcon, XCircleIcon, ArrowRightCircleIcon, PencilIcon, EyeIcon, ArrowDownTrayIcon, ChevronRightIcon } from '@heroicons/react/24/solid';
+import { XMarkIcon, StarIcon, ArrowUpCircleIcon, CheckCircleIcon, CheckBadgeIcon, XCircleIcon, ArrowRightCircleIcon, PencilIcon, EyeIcon, ArrowDownTrayIcon, ChevronRightIcon, ArrowLeftIcon } from '@heroicons/react/24/solid';
 import { PlusCircleIcon, TrashIcon, SparklesIcon, ArrowPathIcon, AcademicCapIcon, PhotoIcon, BookOpenIcon, FolderIcon, DocumentIcon, InformationCircleIcon } from '@heroicons/react/24/outline';
 import { LanguageResult, SaveStatus, PermissionCheck, CurriculumImage, DatabaseImage, CommonData, Page, Book } from '../../types';
 import { StatusWorkflow } from '../common/StatusWorkflow';
@@ -8,10 +8,14 @@ import { ImageSearchModal } from '../common/ImageSearchModal';
 import { QuizQAModal } from '../common/QuizQAModal';
 import { LoadingSpinner } from '../common/LoadingSpinner';
 import { translationService } from '../../services/translation.service';
+import { ContestMiddlePanel } from './contest/ContestMiddlePanel';
+import { UserContext } from '../../types';
+import { useContest } from '../../hooks/useContest';
 
 interface MiddlePanelProps {
-  leftPanelView: 'upload' | 'database' | 'curriculum';
+  leftPanelView: 'upload' | 'database' | 'curriculum' | 'contest';
   className?: string;
+  userContext: UserContext | null;
 
   // Upload View props
   previewUrl: string | null;
@@ -63,6 +67,12 @@ interface MiddlePanelProps {
   onReIdentify?: (language: string, context: string) => void;
   isDirty?: boolean;
   onSaveBook?: () => void;
+  onCheckTranslation?: (pageId: string, imageHash: string) => void;
+
+  // Contest Props
+  contestProps: ReturnType<typeof useContest>;
+  cameFromCurriculum?: boolean;
+  onBackToCurriculum?: () => void;
 }
 
 export const MiddlePanel: React.FC<MiddlePanelProps> = (props) => {
@@ -104,6 +114,12 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = (props) => {
     onReIdentify,
     isDirty,
     onSaveBook,
+    onCheckTranslation,
+    // Contest Props
+    contestProps,
+    userContext,
+    cameFromCurriculum,
+    onBackToCurriculum,
   } = props;
 
   const [isImageSearchModalOpen, setIsImageSearchModalOpen] = useState(false);
@@ -307,7 +323,18 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = (props) => {
 
   const renderTranslationEditor = () => (
     <div className="flex flex-col h-full overflow-y-auto">
-      <h2 className="text-lg font-semibold mb-4">Object Details</h2>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-lg font-semibold">Object Details</h2>
+        {cameFromCurriculum && onBackToCurriculum && (
+          <button
+            onClick={onBackToCurriculum}
+            className="flex items-center space-x-1.5 px-3 py-1.5 bg-[var(--color-primary-light)] text-[var(--color-primary)] hover:bg-[var(--color-primary)] hover:text-white rounded-lg transition-all text-sm font-medium border border-[var(--color-primary)]/20 shadow-sm active:scale-95"
+          >
+            <ArrowLeftIcon className="w-4 h-4" />
+            <span>Back to Curriculum</span>
+          </button>
+        )}
+      </div>
       {selectedLanguages.length > 0 && (
         <div className="flex flex-wrap gap-2 mb-4">
           {selectedLanguages.map((language) => (
@@ -573,6 +600,42 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = (props) => {
                         ${isDraggingThis ? 'opacity-40 scale-90' : 'opacity-100 scale-100'}
                         ${isDropTarget ? 'ring-4 ring-[#00AEEF] ring-offset-4 z-30' : 'hover:shadow-xl hover:-translate-y-1'}`}
                     >
+                      {/* Action Buttons Overlay - Top Right Container */}
+                      <div className="absolute top-2 right-2 flex flex-col space-y-2 z-30 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                        {/* Delete Button */}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onRemoveImageFromCurriculumPage(image.image_hash);
+                          }}
+                          className="p-1.5 bg-white shadow-md rounded-lg text-gray-500 hover:text-red-600 hover:bg-red-50 transition-all border border-gray-100"
+                          title="Remove image"
+                        >
+                          <TrashIcon className="w-4 h-4" />
+                        </button>
+
+                        {/* Refresh Button (Only if translation missing) */}
+                        {!image.object_name && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (onCheckTranslation && selectedPageData?.page_id) {
+                                onCheckTranslation(selectedPageData.page_id, image.image_hash);
+                              }
+                            }}
+                            className="p-1.5 bg-white shadow-md rounded-lg text-blue-500 hover:text-blue-700 hover:bg-blue-50 transition-all border border-gray-100 group/refresh"
+                            title="Check for translation"
+                          >
+                            <ArrowPathIcon className="w-4 h-4 group-hover/refresh:rotate-180 transition-transform duration-500" />
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Translation missing indicator (Red Dot) */}
+                      {!image.object_name && (
+                        <div className="absolute top-2 right-2 w-3 h-3 bg-red-600 rounded-full border-2 border-white z-20 shadow-sm animate-pulse group-hover:hidden" title="Translation missing"></div>
+                      )}
+
                       {/* Position indicator badge - High contrast and encircled */}
                       <div className="absolute top-2 left-2 z-20 bg-[var(--color-primary)] text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center shadow-md border border-white/20">
                         {image.position || index + 1}
@@ -584,7 +647,7 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = (props) => {
                           alt={image.object_name}
                           className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-110 pointer-events-none"
                         />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                       </div>
 
                       <div className="absolute bottom-0 left-0 right-0 p-2 transform translate-y-1 group-hover:translate-y-0 transition-transform duration-300">
@@ -600,11 +663,11 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = (props) => {
                             autoFocus
                           />
                         ) : (
-                          <div className="flex items-center justify-between bg-white/10 backdrop-blur-md rounded-lg px-2 py-1 border border-white/20 cursor-text pointer-events-auto" onClick={(e) => startEditingImageName(e, image)}>
-                            <p className="text-white font-semibold text-xs truncate select-none flex-1">
-                              {image.object_name}
+                          <div className="flex items-center justify-between bg-black/60 backdrop-blur-sm rounded-lg px-2 py-1.5 border border-white/10 cursor-text pointer-events-auto" onClick={(e) => startEditingImageName(e, image)}>
+                            <p className="text-white font-bold text-xs truncate select-none flex-1">
+                              {image.object_name || 'Pending Translation'}
                             </p>
-                            <PencilIcon className="w-3 h-3 text-white/70 ml-1 flex-shrink-0" />
+                            <PencilIcon className="w-3 h-3 text-white/50 ml-1 flex-shrink-0" />
                           </div>
                         )}
                       </div>
@@ -612,17 +675,6 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = (props) => {
                       {image.isNew && (
                         <div className="absolute top-2 right-10 w-2 h-2 bg-[#00AEEF] rounded-full border-2 border-white pointer-events-none shadow-sm" title="Not saved"></div>
                       )}
-
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onRemoveImageFromCurriculumPage(image.image_hash);
-                        }}
-                        className="absolute top-2 right-2 p-1.5 bg-[var(--bg-panel)]/90 backdrop-blur-sm rounded-lg text-[var(--text-muted)] opacity-0 group-hover:opacity-100 hover:text-red-500 hover:bg-[var(--bg-panel)] transition-all z-10 shadow-sm border border-[var(--border-main)]"
-                        title="Remove image"
-                      >
-                        <TrashIcon className="w-4 h-4" />
-                      </button>
                     </div>
                   );
                 })}
@@ -708,6 +760,20 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = (props) => {
   const renderContent = () => {
     if (leftPanelView === 'curriculum') {
       return renderCurriculumView();
+    }
+
+    if (leftPanelView === 'contest') {
+      return (
+        <ContestMiddlePanel
+          contest={contestProps.activeContest}
+          isDirty={contestProps.isDirty}
+          onUpdate={contestProps.updateActiveContest}
+          onSave={contestProps.saveContest}
+          isLoading={contestProps.isLoading}
+          error={contestProps.error}
+          userContext={userContext}
+        />
+      );
     }
 
     const hasActiveImage = Object.keys(languageResults).length > 0;

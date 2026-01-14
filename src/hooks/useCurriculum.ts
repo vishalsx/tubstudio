@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { Book, Chapter, Page, CurriculumImage, DatabaseImage, UserContext } from '../types';
 import { curriculumService, BookSavePayload, BookCreatePayload } from '../services/curriculum.service';
+import { translationService } from '../services/translation.service';
 
 const deepClone = <T,>(obj: T): T => JSON.parse(JSON.stringify(obj));
 
@@ -474,7 +475,7 @@ export const useCurriculum = (userContext: UserContext | null) => {
           image_hash: dbImage.object.image_hash,
           position: newPosition,
           thumbnail: `data:image/jpeg;base64,${dbImage.object.thumbnail}`,
-          object_name: dbImage.common_data.object_name_en,
+          object_name: dbImage.common_data.object_name,
           isNew: true,
         };
         if (!page.images) page.images = [];
@@ -609,6 +610,47 @@ export const useCurriculum = (userContext: UserContext | null) => {
     });
   }, [selectedPage, updateActiveBook]);
 
+  // NEW: Check Translation Function
+  const checkTranslation = useCallback(async (pageId: string, imageHash: string) => {
+    if (!activeBook?.language) return;
+
+    setIsLoading(true);
+    try {
+      const result = await translationService.getTranslationByHash(imageHash, activeBook.language);
+      if (result.object_name) {
+        updateActiveBook(book => {
+          const chapter = book.chapters.find(c => c.pages.some(p => p.page_id === pageId));
+          const page = chapter?.pages.find(p => p.page_id === pageId);
+          if (page && chapter) {
+            const image = page.images?.find(img => img.image_hash === imageHash);
+            if (image) {
+              image.object_name = result.object_name;
+              page.isModified = true;
+              chapter.isModified = true;
+              if (selectedPage?.page_id === pageId) {
+                setSelectedPage(prev => {
+                  if (!prev) return prev;
+                  const newImages = prev.images?.map(img =>
+                    img.image_hash === imageHash ? { ...img, object_name: result.object_name } : img
+                  ) || [];
+                  return { ...prev, images: newImages };
+                });
+              }
+            }
+          }
+          return book;
+        });
+        setNotification({ message: 'Translation updated!', type: 'success' });
+      } else {
+        setNotification({ message: 'No translation found yet.', type: 'error' });
+      }
+    } catch (error) {
+      setNotification({ message: (error as Error).message, type: 'error' });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [activeBook, selectedPage, updateActiveBook]);
+
   const saveBook = useCallback(async () => {
     if (!activeBook || !username) return;
 
@@ -699,6 +741,7 @@ export const useCurriculum = (userContext: UserContext | null) => {
     reorderImagesOnPage,
     updateImageName,
     updateStory,
+    checkTranslation,
     collapseAll,
   };
 };

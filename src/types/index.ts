@@ -1,6 +1,7 @@
 // types/index.ts
 export interface CommonData {
   object_name_en?: string;
+  object_name?: string;
   object_category?: string;
   tags?: string[];
   field_of_study?: string;
@@ -63,6 +64,7 @@ export interface UserContext {
   permission_rules: PermissionRulesDict;
   org_name?: string;
   logo_url?: string;
+  org_code?: string;
 }
 
 // Permission interfaces from permissions.ts

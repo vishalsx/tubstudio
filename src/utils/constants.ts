@@ -1,15 +1,16 @@
 // utils/constants.ts
 // FIX: Cast import.meta to any to access Vite env variables without the `vite/client` type definitions.
 export const API_URL = ((import.meta as any).env && (import.meta as any).env.VITE_FASTAPI_URL) || 'http://localhost:8000/';
+export const GAME_BASE_URL = ((import.meta as any).env && (import.meta as any).env.VITE_GAME_BASE_URL) || 'http://localhost:3000';
 
 export const VALID_IMAGE_TYPES = [
-  'image/jpeg', 
-  'image/png', 
-  'image/heic', 
+  'image/jpeg',
+  'image/png',
+  'image/heic',
   'image/heif',
-  'image/webp', 
-  'image/gif', 
-  'image/bmp', 
+  'image/webp',
+  'image/gif',
+  'image/bmp',
   'image/tiff'
 ];
 
@@ -62,6 +63,7 @@ export const UI_MESSAGES = {
 
 export const DEFAULT_COMMON_DATA = {
   object_name_en: "",
+  object_name: "",
   object_category: "",
   tags: [],
   field_of_study: "",

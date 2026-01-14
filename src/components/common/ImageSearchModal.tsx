@@ -133,6 +133,7 @@ export const ImageSearchModal: React.FC<ImageSearchModalProps> = ({
       },
       common_data: {
         object_name_en: item.poolImage.object_name_en,
+        object_name: item.poolImage.object_name_en, // Already mapped correctly in previous turn but ensuring consistency
         object_category: "", tags: [], field_of_study: "", age_appropriate: "",
         image_status: "", object_id: item.poolImage.object_id || "",
         image_base64: "", flag_object: false
@@ -219,8 +220,11 @@ export const ImageSearchModal: React.FC<ImageSearchModalProps> = ({
                     key={image.object.image_hash || image.common_data.object_id}
                     className={`relative group rounded-2xl overflow-hidden shadow-sm bg-[var(--bg-input)] aspect-square border border-[var(--border-main)] transition-opacity ${isAdded ? 'cursor-default' : 'cursor-pointer hover:shadow-lg'}`}
                     onClick={() => handleImageClick(image)}
-                    title={image.common_data.object_name_en || image.file_info.filename}
+                    title={image.common_data.object_name || image.common_data.object_name_en || image.file_info.filename}
                   >
+                    {!image.common_data.object_name && (
+                      <div className="absolute top-2 right-2 w-3 h-3 bg-red-600 rounded-full border-2 border-white z-20 shadow-sm animate-pulse" title="Translation missing"></div>
+                    )}
                     <img
                       src={`data:image/jpeg;base64,${image.object.thumbnail}`}
                       alt={image.common_data.object_name_en || ''}
@@ -228,7 +232,7 @@ export const ImageSearchModal: React.FC<ImageSearchModalProps> = ({
                     />
                     <div className="absolute bottom-0 left-0 right-0 p-1 bg-gradient-to-t from-black/60 to-transparent pointer-events-none">
                       <p className="text-white font-bold text-xs text-center truncate">
-                        {image.common_data.object_name_en || 'Untitled'}
+                        {image.common_data.object_name || 'Pending Translation'}
                       </p>
                     </div>
                     {(image.popularity_stars !== undefined && image.total_vote_count !== undefined) && (

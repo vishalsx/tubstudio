@@ -9,6 +9,7 @@ import { useImageUpload } from '../hooks/useImageUpload';
 import { useLanguageResults } from '../hooks/useLanguageResults';
 import { useWorklist } from '../hooks/useWorklist';
 import { useCurriculum } from '../hooks/useCurriculum';
+import { useContest } from '../hooks/useContest';
 // FIX: Import translationService to resolve 'Cannot find name' errors.
 import { translationService } from '../services/translation.service';
 import { canPerformUiAction } from '../utils/permissions/hasPermissions';
@@ -45,6 +46,7 @@ export const MainApp: React.FC<MainAppProps> = ({ authData }) => {
   const languageResults = useLanguageResults();
   const worklist = useWorklist();
   const curriculum = useCurriculum(userContext);
+  const contest = useContest(userContext);
 
   const [isLanguageDropdownOpen, setIsLanguageDropdownOpen] = useState(false);
   const [isLeftPanelCollapsed, setIsLeftPanelCollapsed] = useState(false);
@@ -57,8 +59,9 @@ export const MainApp: React.FC<MainAppProps> = ({ authData }) => {
   const [identifyProgress, setIdentifyProgress] = useState<{ current: number; total: number } | null>(null);
 
   // View management states
-  const [leftPanelView, setLeftPanelView] = useState<'upload' | 'database' | 'curriculum'>('upload');
+  const [leftPanelView, setLeftPanelView] = useState<'upload' | 'database' | 'curriculum' | 'contest'>('upload');
   const [languageForImageSearch, setLanguageForImageSearch] = useState<string>('');
+  const [cameFromCurriculum, setCameFromCurriculum] = useState(false);
 
   // Database View states
   const [searchQuery, setSearchQuery] = useState('');
@@ -207,8 +210,9 @@ export const MainApp: React.FC<MainAppProps> = ({ authData }) => {
     }
   }, [pendingIdentify, languageResults.selectedLanguages]);
 
-  const handleLeftPanelViewChange = (view: 'upload' | 'database' | 'curriculum') => {
+  const handleLeftPanelViewChange = (view: 'upload' | 'database' | 'curriculum' | 'contest') => {
     setLeftPanelView(view);
+    setCameFromCurriculum(false);
   };
 
   const handleSearchQueryChange = (value: string) => setSearchQuery(value);
@@ -234,6 +238,7 @@ export const MainApp: React.FC<MainAppProps> = ({ authData }) => {
       },
       common_data: {
         object_name_en: item.poolImage.object_name_en,
+        object_name: item.poolImage.object_name_en, // Mapping backend English/Translated name to object_name
         object_category: "", tags: [], field_of_study: "", age_appropriate: "",
         image_status: "", object_id: item.poolImage.object_id || "",
         image_base64: "", flag_object: false
@@ -279,6 +284,7 @@ export const MainApp: React.FC<MainAppProps> = ({ authData }) => {
   };
 
   const handleDatabaseImageClick = async (image: DatabaseImage) => {
+    setCameFromCurriculum(false);
     imageUpload.resetUpload();
     languageResults.clearResults();
 
@@ -293,6 +299,11 @@ export const MainApp: React.FC<MainAppProps> = ({ authData }) => {
       languageResults.setSelectedLanguages(languagesToIdentify);
       setPendingIdentify(languagesToIdentify);
     }
+  };
+
+  const handleBackToCurriculum = () => {
+    setLeftPanelView('curriculum');
+    setCameFromCurriculum(false);
   };
 
   const handleCurriculumImageDoubleClick = async (image: CurriculumImage, language: string) => {
@@ -333,6 +344,7 @@ export const MainApp: React.FC<MainAppProps> = ({ authData }) => {
       untranslated_languages: [language],
     };
     await handleDatabaseImageClick(mockFullImage);
+    setCameFromCurriculum(true);
   };
 
   const handleCancelIdentify = useCallback(() => {
@@ -492,6 +504,7 @@ export const MainApp: React.FC<MainAppProps> = ({ authData }) => {
 
   const handleThumbnailClick = async (thumbnailIndex: number) => {
     try {
+      setCameFromCurriculum(false);
       setLeftPanelView('upload');
       if (recentTranslations.length > thumbnailIndex) {
         const thumb = recentTranslations[thumbnailIndex];
@@ -648,7 +661,7 @@ export const MainApp: React.FC<MainAppProps> = ({ authData }) => {
       <Header
         userContext={userContext}
         onLogout={logout}
-        onViewChange={(view) => setLeftPanelView(view)}
+        onViewChange={handleLeftPanelViewChange}
       />
       <main className="flex-1 flex flex-col md:flex-row p-4 gap-4 min-h-[calc(100vh-80px)]">
         <LeftPanel
@@ -706,6 +719,9 @@ export const MainApp: React.FC<MainAppProps> = ({ authData }) => {
             }
             setShowWorklistCallout(false);
           }}
+
+          // Contest props
+          contestProps={contest}
         />
 
         <MiddlePanel
@@ -760,6 +776,11 @@ export const MainApp: React.FC<MainAppProps> = ({ authData }) => {
           onReIdentify={handleReIdentify}
           isDirty={curriculum.isDirty}
           onSaveBook={curriculum.saveBook}
+          onCheckTranslation={curriculum.checkTranslation}
+          contestProps={contest}
+          userContext={userContext}
+          cameFromCurriculum={cameFromCurriculum}
+          onBackToCurriculum={handleBackToCurriculum}
         />
 
         <RightPanel
@@ -774,11 +795,15 @@ export const MainApp: React.FC<MainAppProps> = ({ authData }) => {
           permissions={{ canSwitchToEditMode }}
           onUpdateCommonData={languageResults.updateCommonData}
           className={`transition-all duration-300 ease-in-out ${isLeftPanelCollapsed ? 'md:flex-[2_0_0%] min-w-0' : 'md:flex-[3_0_0%] min-w-0'}`}
-          showContent={Object.keys(languageResults.languageResults).length > 0 || !!selectedCurriculumNode}
+          showContent={leftPanelView === 'contest' || Object.keys(languageResults.languageResults).length > 0 || !!selectedCurriculumNode}
           isDirty={curriculum.isDirty}
           onSaveBook={curriculum.saveBook}
           isStoryLoading={curriculum.isStoryLoading}
           onUpdateStory={handleUpdateStory}
+
+          // Contest props
+          contestProps={contest}
+          userContext={userContext}
         />
       </main>
     </div>

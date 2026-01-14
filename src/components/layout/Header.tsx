@@ -6,7 +6,7 @@ import { useTheme, ThemeType } from '../../contexts/ThemeContext';
 interface HeaderProps {
   userContext: UserContext | null;
   onLogout: () => void;
-  onViewChange?: (view: 'upload' | 'database' | 'curriculum') => void;
+  onViewChange?: (view: 'upload' | 'database' | 'curriculum' | 'contest') => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({ userContext, onLogout, onViewChange }) => {
@@ -28,7 +28,7 @@ export const Header: React.FC<HeaderProps> = ({ userContext, onLogout, onViewCha
   const menuItems = [
     { label: 'Objects', icon: CircleStackIcon, onClick: () => onViewChange?.('upload') },
     { label: 'Curriculum', icon: BookOpenIcon, onClick: () => onViewChange?.('curriculum') },
-    { label: 'Contest', icon: TrophyIcon, onClick: () => { /* Placeholder */ } },
+    { label: 'Contest', icon: TrophyIcon, onClick: () => onViewChange?.('contest') },
     { label: 'Settings', icon: Cog6ToothIcon, onClick: () => { /* Placeholder */ } },
   ];
 
