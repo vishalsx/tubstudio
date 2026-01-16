@@ -663,7 +663,7 @@ export const MainApp: React.FC<MainAppProps> = ({ authData }) => {
         onLogout={logout}
         onViewChange={handleLeftPanelViewChange}
       />
-      <main className="flex-1 flex flex-col md:flex-row p-4 gap-4 min-h-[calc(100vh-80px)]">
+      <main className="flex-1 flex flex-col md:flex-row md:items-start p-4 gap-4 min-h-[calc(100vh-80px)]">
         <LeftPanel
           leftPanelView={leftPanelView}
           fileInputRef={imageUpload.fileInputRef}
@@ -703,7 +703,7 @@ export const MainApp: React.FC<MainAppProps> = ({ authData }) => {
           onDatabaseImageClick={handleDatabaseImageClick}
           isCollapsed={isLeftPanelCollapsed}
           onToggleCollapse={handleToggleLeftPanel}
-          className={`md:flex-shrink-0 transition-all duration-300 ease-in-out ${isLeftPanelCollapsed ? 'md:w-16 md:flex-none' : 'md:flex-[2_0_0%] min-w-0'}`}
+          className={`md:flex-shrink-0 transition-all duration-300 ease-in-out min-h-[600px] ${isLeftPanelCollapsed ? 'md:w-16 md:flex-none' : 'md:flex-[2_0_0%] min-w-0'}`}
           curriculumProps={curriculum}
           onSelectBook={curriculum.selectBook}
           onSelectPage={curriculum.selectPage}
@@ -726,11 +726,12 @@ export const MainApp: React.FC<MainAppProps> = ({ authData }) => {
 
         <MiddlePanel
           leftPanelView={leftPanelView}
-          className={`transition-all duration-300 ease-in-out ${isLeftPanelCollapsed ? 'md:flex-[3_0_0%] min-w-0' : 'md:flex-[5_0_0%] min-w-0'}`}
+          className={`transition-all duration-300 ease-in-out min-h-[600px] ${isLeftPanelCollapsed ? 'md:flex-[3_0_0%] min-w-0' : 'md:flex-[5_0_0%] min-w-0'}`}
 
           // Upload view props
           previewUrl={imageUpload.previewUrl}
           currentCommonData={currentDataForPanels}
+          imageHash={imageUpload.imageHash}
           activeTab={languageResults.activeTab}
           availableTabs={languageResults.availableTabs}
           languageResults={languageResults.languageResults}
@@ -757,6 +758,7 @@ export const MainApp: React.FC<MainAppProps> = ({ authData }) => {
           }}
           onSkip={handleSkip}
           onToggleEdit={languageResults.toggleEdit}
+          onSetError={worklist.setError}
 
           // Curriculum view props
           activeBook={curriculum.activeBook}
@@ -794,7 +796,7 @@ export const MainApp: React.FC<MainAppProps> = ({ authData }) => {
           commonDataMode={commonDataMode}
           permissions={{ canSwitchToEditMode }}
           onUpdateCommonData={languageResults.updateCommonData}
-          className={`transition-all duration-300 ease-in-out ${isLeftPanelCollapsed ? 'md:flex-[2_0_0%] min-w-0' : 'md:flex-[3_0_0%] min-w-0'}`}
+          className={`transition-all duration-300 ease-in-out min-h-[600px] ${isLeftPanelCollapsed ? 'md:flex-[2_0_0%] min-w-0' : 'md:flex-[3_0_0%] min-w-0'}`}
           showContent={leftPanelView === 'contest' || Object.keys(languageResults.languageResults).length > 0 || !!selectedCurriculumNode}
           isDirty={curriculum.isDirty}
           onSaveBook={curriculum.saveBook}

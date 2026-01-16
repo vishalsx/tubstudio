@@ -539,7 +539,7 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
               <ErrorMessage message={error} showDog={true} className="mb-4" />
             )}
 
-            <div className="mt-auto">
+            <div className="mt-8">
               <h3 className="font-semibold mb-2 text-[var(--text-main)] text-sm">Recent Edits</h3>
               <div className="flex space-x-3 overflow-x-auto pb-2 -mx-1 px-1 custom-scrollbar">
                 {recentTranslations.length > 0 ? (

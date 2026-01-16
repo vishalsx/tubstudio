@@ -93,6 +93,10 @@ export class TranslationService {
   async getTranslationByHash(imageHash: string, language: string): Promise<any> {
     return apiClient.get(`translations/search?image_hash=${imageHash}&language=${language}`);
   }
+
+  async importContent(imageHash: string, language: string): Promise<any> {
+    return apiClient.get(`import_content?image_hash=${imageHash}&language=${language}`);
+  }
 }
 
 export const translationService = new TranslationService();

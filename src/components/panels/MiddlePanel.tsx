@@ -1,7 +1,7 @@
 // components/panels/MiddlePanel.tsx
 import React, { useState, useEffect } from 'react';
 import { XMarkIcon, StarIcon, ArrowUpCircleIcon, CheckCircleIcon, CheckBadgeIcon, XCircleIcon, ArrowRightCircleIcon, PencilIcon, EyeIcon, ArrowDownTrayIcon, ChevronRightIcon, ArrowLeftIcon } from '@heroicons/react/24/solid';
-import { PlusCircleIcon, TrashIcon, SparklesIcon, ArrowPathIcon, AcademicCapIcon, PhotoIcon, BookOpenIcon, FolderIcon, DocumentIcon, InformationCircleIcon } from '@heroicons/react/24/outline';
+import { PlusCircleIcon, TrashIcon, SparklesIcon, ArrowPathIcon, AcademicCapIcon, PhotoIcon, BookOpenIcon, FolderIcon, DocumentIcon, InformationCircleIcon, DocumentArrowDownIcon } from '@heroicons/react/24/outline';
 import { LanguageResult, SaveStatus, PermissionCheck, CurriculumImage, DatabaseImage, CommonData, Page, Book } from '../../types';
 import { StatusWorkflow } from '../common/StatusWorkflow';
 import { ImageSearchModal } from '../common/ImageSearchModal';
@@ -20,6 +20,7 @@ interface MiddlePanelProps {
   // Upload View props
   previewUrl: string | null;
   currentCommonData: CommonData;
+  imageHash?: string | null;
   activeTab: string;
   availableTabs: string[];
   languageResults: { [key: string]: LanguageResult };
@@ -48,6 +49,7 @@ interface MiddlePanelProps {
   onSave: (action: string) => void;
   onSkip: () => void;
   onToggleEdit: (language: string) => void;
+  onSetError?: (error: string | null) => void;
 
   // Curriculum View props
   activeBook: Book | null;
@@ -81,6 +83,7 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = (props) => {
     className = '',
     // upload props
     activeTab,
+    imageHash,
     availableTabs,
     languageResults,
     selectedLanguages,
@@ -120,6 +123,7 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = (props) => {
     userContext,
     cameFromCurriculum,
     onBackToCurriculum,
+    onSetError,
   } = props;
 
   const [isImageSearchModalOpen, setIsImageSearchModalOpen] = useState(false);
@@ -139,9 +143,17 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = (props) => {
   // Refine Context State - Per language
   const [refineContext, setRefineContext] = useState<{ [language: string]: string }>({});
 
-  // Clear all refine contexts when a new image is uploaded/identified
+  // Import/Original Toggle state
+  const [importedDataCache, setImportedDataCache] = useState<{ [language: string]: LanguageResult }>({});
+  const [originalDataCache, setOriginalDataCache] = useState<{ [language: string]: LanguageResult }>({});
+  const [isShowingImported, setIsShowingImported] = useState<{ [language: string]: boolean }>({});
+
+  // Clear all refine contexts and import caches when a new image is uploaded/identified
   useEffect(() => {
     setRefineContext({});
+    setImportedDataCache({});
+    setOriginalDataCache({});
+    setIsShowingImported({});
   }, [props.currentCommonData.object_id]); // Clear when object_id changes (new image)
 
   // Clear user comments and validation errors when tab changes
@@ -321,6 +333,89 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = (props) => {
     }
   };
 
+  const handleImportText = async () => {
+    if (!activeTab || !imageHash || !currentResult) {
+      console.error('Missing data for import');
+      return;
+    }
+
+    const hasImported = !!importedDataCache[activeTab];
+
+    if (hasImported) {
+      // Toggle logic: Switch between Original and Imported, preserving edits
+      const showingImported = isShowingImported[activeTab];
+
+      // 1. Capture current edits into the appropriate cache
+      const currentFields = {
+        ...currentResult,
+        // We only care about the text fields we import
+        object_name: currentResult.object_name,
+        object_description: currentResult.object_description,
+        object_hint: currentResult.object_hint,
+        object_short_hint: currentResult.object_short_hint,
+        quiz_qa: [...(currentResult.quiz_qa || [])]
+      };
+
+      if (showingImported) {
+        setImportedDataCache(prev => ({ ...prev, [activeTab]: currentFields }));
+        // Switch to Original
+        const original = originalDataCache[activeTab];
+        updateFields(original);
+        setIsShowingImported(prev => ({ ...prev, [activeTab]: false }));
+      } else {
+        setOriginalDataCache(prev => ({ ...prev, [activeTab]: currentFields }));
+        // Switch to Imported
+        const imported = importedDataCache[activeTab];
+        updateFields(imported);
+        setIsShowingImported(prev => ({ ...prev, [activeTab]: true }));
+      }
+      return;
+    }
+
+    // First time import: Call API
+    try {
+      if (onSetError) onSetError(null);
+      const data = await translationService.importContent(imageHash, activeTab);
+
+      if (data) {
+        // 1. Save current fields as Original
+        setOriginalDataCache(prev => ({ ...prev, [activeTab]: { ...currentResult } }));
+
+        // 2. Prepare imported data
+        const importedResult: LanguageResult = {
+          ...currentResult,
+          object_name: data.object_name || currentResult.object_name,
+          object_description: data.object_description || currentResult.object_description,
+          object_hint: data.object_hint || currentResult.object_hint,
+          object_short_hint: data.object_short_hint || currentResult.object_short_hint,
+          quiz_qa: data.quiz_qa || currentResult.quiz_qa
+        };
+
+        // 3. Save to Imported cache and update fields
+        setImportedDataCache(prev => ({ ...prev, [activeTab]: importedResult }));
+        updateFields(importedResult);
+        setIsShowingImported(prev => ({ ...prev, [activeTab]: true }));
+      }
+    } catch (error: any) {
+      console.error('Failed to import content:', error);
+      const errorMessage = error?.response?.data?.detail || error?.message || 'Failed to import content';
+      if (onSetError) {
+        onSetError(errorMessage);
+      } else {
+        alert('Error: ' + errorMessage);
+      }
+    }
+  };
+
+  // Helper to update fields in parent state
+  const updateFields = (data: Partial<LanguageResult>) => {
+    if (data.object_name !== undefined) onUpdateLanguageResult(activeTab, 'object_name', data.object_name);
+    if (data.object_description !== undefined) onUpdateLanguageResult(activeTab, 'object_description', data.object_description);
+    if (data.object_hint !== undefined) onUpdateLanguageResult(activeTab, 'object_hint', data.object_hint);
+    if (data.object_short_hint !== undefined) onUpdateLanguageResult(activeTab, 'object_short_hint', data.object_short_hint);
+    if (data.quiz_qa !== undefined) onUpdateLanguageResult(activeTab, 'quiz_qa', data.quiz_qa);
+  };
+
   const renderTranslationEditor = () => (
     <div className="flex flex-col h-full overflow-y-auto">
       <div className="flex items-center justify-between mb-4">
@@ -406,6 +501,17 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = (props) => {
                   >
                     <AcademicCapIcon className="w-5 h-5" />
                   </button>
+                  {leftPanelView === 'upload' && (
+                    <button
+                      onClick={handleImportText}
+                      disabled={!permissions.canSwitchToEditMode.language || isLoading || hasError || isCurrentTabSaving}
+                      title={importedDataCache[activeTab] ? (isShowingImported[activeTab] ? "Switch to Original" : "Switch to Imported") : "Import Text"}
+                      className={`p-2 rounded transition ml-auto ${isShowingImported[activeTab] ? 'text-blue-500 bg-blue-500/10' : 'text-[var(--text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--bg-input)]'
+                        } disabled:opacity-50`}
+                    >
+                      {importedDataCache[activeTab] ? <ArrowPathIcon className={`w-5 h-5 ${isShowingImported[activeTab] ? 'rotate-180 transition-transform' : ''}`} /> : <DocumentArrowDownIcon className="w-5 h-5" />}
+                    </button>
+                  )}
                 </div>
                 {isLoading ? <div className="flex items-center justify-center py-8"><div className="flex items-center space-x-2"><div className="w-5 h-5 border-2 border-[var(--border-main)] border-t-[var(--color-primary)] rounded-full animate-spin"></div><span className="text-[var(--text-muted)]">Loading {activeTab} Details...</span></div></div> : hasError ? <div className="p-3 bg-red-500/10 text-red-500 rounded-lg border border-red-500/20"><p><strong>Error:</strong> {currentResult.error}</p></div> : <div className="space-y-4">{[{ label: 'Object Name', key: 'object_name' }, { label: 'Description', key: 'object_description', textarea: true }, { label: 'Hint', key: 'object_hint', textarea: true }, { label: 'Short Hint', key: 'object_short_hint', textarea: true }, { label: 'Translation Status', key: 'translation_status' }].map(({ label, key, textarea }) => {
                   // Check if field has validation error
