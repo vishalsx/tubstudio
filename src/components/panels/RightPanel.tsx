@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { CommonData, FileInfo, LanguageResult, PermissionCheck, Book, Chapter, Page, UserContext } from '../../types';
+import { CommonData, FileInfo, LanguageResult, PermissionCheck, DatabaseImage, CurriculumImage, Book, Chapter, Page, OrgObject, UserContext } from '../../types';
 import { StatusWorkflow } from '../common/StatusWorkflow';
 import { ContestRightPanel } from './contest/ContestRightPanel';
 import { useContest } from '../../hooks/useContest';
+import { useMyContent } from '../../hooks/useMyContent';
 import { PencilIcon, CheckIcon, XMarkIcon, IdentificationIcon, AcademicCapIcon, BookOpenIcon, SparklesIcon, InformationCircleIcon } from '@heroicons/react/24/solid';
+import { ArrowPathIcon } from '@heroicons/react/24/outline';
 
 // Define the new spinner component locally
 const StoryLoadingSpinner: React.FC = () => {
@@ -36,7 +38,7 @@ const StoryLoadingSpinner: React.FC = () => {
 };
 
 interface RightPanelProps {
-  leftPanelView: 'upload' | 'database' | 'curriculum' | 'contest';
+  leftPanelView: 'upload' | 'database' | 'curriculum' | 'contest' | 'my_content';
   selectedCurriculumNode: Book | Chapter | Page | null;
   currentCommonData: CommonData;
   currentFileInfo: FileInfo;
@@ -57,6 +59,8 @@ interface RightPanelProps {
   // Contest Props
   contestProps: ReturnType<typeof useContest>;
   userContext: UserContext | null;
+  // My Content Props
+  myContentProps: ReturnType<typeof useMyContent>;
 }
 
 export const RightPanel: React.FC<RightPanelProps> = ({
@@ -77,7 +81,8 @@ export const RightPanel: React.FC<RightPanelProps> = ({
   isStoryLoading,
   onUpdateStory,
   contestProps,
-  userContext
+  userContext,
+  myContentProps,
 }) => {
   const [isStoryEditing, setIsStoryEditing] = useState(false);
   const [editedStory, setEditedStory] = useState('');
@@ -357,6 +362,10 @@ export const RightPanel: React.FC<RightPanelProps> = ({
   };
 
   const renderContent = () => {
+    if (leftPanelView === 'my_content') {
+      // Repository view - show same metadata content as database view
+      return renderMetadataContent();
+    }
     // If we are in curriculum view, show curriculum-related content.
     if (leftPanelView === 'curriculum') {
       if (selectedCurriculumNode) {

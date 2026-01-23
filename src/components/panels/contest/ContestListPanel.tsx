@@ -40,7 +40,7 @@ export const ContestListPanel: React.FC<ContestListPanelProps> = ({
                             value={searchQuery}
                             onChange={(e) => onSearchChange(e.target.value)}
                             onKeyDown={(e) => e.key === 'Enter' && onSearch()}
-                            className="w-full pl-7 pr-2 py-1.5 border border-[var(--border-main)] rounded-lg bg-[var(--bg-input)] text-xs focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
+                            className="w-full pl-7 pr-2 py-1.5 border border-[var(--border-main)] rounded-lg bg-[var(--bg-input)] text-xs focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-all font-medium shadow-sm"
                         />
                     </div>
                     <button

@@ -112,35 +112,54 @@ export const ImageSearchModal: React.FC<ImageSearchModalProps> = ({
     };
   }, [isDragging, handleMouseMove, handleMouseUp]);
 
-  const processPoolImagesResponse = (data: any[]) => {
-    if (!data || data.length === 0) {
+  const processPoolImagesResponse = (data: any) => {
+    let rawItems = [];
+    if (Array.isArray(data)) {
+      rawItems = data; // Legacy
+    } else if (data && typeof data === 'object') {
+      rawItems = data.items || [];
+    }
+
+    if (!rawItems || rawItems.length === 0) {
       setSearchResults([]);
       return;
     }
-    const formattedImages: DatabaseImage[] = data.map((item: any) => ({
-      object: {
-        thumbnail: item.poolImage.thumbnail_base64,
-        image_base64: item.poolImage.image_base64,
-        image_hash: item.poolImage.image_hash,
-      },
-      file_info: {
-        filename: item.file_info.file_name,
-        size: formatFileSize(item.file_info.file_size),
-        mimeType: item.file_info.mime_type,
-        created_at: item.file_info.created_at,
-        updated_at: item.file_info.updated_at,
-        dimensions: '', created_by: '', updated_by: '',
-      },
-      common_data: {
-        object_name_en: item.poolImage.object_name_en,
-        object_name: item.poolImage.object_name_en, // Already mapped correctly in previous turn but ensuring consistency
-        object_category: "", tags: [], field_of_study: "", age_appropriate: "",
-        image_status: "", object_id: item.poolImage.object_id || "",
-        image_base64: "", flag_object: false
-      },
-      popularity_stars: item.poolImage.popularity_stars,
-      total_vote_count: item.poolImage.total_vote_count,
-    }));
+    const formattedImages: DatabaseImage[] = rawItems.map((item: any) => {
+      const poolImage = item.poolImage || {};
+      const fileInfo = poolImage.file_info || {};
+
+      return {
+        object: {
+          thumbnail: poolImage.thumbnail_base64 || "",
+          image_base64: poolImage.image_base64 || "",
+          image_hash: poolImage.image_hash || "",
+        },
+        file_info: {
+          filename: fileInfo.filename || "unknown",
+          size: fileInfo.size || "0 KB",
+          mimeType: fileInfo.mime_type || "image/jpeg",
+          created_at: fileInfo.created_at || "",
+          updated_at: fileInfo.updated_at || "",
+          dimensions: fileInfo.dimensions || "",
+          created_by: fileInfo.created_by || "",
+          updated_by: fileInfo.updated_by || "",
+        },
+        common_data: {
+          object_name_en: poolImage.object_name_en || "",
+          object_name: poolImage.object_name_en || "",
+          object_category: "",
+          tags: poolImage.metadata?.tags || [],
+          field_of_study: "",
+          age_appropriate: "",
+          image_status: "",
+          object_id: poolImage.object_id || "",
+          image_base64: "",
+          flag_object: false
+        },
+        popularity_stars: poolImage.popularity_stars,
+        total_vote_count: poolImage.total_vote_count_human || "0",
+      };
+    });
     setSearchResults(formattedImages);
   };
 
@@ -153,8 +172,21 @@ export const ImageSearchModal: React.FC<ImageSearchModalProps> = ({
     setError(null);
     setIsLoading(true);
     setSearchAttempted(true);
+
+    // Get settings
+    let limit = 25;
+    let useVectorSearch = true;
     try {
-      const data = await translationService.fetchPopularImages(searchQuery, language);
+      const settings = localStorage.getItem('repository_settings');
+      if (settings) {
+        const parsed = JSON.parse(settings);
+        limit = parsed.limit || 25;
+        useVectorSearch = parsed.use_vector_search !== false;
+      }
+    } catch (e) { console.error(e); }
+
+    try {
+      const data = await translationService.fetchPopularImages(searchQuery, language, limit, useVectorSearch);
       processPoolImagesResponse(data);
     } catch (err) {
       setError((err as Error).message || 'Failed to fetch images.');
@@ -193,7 +225,7 @@ export const ImageSearchModal: React.FC<ImageSearchModalProps> = ({
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') handleSearch(); }}
-            className="w-full p-2 border border-[var(--border-main)] rounded-md text-sm focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] bg-[var(--bg-panel)] text-[var(--text-main)]"
+            className="w-full p-2 border border-[var(--border-main)] rounded-lg text-sm focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent bg-[var(--bg-input)] text-[var(--text-main)] transition-all font-medium shadow-sm"
           />
           <button
             onClick={handleSearch}

@@ -1,7 +1,7 @@
 // components/panels/LeftPanel.tsx
 import React, { useState } from 'react';
-import { Bars3Icon, ChevronDownIcon, XMarkIcon, SparklesIcon, ListBulletIcon, ArrowUpTrayIcon, PhotoIcon, MagnifyingGlassIcon, BookOpenIcon, StarIcon, StopIcon, CloudArrowUpIcon, CircleStackIcon, TrophyIcon } from '@heroicons/react/24/solid';
-import { CommonData, RecentTranslation, PermissionCheck, DatabaseImage, Book, Chapter, Page } from '../../types';
+import { Bars3Icon, ChevronDownIcon, XMarkIcon, SparklesIcon, ListBulletIcon, ArrowUpTrayIcon, PhotoIcon, MagnifyingGlassIcon, BookOpenIcon, StarIcon, StopIcon, CloudArrowUpIcon, CircleStackIcon, TrophyIcon, CheckCircleIcon } from '@heroicons/react/24/solid';
+import { CommonData, RecentTranslation, PermissionCheck, DatabaseImage, Book, Chapter, Page, OrgObject, RepositoryItem } from '../../types';
 import { CurriculumPanel } from './CurriculumPanel';
 import { useCurriculum } from '../../hooks/useCurriculum';
 import { CreateBookModal } from '../curriculum/CreateBookModal';
@@ -12,10 +12,13 @@ import { useConfirmation } from '../../contexts/ConfirmationContext';
 
 type CurriculumHookProps = ReturnType<typeof useCurriculum>;
 import { useContest } from '../../hooks/useContest';
+import { useMyContent } from '../../hooks/useMyContent';
+
+type MyContentHookProps = ReturnType<typeof useMyContent>;
 
 interface LeftPanelProps {
   // View state props
-  leftPanelView: 'upload' | 'database' | 'curriculum' | 'contest';
+  leftPanelView: 'upload' | 'database' | 'curriculum' | 'contest' | 'my_content';
 
   // File upload props
   fileInputRef: React.RefObject<HTMLInputElement | null>;
@@ -51,7 +54,7 @@ interface LeftPanelProps {
   canViewWorkList: PermissionCheck;
 
   // Event handlers
-  onViewChange: (view: 'upload' | 'database' | 'curriculum') => void;
+  onViewChange: (view: 'upload' | 'database' | 'curriculum' | 'my_content') => void;
   onFileChange: (file: File) => void;
   onDrop: (e: React.DragEvent<HTMLDivElement>) => void;
   onFileClick: () => void;
@@ -65,6 +68,7 @@ interface LeftPanelProps {
   onDatabaseSearch: (query: string) => void;
   onFetchPopularImages: () => void;
   onDatabaseImageClick: (image: DatabaseImage) => void;
+  onRepositoryImageClick: (item: RepositoryItem) => void;
   onSelectBook: (bookId: string) => void;
   onSelectPage: (page: Page) => void;
   onSelectNode: (node: Book | Chapter | Page) => void;
@@ -88,6 +92,15 @@ interface LeftPanelProps {
 
   // Contest props
   contestProps: ReturnType<typeof useContest>;
+
+  // My Content props
+  myContentProps: MyContentHookProps;
+
+  // Gallery Pagination
+  galleryPage?: number;
+  galleryHasMore?: boolean;
+  onGalleryNext?: () => void;
+  onGalleryPrevious?: () => void;
 }
 
 export const LeftPanel: React.FC<LeftPanelProps> = ({
@@ -127,6 +140,11 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
   onDatabaseSearch,
   onFetchPopularImages,
   onDatabaseImageClick,
+  onRepositoryImageClick,
+  galleryPage,
+  galleryHasMore,
+  onGalleryNext,
+  onGalleryPrevious,
   onSelectBook,
   onSelectPage,
   onSelectNode,
@@ -140,6 +158,7 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
   showWorklistCallout = false,
   onDismissCallout,
   contestProps,
+  myContentProps,
 }) => {
   const [isCreateBookModalOpen, setIsCreateBookModalOpen] = useState(false);
   const confirm = useConfirmation();
@@ -159,11 +178,197 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
     curriculumProps.handleSearch();
   };
 
+  const renderMyContentPanel = () => {
+    const { items, totalCount, currentPage, totalPages, pageCache, searchQuery, setSearchQuery, selectedLanguage, setSelectedLanguage, handleSearch, isLoading, isJumping, error, handleNext, handlePrevious, jumpToPage } = myContentProps;
+
+    // Calculate items display range
+    const startItem = totalCount > 0 ? (currentPage - 1) * myContentProps.limit + 1 : 0;
+    const endItem = Math.min(currentPage * myContentProps.limit, totalCount);
+
+    return (
+      <div className="flex flex-col h-full animate-fade-in pr-1">
+        <div className="space-y-4 mb-5 p-1">
+          {/* Search Row: Language + Keywords */}
+          <div className="flex items-center gap-2">
+            <div className="flex-1 min-w-0">
+              <div className="relative" ref={languageDropdownRef as React.RefObject<HTMLDivElement>}>
+                <button
+                  onClick={onLanguageDropdownToggle}
+                  className="w-full px-3 py-1.5 bg-[var(--bg-input)] border border-[var(--border-main)] rounded-lg text-sm flex items-center justify-between text-[var(--text-main)] hover:border-[var(--color-primary)] transition-all shadow-sm"
+                >
+                  <span className="truncate font-medium">{selectedLanguage}</span>
+                  <ChevronDownIcon className={`w-3 h-3 transition-transform text-[var(--color-primary)] flex-shrink-0 ml-1 ${isLanguageDropdownOpen ? 'rotate-180' : ''}`} />
+                </button>
+                {isLanguageDropdownOpen && (
+                  <div className="absolute top-full left-0 right-0 mt-1 bg-[var(--bg-panel)] border border-[var(--border-main)] rounded-xl shadow-2xl z-50 max-h-60 overflow-y-auto backdrop-blur-md">
+                    {languageOptions.map((lang) => (
+                      <button
+                        key={lang}
+                        onClick={() => {
+                          setSelectedLanguage(lang);
+                          onLanguageDropdownToggle();
+                        }}
+                        className={`w-full text-left px-4 py-2.5 text-sm hover:bg-[var(--color-primary-light)] hover:text-[var(--color-primary)] transition-colors ${selectedLanguage === lang ? 'bg-[var(--color-primary-light)] text-[var(--color-primary)] font-bold' : 'text-[var(--text-main)]'}`}
+                      >
+                        {lang}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="flex-[1.5] min-w-0">
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Search repository..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSearch(searchQuery)}
+                  className="w-full pl-8 pr-3 py-1.5 bg-[var(--bg-input)] border border-[var(--border-main)] rounded-lg text-sm focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-all text-[var(--text-main)] placeholder:text-[var(--text-muted)]/50 font-medium shadow-sm"
+                />
+                <MagnifyingGlassIcon className="absolute left-2.5 top-2 w-3.5 h-3.5 text-[var(--color-primary)]" />
+              </div>
+            </div>
+          </div>
+
+          {/* Search Button */}
+          <button
+            onClick={() => handleSearch(searchQuery)}
+            disabled={isLoading || isJumping}
+            className="w-full px-2 py-1.5 bg-[var(--color-primary)] text-white rounded-lg hover:opacity-90 transition flex items-center justify-center text-sm shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isLoading || isJumping ? (
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+            ) : (
+              <><MagnifyingGlassIcon className="w-4 h-4 mr-1" />Search Repository</>
+            )}
+          </button>
+        </div>
+
+        {/* Thumbnail Grid - 3 rows with horizontal scrolling */}
+        <div className="flex-1 overflow-y-auto bg-[var(--bg-input)] rounded-lg border border-[var(--border-main)] p-2 min-h-0 shadow-inner flex flex-col">
+          <div className="flex items-center justify-between px-2 mb-3">
+            <h3 className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest">Metadata Repository ({totalCount})</h3>
+            {(isLoading || isJumping) && <LoadingSpinner size="sm" />}
+          </div>
+
+          {error ? (
+            <div className="px-2 py-4 text-[10px] text-red-500 font-bold italic bg-red-500/10 rounded-lg border border-red-500/20 m-1">{error}</div>
+          ) : items.length > 0 ? (
+            <div className={`grid grid-rows-3 grid-flow-col gap-3 p-1 ${items.length > 3 ? 'overflow-x-auto' : ''} w-max`}>
+              {items.map((item: RepositoryItem) => (
+                <button
+                  key={item.translation_id}
+                  onClick={() => onRepositoryImageClick(item)}
+                  title={item.object_name}
+                  className="relative w-28 aspect-square rounded-xl overflow-hidden border-2 transition-all group hover:border-[var(--color-primary-light)] border-white/5 hover:shadow-md"
+                >
+                  {item.thumbnail ? (
+                    <img src={`data:image/jpeg;base64,${item.thumbnail}`} alt={item.object_name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center bg-[var(--bg-panel)] text-[var(--color-primary)]/40">
+                      <PhotoIcon className="w-6 h-6" />
+                    </div>
+                  )}
+                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent p-1.5 pt-4">
+                    <p className="text-[8px] font-black text-white truncate text-center uppercase tracking-tighter">{item.object_name}</p>
+                  </div>
+                  {/* Status indicator with color-coded dots */}
+                  {item.translation_status && (
+                    <div className="absolute top-1 right-1">
+                      {item.translation_status === 'Approved' && (
+                        <div className="w-3 h-3 rounded-full bg-green-500 shadow-lg shadow-green-500/50 border border-white/20" title="Approved" />
+                      )}
+                      {item.translation_status === 'Verified' && (
+                        <div className="w-3 h-3 rounded-full bg-purple-500 shadow-lg shadow-purple-500/50 border border-white/20" title="Verified" />
+                      )}
+                      {item.translation_status === 'Released' && (
+                        <div className="w-3 h-3 rounded-full bg-blue-500 shadow-lg shadow-blue-500/50 border border-white/20" title="Released" />
+                      )}
+                      {item.translation_status === 'Draft' && (
+                        <div className="w-3 h-3 rounded-full bg-orange-500 shadow-lg shadow-orange-500/50 border border-white/20" title="Draft" />
+                      )}
+                      {!['Approved', 'Verified', 'Released', 'Draft'].includes(item.translation_status) && (
+                        <div className="w-3 h-3 rounded-full bg-gray-400 shadow-lg shadow-gray-400/50 border border-white/20" title={item.translation_status} />
+                      )}
+                    </div>
+                  )}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="flex-1 flex flex-col items-center justify-center text-center p-4">
+              <CircleStackIcon className="w-8 h-8 text-[var(--text-muted)] mb-2 opacity-20" />
+              <p className="text-[10px] text-[var(--text-muted)] italic font-bold uppercase tracking-tight opacity-40">Search stream inactive. Enter parameters to query.</p>
+            </div>
+          )}
+        </div>
+
+        {/* Enhanced Pagination Controls */}
+        {totalPages > 0 && (
+          <div className="mt-3 px-1">
+            {/* Page info and dropdown */}
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[10px] font-black text-[var(--text-muted)] font-mono">
+                Showing {startItem}-{endItem} of {totalCount}
+              </span>
+
+              {/* Page Selector Dropdown */}
+              {totalPages > 1 && (
+                <div className="flex items-center space-x-2">
+                  <span className="text-[9px] font-black text-[var(--text-muted)] uppercase tracking-wider">Page</span>
+                  <select
+                    value={currentPage}
+                    onChange={(e) => jumpToPage(Number(e.target.value))}
+                    disabled={isLoading || isJumping}
+                    className="px-2 py-0.5 bg-[var(--bg-input)] border border-[var(--border-main)] rounded text-[10px] font-black text-[var(--text-main)] focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-all disabled:opacity-50"
+                  >
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                      <option key={page} value={page}>
+                        {page} {pageCache.has(page) ? '✓' : ''}
+                      </option>
+                    ))}
+                  </select>
+                  <span className="text-[9px] font-black text-[var(--text-muted)] uppercase tracking-wider">of {totalPages}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Navigation Buttons */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between">
+                <button
+                  onClick={handlePrevious}
+                  disabled={currentPage === 1 || isLoading || isJumping}
+                  className="text-[9px] font-black text-[var(--color-primary)] disabled:text-[var(--text-muted)] uppercase tracking-widest disabled:opacity-30 hover:underline disabled:hover:no-underline transition"
+                >
+                  ← Back
+                </button>
+                <div className="flex items-center space-x-1.5">
+                  <div className="w-1.5 h-1.5 rounded-full bg-[var(--color-primary)] animate-pulse" />
+                </div>
+                <button
+                  onClick={handleNext}
+                  disabled={currentPage >= totalPages || isLoading || isJumping}
+                  className="text-[9px] font-black text-[var(--color-primary)] disabled:text-[var(--text-muted)] uppercase tracking-widest disabled:opacity-30 hover:underline disabled:hover:no-underline transition"
+                >
+                  Next →
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const renderViewSpecificControls = () => {
     if (leftPanelView === 'upload') {
       return (
         <div
-          className={`border-2 border-dashed border-[var(--border-main)] rounded-lg flex flex-col items-center justify-center p-4 mb-3 h-32 backdrop-blur-sm ${canUploadPicture.metadata ? "cursor-pointer hover:border-[var(--color-primary)] bg-[var(--bg-input)]/50" : "cursor-not-allowed opacity-50 bg-[var(--bg-panel)]/50"
+          className={`border-2 border-dashed border-[var(--border-main)] rounded-lg flex flex-col items-center justify-center p-4 mb-3 h-32 backdrop-blur-sm ${canUploadPicture.metadata ? "cursor-pointer hover:border-[var(--color-primary)] bg-[var(--bg-input)]" : "cursor-not-allowed opacity-50 bg-[var(--bg-panel)]"
             }`}
           onDragOver={(e) => canUploadPicture.metadata && e.preventDefault()}
           onDrop={(e) => canUploadPicture.metadata && onDrop(e)}
@@ -190,7 +395,7 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
       );
     } else if (leftPanelView === 'database') {
       return (
-        <div className="border-2 border-dashed border-[var(--border-main)] rounded-lg p-3 mb-3 flex flex-col bg-[var(--bg-input)]/50 backdrop-blur-sm">
+        <div className="border border-[var(--border-main)] rounded-lg p-3 mb-3 flex flex-col bg-[var(--bg-input)] shadow-sm">
           <div className="mb-2">
             <input
               type="text"
@@ -199,7 +404,7 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
               onChange={(e) => onSearchQueryChange(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter' && !(isSearchLoading || isPopularImagesLoading)) onDatabaseSearch(searchQuery); }}
               disabled={isSearchLoading || isPopularImagesLoading}
-              className="w-full p-1.5 border border-[var(--border-main)] rounded-md text-sm focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] bg-[var(--bg-panel)] text-[var(--text-main)] disabled:opacity-50"
+              className="w-full p-1.5 border border-[var(--border-main)] rounded-lg text-sm focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent bg-[var(--bg-input)] text-[var(--text-main)] disabled:opacity-50 transition-all font-medium shadow-sm"
             />
           </div>
           <div className="flex items-center gap-2">
@@ -231,13 +436,13 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
     } else if (leftPanelView === 'curriculum') {
       return (
         <>
-          <div className="border border-[var(--border-main)] rounded-lg p-3 mb-3 flex flex-col gap-2 bg-[var(--bg-input)]/50 backdrop-blur-sm">
+          <div className="border border-[var(--border-main)] rounded-lg p-3 mb-3 flex flex-col gap-2 bg-[var(--bg-input)] shadow-sm">
             <div className="flex items-center gap-2 w-full">
               <select
                 id="curriculum-language-select"
                 value={curriculumProps.searchLanguage}
                 onChange={(e) => curriculumProps.setSearchLanguage(e.target.value)}
-                className="w-32 flex-shrink-0 p-1.5 border border-[var(--border-main)] rounded-md text-sm focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] bg-[var(--bg-panel)] text-[var(--text-main)]"
+                className="w-32 flex-shrink-0 p-1.5 border border-[var(--border-main)] rounded-lg text-sm focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent bg-[var(--bg-input)] text-[var(--text-main)] transition-all font-medium shadow-sm"
                 disabled={languageOptions.length === 0}
                 aria-label="Language for Book Search"
               >
@@ -250,7 +455,7 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
                 value={curriculumProps.searchQuery}
                 onChange={(e) => curriculumProps.setSearchQuery(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') handleCurriculumSearch(); }}
-                className="flex-1 min-w-0 p-1.5 border border-[var(--border-main)] rounded-md text-sm focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] bg-[var(--bg-panel)] text-[var(--text-main)]"
+                className="flex-1 min-w-0 p-1.5 border border-[var(--border-main)] rounded-lg text-sm focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent bg-[var(--bg-input)] text-[var(--text-main)] transition-all font-medium shadow-sm"
               />
             </div>
             <button
@@ -284,7 +489,7 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
             </button>
           )}
 
-          <div className="border border-[var(--border-main)] rounded-lg p-3 flex-1 min-h-0 bg-[var(--bg-input)]/50 backdrop-blur-sm">
+          <div className="border border-[var(--border-main)] rounded-lg p-3 flex-1 min-h-0 bg-[var(--bg-input)] shadow-inner overflow-hidden">
             <CurriculumPanel
               books={curriculumProps.books}
               activeBook={curriculumProps.activeBook}
@@ -311,7 +516,7 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
       );
     } else if (leftPanelView === 'contest') {
       return (
-        <div className="flex-1 min-h-0 bg-[var(--bg-input)]/50 backdrop-blur-sm border border-[var(--border-main)] rounded-lg p-3">
+        <div className="flex-1 min-h-0 bg-[var(--bg-input)] border border-[var(--border-main)] rounded-lg p-3 shadow-inner overflow-hidden">
           <ContestListPanel
             contests={contestProps.contests}
             activeContest={contestProps.activeContest}
@@ -377,19 +582,28 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
           <div className="flex bg-[var(--bg-input)]/50 backdrop-blur-sm p-1 rounded-xl mb-4 border border-[var(--border-main)] transition-colors duration-300">
             <button
               onClick={() => onViewChange('upload')}
+              title="Upload new Objects"
               className={`flex-1 flex items-center justify-center space-x-2 py-1.5 rounded-lg text-xs font-bold transition-all ${leftPanelView === 'upload' ? 'bg-[var(--bg-panel)] text-[var(--color-primary)] shadow-sm' : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'}`}
             >
               <ArrowUpTrayIcon className="w-4 h-4" />
-              <span>File Upload</span>
+              <span>Upload</span>
             </button>
             <button
               onClick={() => onViewChange('database')}
               disabled={!canUploadPicture.metadata || !canIdentifyImage.metadata}
-              title={!canUploadPicture.metadata || !canIdentifyImage.metadata ? "You need upload and identify permissions to view the database" : "Database View"}
-              className={`flex-1 flex items-center justify-center space-x-2 py-1.5 rounded-lg text-xs font-bold transition-all ${leftPanelView === 'database' ? 'bg-[var(--bg-panel)] text-[var(--color-secondary)] shadow-sm' : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'} disabled:opacity-50 disabled:cursor-not-allowed`}
+              title={!canUploadPicture.metadata || !canIdentifyImage.metadata ? "You need upload and identify permissions to view the database" : "View Objects others have provided"}
+              className={`flex-1 flex items-center justify-center space-x-1 py-1.5 rounded-lg text-[10px] font-bold transition-all ${leftPanelView === 'database' ? 'bg-[var(--bg-panel)] text-[var(--color-secondary)] shadow-sm' : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'} disabled:opacity-50 disabled:cursor-not-allowed`}
             >
-              <MagnifyingGlassIcon className="w-4 h-4" />
+              <MagnifyingGlassIcon className="w-3 h-3" />
               <span>Gallery</span>
+            </button>
+            <button
+              onClick={() => onViewChange('my_content')}
+              title="View existing Objects"
+              className={`flex-1 flex items-center justify-center space-x-1 py-1.5 rounded-lg text-[10px] font-bold transition-all ${leftPanelView === 'my_content' ? 'bg-[var(--bg-panel)] text-[var(--color-secondary)] shadow-sm' : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'}`}
+            >
+              <CircleStackIcon className="w-3 h-3" />
+              <span>Repository</span>
             </button>
           </div>
         )}
@@ -399,7 +613,7 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
         {leftPanelView === 'upload' && (
           (previewUrl || currentCommonData?.image_base64) ? (
             <div className="mb-4">
-              <div className="flex-shrink-0 h-64 bg-[var(--bg-input)]/50 backdrop-blur-sm rounded-xl flex items-center justify-center overflow-hidden border border-[var(--border-main)]">
+              <div className="flex-shrink-0 h-64 bg-[var(--bg-input)] rounded-lg flex items-center justify-center overflow-hidden border border-[var(--border-main)] shadow-inner">
                 {previewUrl ? (
                   <img src={previewUrl} alt="Uploaded" className="w-full h-full object-contain" />
                 ) : currentCommonData?.image_base64 ? (
@@ -408,7 +622,7 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
               </div>
             </div>
           ) : (
-            <div className="flex-1 flex items-center justify-center mb-4 min-h-64 border border-[var(--border-main)] rounded-lg bg-[var(--bg-input)]/50 backdrop-blur-sm p-2 text-[var(--text-muted)] italic">
+            <div className="flex-1 flex items-center justify-center mb-4 min-h-64 border border-[var(--border-main)] rounded-lg bg-[var(--bg-input)] p-2 text-[var(--text-muted)] italic shadow-inner">
               Upload an image to see a preview.
             </div>
           )
@@ -416,44 +630,66 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
 
         {/* Content Area for Database View */}
         {leftPanelView === 'database' && (
-          <div className={`flex-1 mb-4 min-h-64 border border-[var(--border-main)] rounded-lg bg-[var(--bg-input)]/50 backdrop-blur-sm p-2 ${isHorizontalScroll ? 'overflow-x-auto' : 'overflow-y-auto'}`}>
+          <>
+            <div className={`flex-1 mb-4 min-h-64 border border-[var(--border-main)] rounded-lg bg-[var(--bg-input)] p-2 shadow-inner ${isHorizontalScroll ? 'overflow-x-auto' : 'overflow-y-auto'}`}>
 
-            {databaseImages.length > 0 ? (
-              <div className={isHorizontalScroll
-                ? "grid grid-rows-3 grid-flow-col gap-2 w-max" // Horizontal scroll layout
-                : "grid grid-cols-3 gap-2 pr-2" // Vertical scroll layout
-              }>
-                {databaseImages.map((image, idx) => (
-                  <div key={image.object.image_hash || idx} className={`relative group rounded-xl overflow-hidden shadow-md cursor-pointer aspect-square ${isHorizontalScroll ? 'w-28' : ''}`} onClick={() => onDatabaseImageClick(image)} title={image.common_data.object_name_en || image.file_info.filename || ''}>
-                    <img src={`data:image/jpeg;base64,${image.object.thumbnail}`} alt={image.common_data.object_name_en || image.file_info.filename || ''} className="w-full h-full object-cover transition-transform duration-300 ease-in-out group-hover:scale-110" />
-                    <div className="absolute bottom-0 left-0 right-0 p-1 bg-gradient-to-t from-black/60 to-transparent pointer-events-none">
-                      <p className="text-white font-bold text-xs text-center drop-shadow-lg truncate">{image.common_data.object_name_en || (image.file_info.filename ? image.file_info.filename.split('.').slice(0, -1).join('.') : 'Untitled')}</p>
+              {databaseImages.length > 0 ? (
+                <div className={isHorizontalScroll
+                  ? "grid grid-rows-3 grid-flow-col gap-2 w-max" // Horizontal scroll layout
+                  : "grid grid-cols-3 gap-2 pr-2" // Vertical scroll layout
+                }>
+                  {databaseImages.map((image, idx) => (
+                    <div key={image.object.image_hash || idx} className={`relative group rounded-xl overflow-hidden shadow-md cursor-pointer aspect-square ${isHorizontalScroll ? 'w-28' : ''}`} onClick={() => onDatabaseImageClick(image)} title={image.common_data.object_name_en || image.file_info.filename || ''}>
+                      <img src={`data:image/jpeg;base64,${image.object.thumbnail}`} alt={image.common_data.object_name_en || image.file_info.filename || ''} className="w-full h-full object-cover transition-transform duration-300 ease-in-out group-hover:scale-110" />
+                      <div className="absolute bottom-0 left-0 right-0 p-1 bg-gradient-to-t from-black/60 to-transparent pointer-events-none">
+                        <p className="text-white font-bold text-xs text-center drop-shadow-lg truncate">{image.common_data.object_name_en || (image.file_info.filename ? image.file_info.filename.split('.').slice(0, -1).join('.') : 'Untitled')}</p>
+                      </div>
+                      {(image.popularity_stars !== undefined && image.total_vote_count !== undefined) && (<div className="absolute inset-0 flex flex-col items-center justify-center bg-black bg-opacity-0 group-hover:bg-opacity-60 transition-opacity duration-300 opacity-0 group-hover:opacity-100"><div className="flex items-center text-white"><StarIcon className="w-5 h-5 text-yellow-400" /><span className="ml-1 font-bold">{typeof image.popularity_stars === 'number' ? image.popularity_stars.toFixed(1) : ''}</span></div><span className="text-xs text-white/80 mt-1 font-medium">{image.total_vote_count} votes</span></div>)}
                     </div>
-                    {(image.popularity_stars !== undefined && image.total_vote_count !== undefined) && (<div className="absolute inset-0 flex flex-col items-center justify-center bg-black bg-opacity-0 group-hover:bg-opacity-60 transition-opacity duration-300 opacity-0 group-hover:opacity-100"><div className="flex items-center text-white"><StarIcon className="w-5 h-5 text-yellow-400" /><span className="ml-1 font-bold">{typeof image.popularity_stars === 'number' ? image.popularity_stars.toFixed(1) : ''}</span></div><span className="text-xs text-white/80 mt-1 font-medium">{image.total_vote_count} votes</span></div>)}
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="flex items-center justify-center h-full text-[var(--text-muted)] italic">
-                {isSearchLoading || isPopularImagesLoading ? "Searching..." : searchAttempted ? 'No results found.' : 'Search results will appear here.'}
+                  ))}
+                </div>
+              ) : (
+                <div className="flex items-center justify-center h-full text-[var(--text-muted)] italic">
+                  {isSearchLoading || isPopularImagesLoading ? "Searching..." : searchAttempted ? 'No results found.' : 'Search results will appear here.'}
+                </div>
+              )}
+            </div>
+            {/* Pagination Controls */}
+            {databaseImages.length > 0 && !!galleryPage && (
+              <div className="flex justify-between items-center mb-4 px-2">
+                <button
+                  onClick={onGalleryPrevious}
+                  disabled={!galleryPage || galleryPage <= 1 || isPopularImagesLoading}
+                  className="px-3 py-1 bg-[var(--bg-input)] border border-[var(--border-main)] rounded-lg text-xs font-medium text-[var(--text-main)] hover:bg-[var(--bg-hover)] disabled:opacity-50 disabled:cursor-not-allowed transition shadow-sm"
+                >
+                  Previous
+                </button>
+                <span className="text-xs font-semibold text-[var(--text-muted)]">Page {galleryPage}</span>
+                <button
+                  onClick={onGalleryNext}
+                  disabled={!galleryHasMore || isPopularImagesLoading}
+                  className="px-3 py-1 bg-[var(--bg-input)] border border-[var(--border-main)] rounded-lg text-xs font-medium text-[var(--text-main)] hover:bg-[var(--bg-hover)] disabled:opacity-50 disabled:cursor-not-allowed transition shadow-sm"
+                >
+                  Next
+                </button>
               </div>
             )}
-          </div>
+          </>
         )}
 
-        {/* --- SHARED COMPONENTS (conditionally rendered) --- */}
-        {leftPanelView !== 'curriculum' && leftPanelView !== 'contest' && (
+        {/* --- SHARED COMPONENTS (conditionally rendered only for Upload view) --- */}
+        {leftPanelView === 'upload' && (
           <>
             <div className="flex items-center gap-2 mb-4">
               <div className="relative flex-1" ref={languageDropdownRef as React.RefObject<HTMLDivElement>}>
                 <button
                   onClick={onLanguageDropdownToggle}
-                  className="px-3 py-1 border border-[var(--border-main)] bg-[var(--bg-panel)] text-[var(--text-main)] rounded text-sm flex items-center justify-between focus:ring-2 focus:ring-[var(--color-primary)] transition min-w-[180px] w-full"
+                  className="w-full px-3 py-1.5 bg-[var(--bg-input)] border border-[var(--border-main)] rounded-lg text-sm flex items-center justify-between text-[var(--text-main)] focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-all font-medium shadow-sm"
                 >
                   <span className="truncate">
                     {selectedLanguages.length === 0 ? 'Select Languages' : `${selectedLanguages.length} selected`}
                   </span>
-                  <ChevronDownIcon className={`w-4 h-4 ml-2 transition-transform ${isLanguageDropdownOpen ? 'rotate-180' : ''}`} />
+                  <ChevronDownIcon className={`w-4 h-4 ml-2 transition-transform text-[var(--color-primary)] ${isLanguageDropdownOpen ? 'rotate-180' : ''}`} />
                 </button>
                 {isLanguageDropdownOpen && (
                   <div className="absolute bottom-full right-0 mb-1 bg-[var(--bg-panel)] border border-[var(--border-main)] rounded-lg shadow-lg z-10 max-h-60 overflow-y-auto min-w-[150px]">
@@ -476,14 +712,13 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
                   onClick={isLoading ? onCancelIdentify : onIdentify}
                   disabled={(!isLoading && !canIdentifyImage.metadata) || isRedirecting}
                   title={isLoading ? "Cancel Identification" : "Identify Object"}
-                  className={`px-4 py-2 rounded-lg transition flex-1 flex justify-center items-center ${(!isLoading && !canIdentifyImage.metadata) ? 'bg-[var(--bg-input)] text-[var(--text-muted)] cursor-not-allowed border border-[var(--border-main)]' :
+                  className={`px-4 py-2 rounded-lg transition flex-none flex justify-center items-center ${(!isLoading && !canIdentifyImage.metadata) ? 'bg-[var(--bg-input)] text-[var(--text-muted)] cursor-not-allowed border border-[var(--border-main)]' :
                     isLoading ? 'bg-red-500 text-white hover:bg-red-600 shadow-md shadow-red-500/20' : 'bg-[var(--color-primary)] text-white hover:opacity-90 shadow-md shadow-blue-500/20'
                     }`}
                 >
-                  {/* {isLoading ? <StopIcon className="w-5 h-5 animate-pulse" /> : <SparklesIcon className="w-5 h-5" />} */}
                   {isLoading ? (
                     <div className="flex items-center gap-1">
-                      <StopIcon className="w-5 h-5 animate-pulse" />
+                      <LoadingSpinner size="sm" color="white" className="mr-1" />
                       {identifyProgress && (
                         <span className="text-xs font-bold">
                           {identifyProgress.current}/{identifyProgress.total}
@@ -501,7 +736,7 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
                   onClick={onFetchWorklist}
                   disabled={!canViewWorkList.language || isWorklistLoading}
                   title="My Work Items"
-                  className={`px-4 py-2 rounded-lg transition flex-1 flex justify-center items-center ${!canViewWorkList.language || isWorklistLoading ? 'bg-[var(--bg-input)] text-[var(--text-muted)] cursor-not-allowed border border-[var(--border-main)]' : 'bg-[var(--color-secondary)] text-white hover:opacity-90 shadow-md shadow-orange-500/20'}`}
+                  className={`px-4 py-2 rounded-lg transition flex-none flex justify-center items-center ${!canViewWorkList.language || isWorklistLoading ? 'bg-[var(--bg-input)] text-[var(--text-muted)] cursor-not-allowed border border-[var(--border-main)]' : 'bg-[var(--color-secondary)] text-white hover:opacity-90 shadow-md shadow-orange-500/20'}`}
                 >
                   {isWorklistLoading ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : <ListBulletIcon className="w-5 h-5" />}
                 </button>
@@ -539,34 +774,39 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
               <ErrorMessage message={error} showDog={true} className="mb-4" />
             )}
 
-            <div className="mt-8">
-              <h3 className="font-semibold mb-2 text-[var(--text-main)] text-sm">Recent Edits</h3>
-              <div className="flex space-x-3 overflow-x-auto pb-2 -mx-1 px-1 custom-scrollbar">
-                {recentTranslations.length > 0 ? (
-                  recentTranslations.map((item, idx) => (
-                    <div key={idx} className="flex-shrink-0 w-28 bg-[var(--bg-input)] rounded-lg overflow-hidden flex flex-col items-center shadow-md transition-transform hover:scale-105 border border-[var(--border-main)]">
-                      <div className="h-24 w-full">
-                        <img
-                          src={`data:image/jpeg;base64,${item.object.thumbnail}`}
-                          alt="thumbnail"
-                          className="w-full h-full object-cover cursor-pointer hover:opacity-80 transition"
-                          onClick={canUploadPicture.metadata ? () => onThumbnailClick(idx) : undefined}
-                        />
-                      </div>
-                      <div className="p-1.5 text-center w-full">
-                        <p className="text-xs font-semibold text-[var(--text-main)] truncate" title={item.translation.requested_language}>{item.translation.requested_language}</p>
-                        <p className="text-xs text-[var(--text-muted)] truncate" title={item.translation.translation_status}>{item.translation.translation_status}</p>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  [...Array(3)].map((_, idx) => (
-                    <div key={idx} className="flex-shrink-0 w-28 h-36 bg-[var(--bg-input)] rounded-lg animate-pulse border border-[var(--border-main)]"></div>
-                  ))
-                )}
-              </div>
-            </div>
           </>
+        )}
+
+        {leftPanelView === 'my_content' && renderMyContentPanel()}
+
+        {(leftPanelView === 'upload' || leftPanelView === 'database' || leftPanelView === 'my_content') && (
+          <div className="mt-8 flex-shrink-0">
+            <h3 className="font-semibold mb-2 text-[var(--text-main)] text-sm">Recent Edits</h3>
+            <div className="flex space-x-3 overflow-x-auto pb-2 -mx-1 px-1 custom-scrollbar">
+              {recentTranslations.length > 0 ? (
+                recentTranslations.map((item, idx) => (
+                  <div key={idx} className="flex-shrink-0 w-28 bg-[var(--bg-input)] rounded-lg overflow-hidden flex flex-col items-center shadow-md transition-transform hover:scale-105 border border-[var(--border-main)]">
+                    <div className="h-24 w-full">
+                      <img
+                        src={`data:image/jpeg;base64,${item.object.thumbnail}`}
+                        alt="thumbnail"
+                        className="w-full h-full object-cover cursor-pointer hover:opacity-80 transition"
+                        onClick={canUploadPicture.metadata ? () => onThumbnailClick(idx) : undefined}
+                      />
+                    </div>
+                    <div className="p-1.5 text-center w-full">
+                      <p className="text-xs font-semibold text-[var(--text-main)] truncate" title={item.translation.requested_language}>{item.translation.requested_language}</p>
+                      <p className="text-xs text-[var(--text-muted)] truncate" title={item.translation.translation_status}>{item.translation.translation_status}</p>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                [...Array(3)].map((_, idx) => (
+                  <div key={idx} className="flex-shrink-0 w-28 h-36 bg-[var(--bg-input)] rounded-lg animate-pulse border border-[var(--border-main)]"></div>
+                ))
+              )}
+            </div>
+          </div>
         )}
       </div>
 

@@ -112,6 +112,47 @@ export interface DatabaseImage {
   untranslated_languages?: string[];
 }
 
+export interface OrgObject {
+  object_id: string;
+  image_hash: string;
+  object_name: string;
+  status: string;
+  thumbnail?: string;
+  image_base64?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface OrgObjectsResponse {
+  objects: OrgObject[];
+  total_count: number;
+  skip: number;
+  limit: number;
+}
+
+// New Repository API Types
+export interface RepositoryItem {
+  translation_id: string;
+  object_id: string;
+  image_hash: string;
+  thumbnail: string; // base64
+  image_status: string;
+  translation_status: string;
+  object_name: string;
+}
+
+export interface RepositoryResponse {
+  status: string;
+  total: number;
+  count: number;
+  items: RepositoryItem[];
+}
+
+export interface RepositorySettings {
+  limit: number;
+  use_vector_search?: boolean;
+}
+
 export type SaveStatus = 'unsaved' | 'saved';
 export type CheckType = "metadata" | "language";
 

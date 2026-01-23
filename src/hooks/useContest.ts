@@ -20,6 +20,7 @@ export const useContest = (userContext: UserContext | null) => {
         status: 'Draft',
         contest_type: 'Local',
         content_type: 'Generic',
+        generic_theme_type: 'generic',
         registration_start_at: new Date().toISOString(),
         registration_end_at: new Date().toISOString(),
         contest_start_at: new Date().toISOString(),

@@ -118,6 +118,7 @@ export interface Contest {
 
     rewards: RewardsConfig;
 
+    generic_theme_type?: string; // "generic" | "category" | "field_of_study"
     created_by?: string | null;
     created_at: string;
     config_locked_at?: string | null;

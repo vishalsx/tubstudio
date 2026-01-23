@@ -72,13 +72,26 @@ export class TranslationService {
     return apiClient.post('thumbnail', formData);
   }
 
-  async fetchPopularImages(searchQuery?: string, language?: string): Promise<any> {
+  async fetchPopularImages(
+    searchQuery?: string,
+    language?: string,
+    limit: number = 25,
+    useVectorSearch: boolean = true,
+    skip: number = 0,
+    lastObjectId?: string
+  ): Promise<any> {
     const params = new URLSearchParams();
     if (searchQuery && searchQuery.trim() !== '') {
       params.append('search_query', searchQuery);
     }
     if (language) {
       params.append('language', language);
+    }
+    params.append('limit', limit.toString());
+    params.append('use_vector_search', useVectorSearch.toString());
+    params.append('skip', skip.toString());
+    if (lastObjectId) {
+      params.append('last_object_id', lastObjectId);
     }
 
     let endpoint = 'pool/recommendations';
@@ -96,6 +109,34 @@ export class TranslationService {
 
   async importContent(imageHash: string, language: string): Promise<any> {
     return apiClient.get(`import_content?image_hash=${imageHash}&language=${language}`);
+  }
+
+  async getRepository(
+    language: string,
+    searchText?: string,
+    lastTxnId?: string,
+    limit: number = 25,
+    skip: number = 0,
+    useVectorSearch: boolean = true
+  ): Promise<any> {
+    const params = new URLSearchParams();
+    params.append('language', language);
+    if (searchText) params.append('search_text', searchText);
+    if (lastTxnId) params.append('last_txn_id', lastTxnId);
+    params.append('limit', limit.toString());
+    params.append('skip', skip.toString());
+    params.append('use_vector_search', useVectorSearch.toString());
+    return apiClient.get(`repository/get_repository?${params.toString()}`);
+  }
+
+  // Legacy method - kept for backwards compatibility if needed
+  async fetchOrgObjects(language: string, searchQuery: string, skip: number = 0, limit: number = 25): Promise<any> {
+    const params = new URLSearchParams();
+    params.append('language', language);
+    if (searchQuery) params.append('search_query', searchQuery);
+    params.append('skip', skip.toString());
+    params.append('limit', limit.toString());
+    return apiClient.get(`organization/objects?${params.toString()}`);
   }
 }
 

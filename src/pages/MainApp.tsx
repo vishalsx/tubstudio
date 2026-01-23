@@ -12,8 +12,9 @@ import { useCurriculum } from '../hooks/useCurriculum';
 import { useContest } from '../hooks/useContest';
 // FIX: Import translationService to resolve 'Cannot find name' errors.
 import { translationService } from '../services/translation.service';
+import { useMyContent } from '../hooks/useMyContent';
 import { canPerformUiAction } from '../utils/permissions/hasPermissions';
-import { PermissionCheck, UserContext, DatabaseImage, CurriculumImage, Book, Chapter, Page } from '../types';
+import { PermissionCheck, UserContext, DatabaseImage, CurriculumImage, Book, Chapter, Page, OrgObject } from '../types';
 import { formatFileSize } from '../utils/imageUtils';
 import { UI_MESSAGES, DEFAULT_COMMON_DATA, DEFAULT_FILE_INFO } from '../utils/constants';
 
@@ -47,6 +48,7 @@ export const MainApp: React.FC<MainAppProps> = ({ authData }) => {
   const worklist = useWorklist();
   const curriculum = useCurriculum(userContext);
   const contest = useContest(userContext);
+  const myContent = useMyContent(userContext);
 
   const [isLanguageDropdownOpen, setIsLanguageDropdownOpen] = useState(false);
   const [isLeftPanelCollapsed, setIsLeftPanelCollapsed] = useState(false);
@@ -59,7 +61,7 @@ export const MainApp: React.FC<MainAppProps> = ({ authData }) => {
   const [identifyProgress, setIdentifyProgress] = useState<{ current: number; total: number } | null>(null);
 
   // View management states
-  const [leftPanelView, setLeftPanelView] = useState<'upload' | 'database' | 'curriculum' | 'contest'>('upload');
+  const [leftPanelView, setLeftPanelView] = useState<'upload' | 'database' | 'curriculum' | 'contest' | 'my_content'>('upload');
   const [languageForImageSearch, setLanguageForImageSearch] = useState<string>('');
   const [cameFromCurriculum, setCameFromCurriculum] = useState(false);
 
@@ -70,6 +72,12 @@ export const MainApp: React.FC<MainAppProps> = ({ authData }) => {
   const [isSearchLoading, setIsSearchLoading] = useState(false);
   const [pendingIdentify, setPendingIdentify] = useState<string[] | null>(null);
   const [searchAttempted, setSearchAttempted] = useState(false);
+
+  // Gallery Pagination State
+  const [galleryPage, setGalleryPage] = useState(1);
+  const [galleryHasMore, setGalleryHasMore] = useState(false);
+  const [galleryPageCache, setGalleryPageCache] = useState<Map<number, string | null>>(new Map([[1, null]]));
+  const [lastProcessedId, setLastProcessedId] = useState<string | null>(null);
 
   // Curriculum State
   const [selectedCurriculumNode, setSelectedCurriculumNode] = useState<Book | Chapter | Page | null>(null);
@@ -210,45 +218,73 @@ export const MainApp: React.FC<MainAppProps> = ({ authData }) => {
     }
   }, [pendingIdentify, languageResults.selectedLanguages]);
 
-  const handleLeftPanelViewChange = (view: 'upload' | 'database' | 'curriculum' | 'contest') => {
+  const handleLeftPanelViewChange = (view: 'upload' | 'database' | 'curriculum' | 'contest' | 'my_content') => {
     setLeftPanelView(view);
     setCameFromCurriculum(false);
   };
 
   const handleSearchQueryChange = (value: string) => setSearchQuery(value);
 
-  const processPoolImagesResponse = (data: any[]) => {
-    if (!data || data.length === 0) {
-      setDatabaseImages([]);
-      return;
+  // Helper to handle new response format which might be { items: [], ... } or just [] (legacy check)
+  const processPoolImagesResponse = (data: any) => {
+    let rawItems = [];
+    let hasMore = false;
+    let total = 0;
+
+    if (Array.isArray(data)) {
+      rawItems = data; // Legacy fallback
+    } else if (data && typeof data === 'object') {
+      rawItems = data.items || [];
+      hasMore = data.has_more || false;
+      total = data.total || 0;
     }
-    const formattedImages: DatabaseImage[] = data.map((item: any) => ({
-      object: {
-        thumbnail: item.poolImage.thumbnail_base64,
-        image_base64: item.poolImage.image_base64,
-        image_hash: item.poolImage.image_hash,
-      },
-      file_info: {
-        filename: item.file_info.file_name,
-        size: formatFileSize(item.file_info.file_size),
-        mimeType: item.file_info.mime_type,
-        created_at: item.file_info.created_at,
-        updated_at: item.file_info.updated_at,
-        dimensions: '', created_by: '', updated_by: '',
-      },
-      common_data: {
-        object_name_en: item.poolImage.object_name_en,
-        object_name: item.poolImage.object_name_en, // Mapping backend English/Translated name to object_name
-        object_category: "", tags: [], field_of_study: "", age_appropriate: "",
-        image_status: "", object_id: item.poolImage.object_id || "",
-        image_base64: "", flag_object: false
-      },
-      popularity_stars: item.poolImage.popularity_stars,
-      total_vote_count: item.poolImage.total_vote_count,
-      translated_languages: item.translated_languages,
-      untranslated_languages: item.untranslated_languages,
-    }));
+
+    setGalleryHasMore(hasMore);
+
+    if (rawItems.length > 0) {
+      // Update lastProcessedId for the NEXT page (this batch's last item)
+      const lastItem = rawItems[rawItems.length - 1];
+      if (lastItem && lastItem.poolImage && lastItem.poolImage.object_id) {
+        setLastProcessedId(lastItem.poolImage.object_id);
+      }
+    }
+
+    const formattedImages: DatabaseImage[] = rawItems
+      .filter((item: any) => item && item.poolImage) // Filter nulls
+      .map((item: any) => ({
+        object: {
+          image_hash: item.poolImage.image_hash,
+          thumbnail: item.poolImage.thumbnail_base64,
+          image_base64: item.poolImage.image_base64 || "", // Ensure base64 if needed
+        },
+        common_data: {
+          object_name_en: item.poolImage.object_name_en,
+          object_id: item.poolImage.object_id,
+        },
+        file_info: item.file_info || {},
+        popularity_stars: item.poolImage.popularity_stars,
+        total_vote_count: item.poolImage.total_vote_count_human || item.poolImage.total_vote_count, // Fallback
+        untranslated_languages: item.poolImage.untranslated_languages || [],
+        languages_translated: item.poolImage.languages_translated || []
+      }));
     setDatabaseImages(formattedImages);
+  };
+
+  // Helper to get repository settings
+  const getRepositorySettings = () => {
+    try {
+      const settings = localStorage.getItem('repository_settings');
+      if (settings) {
+        const parsed = JSON.parse(settings);
+        return {
+          limit: parsed.limit || 25,
+          useVectorSearch: parsed.use_vector_search !== false
+        };
+      }
+    } catch (e) {
+      console.error('Failed to read repository settings', e);
+    }
+    return { limit: 25, useVectorSearch: true };
   };
 
   const handleDatabaseSearch = async (query: string) => {
@@ -256,12 +292,21 @@ export const MainApp: React.FC<MainAppProps> = ({ authData }) => {
     setDatabaseImages([]);
     setSearchAttempted(true);
     setIsSearchLoading(true);
+    setSearchQuery(query); // Sync state
+
+    // Reset pagination
+    setGalleryPage(1);
+    setGalleryPageCache(new Map([[1, null]]));
+
     try {
-      const poolImagesData = await translationService.fetchPopularImages(query);
+      const { limit, useVectorSearch } = getRepositorySettings();
+      // Page 1: skip = 0
+      const poolImagesData = await translationService.fetchPopularImages(query, undefined, limit, useVectorSearch, 0, undefined);
       processPoolImagesResponse(poolImagesData);
     } catch (error) {
       worklist.setError((error as Error).message || UI_MESSAGES.ERRORS.SOMETHING_WRONG);
       setDatabaseImages([]);
+      setGalleryHasMore(false);
     } finally {
       setIsSearchLoading(false);
     }
@@ -272,12 +317,90 @@ export const MainApp: React.FC<MainAppProps> = ({ authData }) => {
     setDatabaseImages([]);
     setSearchAttempted(true);
     setIsPopularImagesLoading(true);
+    setSearchQuery(''); // Clear search query
+
+    // Reset pagination
+    setGalleryPage(1);
+    setGalleryPageCache(new Map([[1, null]]));
+
     try {
-      const popularImagesData = await translationService.fetchPopularImages();
-      processPoolImagesResponse(popularImagesData);
+      const { limit, useVectorSearch } = getRepositorySettings();
+      // Page 1: lastObjectId = null
+      const poolImagesData = await translationService.fetchPopularImages(undefined, undefined, limit, useVectorSearch, 0, undefined);
+      processPoolImagesResponse(poolImagesData);
     } catch (error) {
       worklist.setError((error as Error).message || UI_MESSAGES.ERRORS.SOMETHING_WRONG);
       setDatabaseImages([]);
+      setGalleryHasMore(false);
+    } finally {
+      setIsPopularImagesLoading(false);
+    }
+  };
+
+  // Pagination Handlers
+  const handleGalleryNext = async () => {
+    const nextPage = galleryPage + 1;
+    setIsPopularImagesLoading(true);
+
+    try {
+      const { limit, useVectorSearch } = getRepositorySettings();
+
+      let itemsData;
+      if (searchQuery && searchQuery.trim() !== '') {
+        // Search Mode: Use SKIP
+        const skip = (nextPage - 1) * limit;
+        itemsData = await translationService.fetchPopularImages(searchQuery, undefined, limit, useVectorSearch, skip, undefined);
+      } else {
+        // Browse Mode: Use CURSOR
+        // We use the ID of the last processed item from the CURRENT page (stored in lastProcessedId)
+        // as the cursor for the NEXT page.
+        // We should store this in the cache for the NEXT page key.
+        const cursorForNextPage = lastProcessedId;
+
+        // Update cache
+        setGalleryPageCache(prev => new Map(prev).set(nextPage, cursorForNextPage));
+
+        itemsData = await translationService.fetchPopularImages(undefined, undefined, limit, useVectorSearch, 0, cursorForNextPage || undefined);
+      }
+
+      processPoolImagesResponse(itemsData);
+      setGalleryPage(nextPage);
+
+    } catch (error) {
+      console.error(error);
+      worklist.setError("Failed to load next page.");
+    } finally {
+      setIsPopularImagesLoading(false);
+    }
+  };
+
+  const handleGalleryPrevious = async () => {
+    if (galleryPage <= 1) return;
+    const prevPage = galleryPage - 1;
+    setIsPopularImagesLoading(true);
+
+    try {
+      const { limit, useVectorSearch } = getRepositorySettings();
+
+      let itemsData;
+      if (searchQuery && searchQuery.trim() !== '') {
+        // Search Mode: Use SKIP
+        const skip = (prevPage - 1) * limit;
+        itemsData = await translationService.fetchPopularImages(searchQuery, undefined, limit, useVectorSearch, skip, undefined);
+      } else {
+        // Browse Mode: Use CURSOR from CACHE
+        // The cursor for Page N is stored in cache under key N.
+        const cursorForPrevPage = galleryPageCache.get(prevPage);
+
+        itemsData = await translationService.fetchPopularImages(undefined, undefined, limit, useVectorSearch, 0, cursorForPrevPage || undefined);
+      }
+
+      processPoolImagesResponse(itemsData);
+      setGalleryPage(prevPage);
+
+    } catch (error) {
+      console.error(error);
+      worklist.setError("Failed to load previous page.");
     } finally {
       setIsPopularImagesLoading(false);
     }
@@ -299,6 +422,22 @@ export const MainApp: React.FC<MainAppProps> = ({ authData }) => {
       languageResults.setSelectedLanguages(languagesToIdentify);
       setPendingIdentify(languagesToIdentify);
     }
+  };
+
+  const handleRepositoryImageClick = async (item: any) => {
+    setCameFromCurriculum(false);
+    imageUpload.resetUpload();
+    languageResults.clearResults();
+
+    // Load thumbnail
+    await imageUpload.handleThumbnailFile(item.thumbnail, `${item.object_name.replace(/\s/g, '_')}.jpg`);
+    imageUpload.setImageHash(item.image_hash);
+
+    // Set language and prepare for identification
+    const language = myContent.selectedLanguage;
+    languageResults.setSelectedLanguages([language]);
+    setLeftPanelView('upload');
+    setPendingIdentify([language]);
   };
 
   const handleBackToCurriculum = () => {
@@ -547,6 +686,8 @@ export const MainApp: React.FC<MainAppProps> = ({ authData }) => {
     languageResults.clearResults();
     worklist.setError(null);
     imageUpload.handleFileChange(file);
+    // Clear selections from other views
+    setSelectedCurriculumNode(null);
   };
 
   const handleFileDrop = (e: React.DragEvent<HTMLDivElement>) => {
@@ -657,7 +798,7 @@ export const MainApp: React.FC<MainAppProps> = ({ authData }) => {
   };
 
   return (
-    <div className="min-h-screen bg-[var(--bg-main)] text-[var(--text-main)] font-sans antialiased transition-colors duration-500">
+    <div className="min-h-screen bg-[var(--bg-main)] text-[var(--text-main)] font-sans antialiased transition-colors duration-500" >
       <Header
         userContext={userContext}
         onLogout={logout}
@@ -701,10 +842,16 @@ export const MainApp: React.FC<MainAppProps> = ({ authData }) => {
           onDatabaseSearch={handleDatabaseSearch}
           onFetchPopularImages={handleFetchPopularImages}
           onDatabaseImageClick={handleDatabaseImageClick}
+          onRepositoryImageClick={handleRepositoryImageClick}
+          galleryPage={galleryPage}
+          galleryHasMore={galleryHasMore}
+          onGalleryNext={handleGalleryNext}
+          onGalleryPrevious={handleGalleryPrevious}
           isCollapsed={isLeftPanelCollapsed}
           onToggleCollapse={handleToggleLeftPanel}
           className={`md:flex-shrink-0 transition-all duration-300 ease-in-out min-h-[600px] ${isLeftPanelCollapsed ? 'md:w-16 md:flex-none' : 'md:flex-[2_0_0%] min-w-0'}`}
           curriculumProps={curriculum}
+          myContentProps={myContent}
           onSelectBook={curriculum.selectBook}
           onSelectPage={curriculum.selectPage}
           onSelectNode={setSelectedCurriculumNode}
@@ -783,6 +930,7 @@ export const MainApp: React.FC<MainAppProps> = ({ authData }) => {
           userContext={userContext}
           cameFromCurriculum={cameFromCurriculum}
           onBackToCurriculum={handleBackToCurriculum}
+          myContentProps={myContent}
         />
 
         <RightPanel
@@ -805,9 +953,10 @@ export const MainApp: React.FC<MainAppProps> = ({ authData }) => {
 
           // Contest props
           contestProps={contest}
+          myContentProps={myContent}
           userContext={userContext}
         />
       </main>
-    </div>
+    </div >
   );
 };

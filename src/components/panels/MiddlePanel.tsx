@@ -1,8 +1,8 @@
 // components/panels/MiddlePanel.tsx
 import React, { useState, useEffect } from 'react';
 import { XMarkIcon, StarIcon, ArrowUpCircleIcon, CheckCircleIcon, CheckBadgeIcon, XCircleIcon, ArrowRightCircleIcon, PencilIcon, EyeIcon, ArrowDownTrayIcon, ChevronRightIcon, ArrowLeftIcon } from '@heroicons/react/24/solid';
-import { PlusCircleIcon, TrashIcon, SparklesIcon, ArrowPathIcon, AcademicCapIcon, PhotoIcon, BookOpenIcon, FolderIcon, DocumentIcon, InformationCircleIcon, DocumentArrowDownIcon } from '@heroicons/react/24/outline';
-import { LanguageResult, SaveStatus, PermissionCheck, CurriculumImage, DatabaseImage, CommonData, Page, Book } from '../../types';
+import { PlusCircleIcon, TrashIcon, SparklesIcon, ArrowPathIcon, AcademicCapIcon, PhotoIcon, BookOpenIcon, FolderIcon, DocumentIcon, InformationCircleIcon, DocumentArrowDownIcon, CircleStackIcon } from '@heroicons/react/24/outline';
+import { LanguageResult, SaveStatus, PermissionCheck, CurriculumImage, DatabaseImage, CommonData, Page, Book, OrgObject } from '../../types';
 import { StatusWorkflow } from '../common/StatusWorkflow';
 import { ImageSearchModal } from '../common/ImageSearchModal';
 import { QuizQAModal } from '../common/QuizQAModal';
@@ -11,9 +11,10 @@ import { translationService } from '../../services/translation.service';
 import { ContestMiddlePanel } from './contest/ContestMiddlePanel';
 import { UserContext } from '../../types';
 import { useContest } from '../../hooks/useContest';
+import { useMyContent } from '../../hooks/useMyContent';
 
 interface MiddlePanelProps {
-  leftPanelView: 'upload' | 'database' | 'curriculum' | 'contest';
+  leftPanelView: 'upload' | 'database' | 'curriculum' | 'contest' | 'my_content';
   className?: string;
   userContext: UserContext | null;
 
@@ -75,6 +76,9 @@ interface MiddlePanelProps {
   contestProps: ReturnType<typeof useContest>;
   cameFromCurriculum?: boolean;
   onBackToCurriculum?: () => void;
+
+  // My Content props
+  myContentProps: ReturnType<typeof useMyContent>;
 }
 
 export const MiddlePanel: React.FC<MiddlePanelProps> = (props) => {
@@ -124,6 +128,7 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = (props) => {
     cameFromCurriculum,
     onBackToCurriculum,
     onSetError,
+    myContentProps,
   } = props;
 
   const [isImageSearchModalOpen, setIsImageSearchModalOpen] = useState(false);
@@ -449,8 +454,30 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = (props) => {
               <button key={language} onClick={() => onTabChange(language)} className={`px-3 py-2 font-medium text-sm whitespace-nowrap border-b-2 transition-colors ${activeTab === language ? 'border-[var(--color-primary)] text-[var(--color-primary)] bg-[var(--color-primary-light)]' : 'border-transparent text-[var(--text-muted)] hover:text-[var(--text-main)] hover:border-[var(--border-main)]'}`}>
                 <div className="flex items-center space-x-2">
                   <span>{language}</span>
-                  {saveStatus[language] === 'saved' && <div className="w-2 h-2 bg-green-500 rounded-full" title="Saved"></div>}
-                  {saveStatus[language] === 'unsaved' && <div className="w-2 h-2 bg-red-500 rounded-full" title="Not saved"></div>}
+                  {/* Translation Status Color Dot (matching repository view) */}
+                  {languageResults[language]?.translation_status && (
+                    <>
+                      {languageResults[language]?.translation_status === 'Approved' && (
+                        <div className="w-2.5 h-2.5 rounded-full bg-green-500 shadow-sm shadow-green-500/50" title="Approved" />
+                      )}
+                      {languageResults[language]?.translation_status === 'Verified' && (
+                        <div className="w-2.5 h-2.5 rounded-full bg-purple-500 shadow-sm shadow-purple-500/50" title="Verified" />
+                      )}
+                      {languageResults[language]?.translation_status === 'Released' && (
+                        <div className="w-2.5 h-2.5 rounded-full bg-blue-500 shadow-sm shadow-blue-500/50" title="Released" />
+                      )}
+                      {languageResults[language]?.translation_status === 'Draft' && (
+                        <div className="w-2.5 h-2.5 rounded-full bg-orange-500 shadow-sm shadow-orange-500/50" title="Draft" />
+                      )}
+                      {!['Approved', 'Verified', 'Released', 'Draft'].includes(languageResults[language]?.translation_status || '') && languageResults[language]?.translation_status && (
+                        <div className="w-2.5 h-2.5 rounded-full bg-gray-400 shadow-sm shadow-gray-400/50" title={languageResults[language]?.translation_status} />
+                      )}
+                    </>
+                  )}
+                  {/* No translation status - show white outline circle */}
+                  {!languageResults[language]?.translation_status && !languageResults[language]?.isLoading && (
+                    <div className="w-2.5 h-2.5 rounded-full border-2 border-gray-400 bg-transparent" title="No status" />
+                  )}
                   {languageResults[language]?.isLoading && <div className="w-3 h-3 border-2 border-[var(--border-main)] border-t-[var(--color-primary)] rounded-full animate-spin"></div>}
                   {language !== 'X' && (<button onClick={(e) => { e.stopPropagation(); onRemoveTab(language); }} className="hover:text-red-500"><XMarkIcon className="w-3 h-3" /></button>)}
                 </div>
@@ -879,6 +906,21 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = (props) => {
           error={contestProps.error}
           userContext={userContext}
         />
+      );
+    }
+
+    if (leftPanelView === 'my_content') {
+      // Repository view - show same placeholder as database view
+      const hasActiveImage = Object.keys(languageResults).length > 0;
+
+      if (hasActiveImage) {
+        return renderTranslationEditor();
+      }
+
+      return (
+        <div className="flex items-center justify-center h-full">
+          <p className="text-[var(--text-muted)] italic text-center">Select an image from the repository to view its details.</p>
+        </div>
       );
     }
 

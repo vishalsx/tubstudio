@@ -433,16 +433,79 @@ export const ContestMiddlePanel: React.FC<ContestMiddlePanelProps> = ({
                     )}
 
                     {contest.content_type === 'Generic' && (
-                        <div>
-                            <label className="block text-sm font-medium text-[var(--text-main)] mb-1">Generic Theme</label>
-                            <input
-                                type="text"
-                                value={contest.areas_of_interest?.join(', ') || ''}
-                                onChange={(e) => handleChange('areas_of_interest', e.target.value.split(',').map(s => s.trim()).filter(Boolean))}
-                                className="w-full p-2 border border-[var(--border-main)] rounded-lg focus:ring-2 focus:ring-[var(--color-primary)]/50 bg-[var(--bg-input)] disabled:opacity-50 disabled:cursor-not-allowed"
-                                placeholder="Math, Science, History"
-                                disabled={!canEdit}
-                            />
+                        <div className="space-y-3">
+                            <label className="block text-sm font-medium text-[var(--text-main)] mb-1">Theme selection</label>
+                            <div className="flex flex-wrap gap-4 mb-3">
+                                <div className="flex items-center gap-2">
+                                    <input
+                                        id="theme-generic"
+                                        type="radio"
+                                        name="generic_theme_type_group"
+                                        value="generic"
+                                        checked={(contest.generic_theme_type || 'generic') === 'generic'}
+                                        onChange={(e) => handleChange('generic_theme_type', e.target.value)}
+                                        disabled={!canEdit || contest.content_type !== 'Generic'}
+                                        className="w-4 h-4 text-[var(--color-primary)] focus:ring-[var(--color-primary)] cursor-pointer disabled:cursor-not-allowed"
+                                    />
+                                    <label
+                                        htmlFor="theme-generic"
+                                        className={`text-sm text-[var(--text-main)] cursor-pointer ${(contest.content_type !== 'Generic' || !canEdit) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                    >
+                                        Generic Theme
+                                    </label>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <input
+                                        id="theme-category"
+                                        type="radio"
+                                        name="generic_theme_type_group"
+                                        value="category"
+                                        checked={contest.generic_theme_type === 'category'}
+                                        onChange={(e) => handleChange('generic_theme_type', e.target.value)}
+                                        disabled={!canEdit || contest.content_type !== 'Generic'}
+                                        className="w-4 h-4 text-[var(--color-primary)] focus:ring-[var(--color-primary)] cursor-pointer disabled:cursor-not-allowed"
+                                    />
+                                    <label
+                                        htmlFor="theme-category"
+                                        className={`text-sm text-[var(--text-main)] cursor-pointer ${(contest.content_type !== 'Generic' || !canEdit) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                    >
+                                        Category
+                                    </label>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <input
+                                        id="theme-fos"
+                                        type="radio"
+                                        name="generic_theme_type_group"
+                                        value="field_of_study"
+                                        checked={contest.generic_theme_type === 'field_of_study'}
+                                        onChange={(e) => handleChange('generic_theme_type', e.target.value)}
+                                        disabled={!canEdit || contest.content_type !== 'Generic'}
+                                        className="w-4 h-4 text-[var(--color-primary)] focus:ring-[var(--color-primary)] cursor-pointer disabled:cursor-not-allowed"
+                                    />
+                                    <label
+                                        htmlFor="theme-fos"
+                                        className={`text-sm text-[var(--text-main)] cursor-pointer ${(contest.content_type !== 'Generic' || !canEdit) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                    >
+                                        Field of Study
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div>
+                                <input
+                                    type="text"
+                                    value={contest.areas_of_interest?.join(', ') || ''}
+                                    onChange={(e) => handleChange('areas_of_interest', e.target.value.split(',').map(s => s.trim()).filter(Boolean))}
+                                    className="w-full p-2 border border-[var(--border-main)] rounded-lg focus:ring-2 focus:ring-[var(--color-primary)]/50 bg-[var(--bg-input)] disabled:opacity-50 disabled:cursor-not-allowed"
+                                    placeholder={
+                                        contest.generic_theme_type === 'category' ? "Math, Science, Animals" :
+                                            contest.generic_theme_type === 'field_of_study' ? "Biology, Physics, World War II" :
+                                                "General Interest Tags"
+                                    }
+                                    disabled={!canEdit}
+                                />
+                            </div>
                         </div>
                     )}
                 </div>

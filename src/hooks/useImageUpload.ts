@@ -28,9 +28,9 @@ export const useImageUpload = () => {
       const url = URL.createObjectURL(resizedFile);
       setPreviewUrl(url);
 
-      // Clear previous image hash ONLY if this is a new upload (not a thumbnail)
-      // When processing thumbnails, the imageHash is set separately and should be preserved
-      setImageHash(prev => isThumbnailUpdate ? prev : null);
+      // Clear previous image hash and thumbnail flag for new manual uploads
+      setImageHash(null);
+      setIsThumbnailUpdate(false);
 
     } catch (err) {
       setError('Failed to process image');
