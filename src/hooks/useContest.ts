@@ -42,10 +42,19 @@ export const useContest = (userContext: UserContext | null) => {
             ]
         },
         scoring_config: {
-            base_points: 10, negative_marking: 0,
-            difficulty_weights: { easy: 1, medium: 1.5, hard: 2 },
-            language_weights: { native: 1, fluent: 1, learning: 1 },
-            time_bonus: { enabled: false, max_bonus: 0 },
+            matching: {
+                base_points: 10,
+                negative_marking: 0,
+                time_bonus: 10,
+                language_weights: {}
+            },
+            quiz: {
+                base_points: 10,
+                negative_marking: 0,
+                time_bonus: 10,
+                language_weights: {},
+                difficulty_weights: { low: 1.0, medium: 1.5, high: 2.0, very_high: 2.5 }
+            },
             tie_breaker_rules: []
         },
         visibility: { mode: 'public', allowed_schools: [], invite_only: false },

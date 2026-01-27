@@ -736,9 +736,14 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
                   onClick={onFetchWorklist}
                   disabled={!canViewWorkList.language || isWorklistLoading}
                   title="My Work Items"
-                  className={`px-4 py-2 rounded-lg transition flex-none flex justify-center items-center ${!canViewWorkList.language || isWorklistLoading ? 'bg-[var(--bg-input)] text-[var(--text-muted)] cursor-not-allowed border border-[var(--border-main)]' : 'bg-[var(--color-secondary)] text-white hover:opacity-90 shadow-md shadow-orange-500/20'}`}
+                  className={`px-4 py-2 rounded-lg transition flex-none flex justify-center items-center ${(!isWorklistLoading && !canViewWorkList.language)
+                      ? 'bg-[var(--bg-input)] text-[var(--text-muted)] cursor-not-allowed border border-[var(--border-main)]'
+                      : isWorklistLoading
+                        ? 'bg-[var(--color-secondary)] text-white cursor-wait opacity-80 shadow-md shadow-orange-500/20'
+                        : 'bg-[var(--color-secondary)] text-white hover:opacity-90 shadow-md shadow-orange-500/20'
+                    }`}
                 >
-                  {isWorklistLoading ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : <ListBulletIcon className="w-5 h-5" />}
+                  {isWorklistLoading ? <LoadingSpinner size="sm" color="white" /> : <ListBulletIcon className="w-5 h-5" />}
                 </button>
               )}
             </div>

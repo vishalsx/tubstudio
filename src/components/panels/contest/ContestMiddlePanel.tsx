@@ -78,6 +78,8 @@ export const ContestMiddlePanel: React.FC<ContestMiddlePanelProps> = ({
         userContext?.languages_allowed?.[0] || 'English'
     );
     const [activeConfigTab, setActiveConfigTab] = useState('Schedule');
+    const [isMatchingScoringExpanded, setIsMatchingScoringExpanded] = useState(true);
+    const [isQuizScoringExpanded, setIsQuizScoringExpanded] = useState(true);
 
     const canEdit = !contest || !contest._id || contest.status === 'Draft';
 
@@ -839,85 +841,250 @@ export const ContestMiddlePanel: React.FC<ContestMiddlePanelProps> = ({
 
                         {/* Scoring Configuration */}
                         {activeConfigTab === 'Scoring' && (
-                            <div className="bg-[var(--bg-input)]/30 p-2.5 rounded-xl border border-[var(--border-main)] animate-fadeIn">
+                            <div className="bg-[var(--bg-input)]/30 p-2.5 rounded-xl border border-[var(--border-main)] animate-fadeIn space-y-4">
                                 <h3 className="text-sm font-bold text-[var(--text-main)] mb-2 flex items-center gap-2">
                                     <ChartBarIcon className="w-4 h-4 text-blue-500" /> Scoring Configuration
                                 </h3>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                    <div className="space-y-2">
-                                        <div className="grid grid-cols-2 gap-2">
-                                            <div>
-                                                <label className="block text-xs font-medium mb-1">Base Points</label>
-                                                <input
-                                                    type="number"
-                                                    value={contest.scoring_config.base_points}
-                                                    onChange={(e) => handleScoringChange({ base_points: parseInt(e.target.value) || 0 })}
-                                                    className="w-full p-2 border border-[var(--border-main)] rounded bg-[var(--bg-panel)] text-sm"
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-xs font-medium mb-1">Neg. Marking</label>
-                                                <input
-                                                    type="number"
-                                                    step="0.1"
-                                                    value={contest.scoring_config.negative_marking}
-                                                    onChange={(e) => handleScoringChange({ negative_marking: parseFloat(e.target.value) || 0 })}
-                                                    className="w-full p-2 border border-[var(--border-main)] rounded bg-[var(--bg-panel)] text-sm"
-                                                />
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <h4 className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider mb-2">Difficulty Weights</h4>
-                                            <div className="grid grid-cols-3 gap-2">
-                                                {['easy', 'medium', 'hard'].map(level => (
-                                                    <div key={level}>
-                                                        <span className="text-[10px] text-[var(--text-muted)] block mb-1 capitalize">{level}</span>
-                                                        <input
-                                                            type="number"
-                                                            step="0.1"
-                                                            value={(contest.scoring_config.difficulty_weights as any)[level]}
-                                                            onChange={(e) => handleScoringChange({
-                                                                difficulty_weights: { ...contest.scoring_config.difficulty_weights, [level]: parseFloat(e.target.value) || 1 }
-                                                            })}
-                                                            className="w-full p-1.5 text-xs border border-[var(--border-main)] rounded bg-[var(--bg-panel)]"
-                                                        />
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="space-y-2">
-                                        <div className="p-3 bg-[var(--bg-panel)] rounded-xl border border-[var(--border-main)]">
-                                            <label className="flex items-center space-x-2 cursor-pointer mb-2">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={contest.scoring_config.time_bonus.enabled}
-                                                    onChange={(e) => handleScoringChange({
-                                                        time_bonus: { ...contest.scoring_config.time_bonus, enabled: e.target.checked }
-                                                    })}
-                                                    className="w-3.5 h-3.5 rounded text-[var(--color-primary)]"
-                                                />
-                                                <span className="font-bold text-xs">Enable Time Bonus</span>
-                                            </label>
-                                            {contest.scoring_config.time_bonus.enabled && (
-                                                <div className="ml-5 pt-1.5 border-t border-[var(--border-main)]">
-                                                    <label className="text-[10px] text-[var(--text-muted)] block mb-0.5">Max Bonus Points</label>
+
+                                {/* Matching Mode Scoring */}
+                                <div className="bg-[var(--bg-panel)] rounded-xl border border-[var(--border-main)] overflow-hidden">
+                                    <button
+                                        onClick={() => setIsMatchingScoringExpanded(!isMatchingScoringExpanded)}
+                                        className="w-full flex items-center justify-between p-3 hover:bg-[var(--bg-input)]/50 transition-colors"
+                                    >
+                                        <h4 className="text-sm font-bold flex items-center gap-2 text-[var(--text-main)]">
+                                            <span className="w-6 h-6 flex items-center justify-center bg-blue-500/10 text-blue-500 rounded text-xs">🧩</span>
+                                            Matching Mode
+                                        </h4>
+                                        <svg
+                                            className={`w-4 h-4 text-[var(--text-muted)] transition-transform ${isMatchingScoringExpanded ? 'rotate-180' : ''}`}
+                                            fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                                        >
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                        </svg>
+                                    </button>
+
+                                    {isMatchingScoringExpanded && (
+                                        <div className="p-3 pt-0 animate-fadeIn">
+                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4 pt-3 border-t border-[var(--border-main)]/50">
+                                                <div>
+                                                    <label className="block text-[10px] font-bold text-[var(--text-muted)] uppercase mb-1">Base Points</label>
                                                     <input
                                                         type="number"
-                                                        value={contest.scoring_config.time_bonus.max_bonus}
+                                                        value={contest.scoring_config.matching.base_points}
                                                         onChange={(e) => handleScoringChange({
-                                                            time_bonus: { ...contest.scoring_config.time_bonus, max_bonus: parseInt(e.target.value) || 0 }
+                                                            matching: { ...contest.scoring_config.matching, base_points: parseInt(e.target.value) || 0 }
                                                         })}
-                                                        className="w-full p-1.5 text-xs border border-[var(--border-main)] rounded bg-[var(--bg-panel)]"
+                                                        className="w-full p-2 border border-[var(--border-main)] rounded bg-[var(--bg-input)] text-sm"
                                                     />
                                                 </div>
-                                            )}
+                                                <div>
+                                                    <label className="block text-[10px] font-bold text-[var(--text-muted)] uppercase mb-1">Negative Marking</label>
+                                                    <input
+                                                        type="number"
+                                                        step="0.1"
+                                                        value={contest.scoring_config.matching.negative_marking}
+                                                        onChange={(e) => handleScoringChange({
+                                                            matching: { ...contest.scoring_config.matching, negative_marking: parseFloat(e.target.value) || 0 }
+                                                        })}
+                                                        className={`w-full p-2 border rounded bg-[var(--bg-input)] text-sm ${contest.scoring_config.matching.negative_marking >= contest.scoring_config.matching.base_points || contest.scoring_config.matching.negative_marking < 0 ? 'border-red-500' : 'border-[var(--border-main)]'}`}
+                                                    />
+                                                    {contest.scoring_config.matching.negative_marking >= contest.scoring_config.matching.base_points && (
+                                                        <p className="text-[9px] text-red-500 mt-1">Must be less than base points</p>
+                                                    )}
+                                                </div>
+                                                <div>
+                                                    <label className="block text-[10px] font-bold text-[var(--text-muted)] uppercase mb-1">Time Bonus (per sec)</label>
+                                                    <input
+                                                        type="number"
+                                                        value={contest.scoring_config.matching.time_bonus}
+                                                        onChange={(e) => handleScoringChange({
+                                                            matching: { ...contest.scoring_config.matching, time_bonus: parseInt(e.target.value) || 0 }
+                                                        })}
+                                                        className="w-full p-2 border border-[var(--border-main)] rounded bg-[var(--bg-input)] text-sm"
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            {/* Language Weights for Matching */}
+                                            <div className="pt-3 border-t border-[var(--border-main)]">
+                                                <h5 className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider mb-2">Language Multipliers</h5>
+                                                <div className="max-h-[200px] overflow-y-auto custom-scrollbar border border-[var(--border-main)] rounded-lg">
+                                                    <table className="w-full text-left text-xs">
+                                                        <thead className="sticky top-0 bg-[var(--bg-input)] text-[var(--text-muted)] border-b border-[var(--border-main)]">
+                                                            <tr>
+                                                                <th className="px-3 py-2 font-bold uppercase tracking-tight">Language</th>
+                                                                <th className="px-3 py-2 font-bold uppercase tracking-tight w-24">Weight</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody className="divide-y divide-[var(--border-main)]/50">
+                                                            {contest.supported_languages.map(lang => (
+                                                                <tr key={`matching-${lang}`} className="hover:bg-[var(--bg-input)]/30 transition-colors">
+                                                                    <td className="px-3 py-2 text-[var(--text-main)] font-medium">{lang}</td>
+                                                                    <td className="px-3 py-2">
+                                                                        <input
+                                                                            type="number"
+                                                                            step="0.1"
+                                                                            value={contest.scoring_config.matching.language_weights?.[lang] ?? 1.0}
+                                                                            onChange={(e) => handleScoringChange({
+                                                                                matching: {
+                                                                                    ...contest.scoring_config.matching,
+                                                                                    language_weights: {
+                                                                                        ...(contest.scoring_config.matching.language_weights || {}),
+                                                                                        [lang]: parseFloat(e.target.value) || 1.0
+                                                                                    }
+                                                                                }
+                                                                            })}
+                                                                            className="w-full p-1 text-xs border border-[var(--border-main)] rounded bg-[var(--bg-panel)] text-center"
+                                                                        />
+                                                                    </td>
+                                                                </tr>
+                                                            ))}
+                                                        </tbody>
+                                                    </table>
+                                                    {contest.supported_languages.length === 0 && (
+                                                        <div className="p-4 text-center">
+                                                            <p className="text-[10px] italic text-[var(--text-muted)]">No languages selected</p>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <h4 className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider mb-1">Tie Breakers</h4>
-                                            <p className="text-[10px] italic text-[var(--text-muted)] leading-tight">Rules applied sequentially to break score ties.</p>
+                                    )}
+                                </div>
+
+                                {/* Quiz Mode Scoring */}
+                                <div className="bg-[var(--bg-panel)] rounded-xl border border-[var(--border-main)] overflow-hidden">
+                                    <button
+                                        onClick={() => setIsQuizScoringExpanded(!isQuizScoringExpanded)}
+                                        className="w-full flex items-center justify-between p-3 hover:bg-[var(--bg-input)]/50 transition-colors"
+                                    >
+                                        <h4 className="text-sm font-bold flex items-center gap-2 text-[var(--text-main)]">
+                                            <span className="w-6 h-6 flex items-center justify-center bg-purple-500/10 text-purple-500 rounded text-xs">❓</span>
+                                            Quiz Mode
+                                        </h4>
+                                        <svg
+                                            className={`w-4 h-4 text-[var(--text-muted)] transition-transform ${isQuizScoringExpanded ? 'rotate-180' : ''}`}
+                                            fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                                        >
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                        </svg>
+                                    </button>
+
+                                    {isQuizScoringExpanded && (
+                                        <div className="p-3 pt-0 animate-fadeIn">
+                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4 pt-3 border-t border-[var(--border-main)]/50">
+                                                <div>
+                                                    <label className="block text-[10px] font-bold text-[var(--text-muted)] uppercase mb-1">Base Points</label>
+                                                    <input
+                                                        type="number"
+                                                        value={contest.scoring_config.quiz.base_points}
+                                                        onChange={(e) => handleScoringChange({
+                                                            quiz: { ...contest.scoring_config.quiz, base_points: parseInt(e.target.value) || 0 }
+                                                        })}
+                                                        className="w-full p-2 border border-[var(--border-main)] rounded bg-[var(--bg-input)] text-sm"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-[10px] font-bold text-[var(--text-muted)] uppercase mb-1">Negative Marking</label>
+                                                    <input
+                                                        type="number"
+                                                        step="0.1"
+                                                        value={contest.scoring_config.quiz.negative_marking}
+                                                        onChange={(e) => handleScoringChange({
+                                                            quiz: { ...contest.scoring_config.quiz, negative_marking: parseFloat(e.target.value) || 0 }
+                                                        })}
+                                                        className={`w-full p-2 border rounded bg-[var(--bg-input)] text-sm ${contest.scoring_config.quiz.negative_marking >= contest.scoring_config.quiz.base_points || contest.scoring_config.quiz.negative_marking < 0 ? 'border-red-500' : 'border-[var(--border-main)]'}`}
+                                                    />
+                                                    {contest.scoring_config.quiz.negative_marking >= contest.scoring_config.quiz.base_points && (
+                                                        <p className="text-[9px] text-red-500 mt-1">Must be less than base points</p>
+                                                    )}
+                                                </div>
+                                                <div>
+                                                    <label className="block text-[10px] font-bold text-[var(--text-muted)] uppercase mb-1">Time Bonus (per sec)</label>
+                                                    <input
+                                                        type="number"
+                                                        value={contest.scoring_config.quiz.time_bonus}
+                                                        onChange={(e) => handleScoringChange({
+                                                            quiz: { ...contest.scoring_config.quiz, time_bonus: parseInt(e.target.value) || 0 }
+                                                        })}
+                                                        className="w-full p-2 border border-[var(--border-main)] rounded bg-[var(--bg-input)] text-sm"
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            {/* Difficulty Weights for Quiz */}
+                                            <div className="mb-4 pt-3 border-t border-[var(--border-main)]">
+                                                <h5 className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider mb-2">Difficulty Multipliers</h5>
+                                                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                                    {['low', 'medium', 'high', 'very_high'].map(level => (
+                                                        <div key={`quiz-diff-${level}`} className="flex flex-col gap-1 bg-[var(--bg-input)] p-2 rounded-lg border border-[var(--border-main)]">
+                                                            <span className="text-[9px] font-bold text-[var(--text-muted)] uppercase text-center">{level.replace('_', ' ')}</span>
+                                                            <input
+                                                                type="number"
+                                                                step="0.1"
+                                                                value={(contest.scoring_config.quiz.difficulty_weights as any)[level]}
+                                                                onChange={(e) => handleScoringChange({
+                                                                    quiz: {
+                                                                        ...contest.scoring_config.quiz,
+                                                                        difficulty_weights: {
+                                                                            ...contest.scoring_config.quiz.difficulty_weights,
+                                                                            [level]: parseFloat(e.target.value) || 1.0
+                                                                        }
+                                                                    }
+                                                                })}
+                                                                className="w-full p-1.5 text-xs border border-[var(--border-main)] rounded bg-[var(--bg-panel)] text-center"
+                                                            />
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+
+                                            {/* Language Weights for Quiz */}
+                                            <div className="pt-3 border-t border-[var(--border-main)]">
+                                                <h5 className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider mb-2">Language Multipliers</h5>
+                                                <div className="max-h-[200px] overflow-y-auto custom-scrollbar border border-[var(--border-main)] rounded-lg">
+                                                    <table className="w-full text-left text-xs">
+                                                        <thead className="sticky top-0 bg-[var(--bg-input)] text-[var(--text-muted)] border-b border-[var(--border-main)]">
+                                                            <tr>
+                                                                <th className="px-3 py-2 font-bold uppercase tracking-tight">Language</th>
+                                                                <th className="px-3 py-2 font-bold uppercase tracking-tight w-24">Weight</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody className="divide-y divide-[var(--border-main)]/50">
+                                                            {contest.supported_languages.map(lang => (
+                                                                <tr key={`quiz-${lang}`} className="hover:bg-[var(--bg-input)]/30 transition-colors">
+                                                                    <td className="px-3 py-2 text-[var(--text-main)] font-medium">{lang}</td>
+                                                                    <td className="px-3 py-2">
+                                                                        <input
+                                                                            type="number"
+                                                                            step="0.1"
+                                                                            value={contest.scoring_config.quiz.language_weights?.[lang] ?? 1.0}
+                                                                            onChange={(e) => handleScoringChange({
+                                                                                quiz: {
+                                                                                    ...contest.scoring_config.quiz,
+                                                                                    language_weights: {
+                                                                                        ...(contest.scoring_config.quiz.language_weights || {}),
+                                                                                        [lang]: parseFloat(e.target.value) || 1.0
+                                                                                    }
+                                                                                }
+                                                                            })}
+                                                                            className="w-full p-1 text-xs border border-[var(--border-main)] rounded bg-[var(--bg-panel)] text-center"
+                                                                        />
+                                                                    </td>
+                                                                </tr>
+                                                            ))}
+                                                        </tbody>
+                                                    </table>
+                                                    {contest.supported_languages.length === 0 && (
+                                                        <div className="p-4 text-center">
+                                                            <p className="text-[10px] italic text-[var(--text-muted)]">No languages selected</p>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
                                         </div>
-                                    </div>
+                                    )}
                                 </div>
                             </div>
                         )}
