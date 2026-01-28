@@ -763,62 +763,83 @@ export const ContestMiddlePanel: React.FC<ContestMiddlePanelProps> = ({
                         {/* Eligibility Rules */}
                         {activeConfigTab === 'Eligibility' && (
                             <div className="bg-[var(--bg-input)]/30 p-2.5 rounded-xl border border-[var(--border-main)] animate-fadeIn">
-                                <h3 className="text-sm font-bold text-[var(--text-main)] mb-2 flex items-center gap-2">
+                                <h3 className="text-sm font-bold text-[var(--text-main)] mb-3 flex items-center gap-2">
                                     <UserGroupIcon className="w-4 h-4 text-emerald-500" /> Eligibility Rules
                                 </h3>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                    <div className="space-y-2">
-                                        <div>
-                                            <label className="block text-xs font-medium text-[var(--text-main)] mb-1">Age Range</label>
-                                            <div className="flex items-center gap-2">
-                                                <div className="flex-1">
-                                                    <span className="text-xs text-[var(--text-muted)] block mb-1">Min Age</span>
-                                                    <input
-                                                        type="number"
-                                                        value={contest.eligibility_rules.min_age}
-                                                        onChange={(e) => handleEligibilityChange('min_age', parseInt(e.target.value) || 0)}
-                                                        className="w-full p-2 border border-[var(--border-main)] rounded-lg bg-[var(--bg-panel)]"
-                                                    />
-                                                </div>
-                                                <div className="text-[var(--text-muted)] pt-5">to</div>
-                                                <div className="flex-1">
-                                                    <span className="text-xs text-[var(--text-muted)] block mb-1">Max Age</span>
-                                                    <input
-                                                        type="number"
-                                                        value={contest.eligibility_rules.max_age}
-                                                        onChange={(e) => handleEligibilityChange('max_age', parseInt(e.target.value) || 0)}
-                                                        className="w-full p-2 border border-[var(--border-main)] rounded-lg bg-[var(--bg-panel)]"
-                                                    />
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <label className="flex items-center space-x-2 cursor-pointer p-2 bg-[var(--bg-panel)] rounded-lg border border-[var(--border-main)] hover:border-[var(--color-primary)] transition-all">
+
+                                {/* Top Row: Age Range and Max Incomplete Attempts */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                    <div>
+                                        <label className="block text-xs font-medium text-[var(--text-main)] mb-2">Age Range</label>
+                                        <div className="flex items-center gap-2">
+                                            <div className="flex-1">
+                                                <span className="text-xs text-[var(--text-muted)] block mb-1">Min Age</span>
                                                 <input
-                                                    type="checkbox"
-                                                    checked={contest.eligibility_rules.school_required}
-                                                    onChange={(e) => handleEligibilityChange('school_required', e.target.checked)}
-                                                    className="w-3.5 h-3.5 rounded text-[var(--color-primary)] focus:ring-[var(--color-primary)] disabled:opacity-50"
+                                                    type="number"
+                                                    value={contest.eligibility_rules.min_age}
+                                                    onChange={(e) => handleEligibilityChange('min_age', parseInt(e.target.value) || 0)}
+                                                    className="w-full p-2.5 border border-[var(--border-main)] rounded-lg bg-[var(--bg-panel)] focus:ring-2 focus:ring-[var(--color-primary)]/50 transition-all text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                                                     disabled={!canEdit}
                                                 />
-                                                <div>
-                                                    <span className="block text-xs font-bold text-[var(--text-main)]">Organisations Required</span>
-                                                    <span className="text-[10px] text-[var(--text-muted)]">Participants must be affiliated with an organisation</span>
-                                                </div>
-                                            </label>
+                                            </div>
+                                            <div className="text-[var(--text-muted)] pt-5">to</div>
+                                            <div className="flex-1">
+                                                <span className="text-xs text-[var(--text-muted)] block mb-1">Max Age</span>
+                                                <input
+                                                    type="number"
+                                                    value={contest.eligibility_rules.max_age}
+                                                    onChange={(e) => handleEligibilityChange('max_age', parseInt(e.target.value) || 0)}
+                                                    className="w-full p-2.5 border border-[var(--border-main)] rounded-lg bg-[var(--bg-panel)] focus:ring-2 focus:ring-[var(--color-primary)]/50 transition-all text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                                                    disabled={!canEdit}
+                                                />
+                                            </div>
                                         </div>
                                     </div>
+
+                                    <div>
+                                        <label className="block text-xs font-medium text-[var(--text-main)] mb-1">Max Incomplete Attempts</label>
+                                        <p className="text-[10px] text-[var(--text-muted)] mb-2 italic">Number of times a participant can exit and resume the contest (0-10)</p>
+                                        <input
+                                            type="number"
+                                            min={0}
+                                            max={10}
+                                            value={contest.max_incomplete_attempts}
+                                            onChange={(e) => handleChange('max_incomplete_attempts', Math.max(0, Math.min(10, parseInt(e.target.value) || 3)))}
+                                            className="w-full p-2.5 border border-[var(--border-main)] rounded-lg bg-[var(--bg-panel)] focus:ring-2 focus:ring-[var(--color-primary)]/50 transition-all text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                                            placeholder="e.g. 3"
+                                            disabled={!canEdit}
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Bottom Row: Organisation Required and Allowed Countries */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-xs font-medium text-[var(--text-main)] mb-1">Participation Requirements</label>
+                                        <p className="text-[10px] text-[var(--text-muted)] mb-2 italic">Participants must be affiliated with an organisation</p>
+                                        <label className="flex items-center space-x-2 cursor-pointer p-2.5 bg-[var(--bg-panel)] rounded-lg border border-[var(--border-main)] hover:border-[var(--color-primary)] transition-all">
+                                            <input
+                                                type="checkbox"
+                                                checked={contest.eligibility_rules.school_required}
+                                                onChange={(e) => handleEligibilityChange('school_required', e.target.checked)}
+                                                className="w-4 h-4 rounded text-[var(--color-primary)] focus:ring-[var(--color-primary)] disabled:opacity-50"
+                                                disabled={!canEdit}
+                                            />
+                                            <span className="block text-xs font-bold text-[var(--text-main)]">Organisations Required</span>
+                                        </label>
+                                    </div>
+
                                     <div>
                                         <label className="block text-xs font-medium text-[var(--text-main)] mb-1">Allowed Countries</label>
+                                        <p className="text-[10px] text-[var(--text-muted)] mb-2 italic">Enter country separated by commas. Leave empty for global access.</p>
                                         <textarea
-                                            rows={2}
+                                            rows={1}
                                             value={contest.eligibility_rules.allowed_countries.join(', ')}
                                             onChange={(e) => handleEligibilityChange('allowed_countries', e.target.value.split(',').map(s => s.trim()).filter(Boolean))}
-                                            className="w-full p-2 border border-[var(--border-main)] rounded-lg bg-[var(--bg-panel)] font-mono text-xs disabled:opacity-50 disabled:cursor-not-allowed"
+                                            className="w-full p-2.5 border border-[var(--border-main)] rounded-lg bg-[var(--bg-panel)] focus:ring-2 focus:ring-[var(--color-primary)]/50 transition-all text-sm font-mono disabled:opacity-50 disabled:cursor-not-allowed resize-none"
                                             placeholder="USA, India, ..."
                                             disabled={!canEdit}
                                         />
-                                        <p className="text-[10px] text-[var(--text-muted)] mt-1 italic leading-tight">Enter country names separated by commas. Leave empty for global access.</p>
                                     </div>
                                 </div>
                             </div>

@@ -3,9 +3,10 @@
 export type MultilingualStr = { [key: string]: string };
 
 export interface RoundDifficultyDistribution {
-    easy: number;
+    low: number;
     medium: number;
-    hard: number;
+    high: number;
+    very_high: number;
 }
 
 export interface RoundStructure {
@@ -105,6 +106,7 @@ export interface Contest {
     grace_period_seconds: number;
 
     max_participants: number;
+    max_incomplete_attempts: number;
 
     eligibility_rules: EligibilityRules;
 

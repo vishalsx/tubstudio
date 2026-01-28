@@ -77,9 +77,10 @@ export const ContestGameStructureEditor: React.FC<ContestGameStructureEditorProp
             time_limit_seconds: 60,
             question_count: 5,
             difficulty_distribution: {
-                easy: 3,
+                low: 3,
                 medium: 2,
-                hard: 0
+                high: 0,
+                very_high: 0
             }
         };
         const updatedLevels = [...gameStructure.levels];
@@ -103,7 +104,7 @@ export const ContestGameStructureEditor: React.FC<ContestGameStructureEditorProp
         onUpdate({ ...gameStructure, levels: updatedLevels });
     };
 
-    const updateRoundDistribution = (levelIndex: number, roundIndex: number, difficulty: 'easy' | 'medium' | 'hard', value: number) => {
+    const updateRoundDistribution = (levelIndex: number, roundIndex: number, difficulty: 'low' | 'medium' | 'high' | 'very_high', value: number) => {
         const updatedLevels = [...gameStructure.levels];
         const round = updatedLevels[levelIndex].rounds[roundIndex];
         const newDistribution = { ...round.difficulty_distribution, [difficulty]: value };
@@ -158,7 +159,7 @@ const LevelEditor: React.FC<{
     onAddRound: (levelIndex: number) => void;
     onUpdateRound: (levelIndex: number, roundIndex: number, updates: Partial<RoundStructure>) => void;
     onRemoveRound: (levelIndex: number, roundIndex: number) => void;
-    onUpdateRoundDistribution: (lIdx: number, rIdx: number, diff: 'easy' | 'medium' | 'hard', val: number) => void;
+    onUpdateRoundDistribution: (lIdx: number, rIdx: number, diff: 'low' | 'medium' | 'high' | 'very_high', val: number) => void;
     readOnly: boolean;
 }> = ({ level, levelIndex, onUpdateLevel, onRemoveLevel, onAddRound, onUpdateRound, onRemoveRound, onUpdateRoundDistribution, readOnly }) => {
     const [isExpanded, setIsExpanded] = useState(true);
@@ -250,12 +251,12 @@ const RoundEditor: React.FC<{
     levelIndex: number;
     onUpdateRound: (lIdx: number, rIdx: number, updates: Partial<RoundStructure>) => void;
     onRemoveRound: (lIdx: number, rIdx: number) => void;
-    onUpdateDistribution: (lIdx: number, rIdx: number, diff: 'easy' | 'medium' | 'hard', val: number) => void;
+    onUpdateDistribution: (lIdx: number, rIdx: number, diff: 'low' | 'medium' | 'high' | 'very_high', val: number) => void;
     readOnly: boolean;
     gameType: 'matching' | 'quiz';
 }> = ({ round, roundIndex, levelIndex, onUpdateRound, onRemoveRound, onUpdateDistribution, readOnly, gameType }) => {
     // Check if distribution matches total questions
-    const totalDist = round.difficulty_distribution.easy + round.difficulty_distribution.medium + round.difficulty_distribution.hard;
+    const totalDist = round.difficulty_distribution.low + round.difficulty_distribution.medium + round.difficulty_distribution.high + round.difficulty_distribution.very_high;
     const isDistMismatch = totalDist !== round.question_count;
 
     return (
@@ -357,13 +358,13 @@ const RoundEditor: React.FC<{
                         )}
                     </div>
 
-                    <div className="grid grid-cols-3 gap-2">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                         <div>
-                            <span className="block text-[9px] text-[var(--text-muted)] text-center mb-0.5">Easy</span>
+                            <span className="block text-[9px] text-[var(--text-muted)] text-center mb-0.5">Low</span>
                             <input
                                 type="number"
-                                value={round.difficulty_distribution.easy}
-                                onChange={(e) => onUpdateDistribution(levelIndex, roundIndex, 'easy', parseInt(e.target.value) || 0)}
+                                value={round.difficulty_distribution.low}
+                                onChange={(e) => onUpdateDistribution(levelIndex, roundIndex, 'low', parseInt(e.target.value) || 0)}
                                 className="w-full text-center p-1 text-[10px] bg-[var(--bg-input)] text-[var(--text-main)] border border-[var(--border-main)] rounded focus:ring-1 focus:ring-[var(--color-primary)] disabled:opacity-50"
                                 disabled={readOnly}
                             />
@@ -379,11 +380,21 @@ const RoundEditor: React.FC<{
                             />
                         </div>
                         <div>
-                            <span className="block text-[9px] text-[var(--text-muted)] text-center mb-0.5">Hard</span>
+                            <span className="block text-[9px] text-[var(--text-muted)] text-center mb-0.5">High</span>
                             <input
                                 type="number"
-                                value={round.difficulty_distribution.hard}
-                                onChange={(e) => onUpdateDistribution(levelIndex, roundIndex, 'hard', parseInt(e.target.value) || 0)}
+                                value={round.difficulty_distribution.high}
+                                onChange={(e) => onUpdateDistribution(levelIndex, roundIndex, 'high', parseInt(e.target.value) || 0)}
+                                className="w-full text-center p-1 text-[10px] bg-[var(--bg-input)] text-[var(--text-main)] border border-[var(--border-main)] rounded focus:ring-1 focus:ring-[var(--color-primary)] disabled:opacity-50"
+                                disabled={readOnly}
+                            />
+                        </div>
+                        <div>
+                            <span className="block text-[9px] text-[var(--text-muted)] text-center mb-0.5">Very High</span>
+                            <input
+                                type="number"
+                                value={round.difficulty_distribution.very_high}
+                                onChange={(e) => onUpdateDistribution(levelIndex, roundIndex, 'very_high', parseInt(e.target.value) || 0)}
                                 className="w-full text-center p-1 text-[10px] bg-[var(--bg-input)] text-[var(--text-main)] border border-[var(--border-main)] rounded focus:ring-1 focus:ring-[var(--color-primary)] disabled:opacity-50"
                                 disabled={readOnly}
                             />

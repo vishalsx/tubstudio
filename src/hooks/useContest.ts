@@ -27,6 +27,7 @@ export const useContest = (userContext: UserContext | null) => {
         contest_end_at: new Date().toISOString(),
         grace_period_seconds: 0,
         max_participants: 100,
+        max_incomplete_attempts: 3,
         eligibility_rules: {
             min_age: 0, max_age: 100, allowed_countries: [], school_required: false
         },
