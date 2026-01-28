@@ -146,7 +146,7 @@ export const ImageSearchModal: React.FC<ImageSearchModalProps> = ({
         },
         common_data: {
           object_name_en: poolImage.object_name_en || "",
-          object_name: poolImage.object_name_en || "",
+          object_name: poolImage.object_name || "",
           object_category: "",
           tags: poolImage.metadata?.tags || [],
           field_of_study: "",
