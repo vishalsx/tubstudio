@@ -673,8 +673,17 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = (props) => {
                           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                         />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center text-gray-300">
-                          <BookOpenIcon className="w-12 h-12 opacity-20" />
+                        <div className="w-full h-full relative">
+                          <img
+                            src="/assets/thumbnails/book_default.png"
+                            alt="Book Cover Placeholder"
+                            className="w-full h-full object-cover opacity-90"
+                          />
+                          <div className="absolute inset-0 flex items-center justify-center p-4">
+                            <h5 className="text-white font-extrabold text-xs text-center leading-tight drop-shadow-md uppercase tracking-tighter">
+                              {book.title}
+                            </h5>
+                          </div>
                         </div>
                       )}
                       <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
@@ -699,7 +708,7 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = (props) => {
           {activeBook && !activeChapter && (
             <div className="mb-6 p-4">
               <div className="flex items-center gap-3 mb-6 bg-[var(--color-primary-light)]/30 p-4 rounded-xl border border-[var(--color-primary)]/10">
-                <div className="w-12 h-16 bg-gray-100 rounded-lg overflow-hidden border border-[var(--border-main)] flex-shrink-0 shadow-sm">
+                <div className="w-12 h-16 bg-gray-100 rounded-lg overflow-hidden border border-[var(--border-main)] flex-shrink-0 shadow-sm relative">
                   {activeBook.front_cover_image ? (
                     <img
                       src={activeBook.front_cover_image.startsWith('data:') ? activeBook.front_cover_image : `data:image/jpeg;base64,${activeBook.front_cover_image}`}
@@ -707,8 +716,17 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = (props) => {
                       className="w-full h-full object-cover"
                     />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center text-gray-300">
-                      <BookOpenIcon className="w-6 h-6 opacity-20" />
+                    <div className="w-full h-full relative">
+                      <img
+                        src="/assets/thumbnails/book_default.png"
+                        alt="Book Cover Placeholder"
+                        className="w-full h-full object-cover opacity-90"
+                      />
+                      <div className="absolute inset-0 flex items-center justify-center p-1">
+                        <span className="text-white font-extrabold text-[8px] text-center leading-[1] drop-shadow-md uppercase tracking-tighter">
+                          {activeBook.title}
+                        </span>
+                      </div>
                     </div>
                   )}
                 </div>
