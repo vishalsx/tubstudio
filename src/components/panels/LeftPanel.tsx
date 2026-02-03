@@ -70,6 +70,7 @@ interface LeftPanelProps {
   onDatabaseImageClick: (image: DatabaseImage) => void;
   onRepositoryImageClick: (item: RepositoryItem) => void;
   onSelectBook: (bookId: string) => void;
+  onSelectChapter: (chapter: Chapter) => void;
   onSelectPage: (page: Page) => void;
   onSelectNode: (node: Book | Chapter | Page) => void;
   onCollapseAll: () => void;
@@ -146,6 +147,7 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
   onGalleryNext,
   onGalleryPrevious,
   onSelectBook,
+  onSelectChapter,
   onSelectPage,
   onSelectNode,
   onCollapseAll,
@@ -509,6 +511,7 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
               onAddPage={curriculumProps.addPage}
               onDeletePage={curriculumProps.deletePage}
               onUpdatePageTitle={curriculumProps.updatePageTitle}
+              onSelectChapter={onSelectChapter}
               onCollapseAll={onCollapseAll}
             />
           </div>
@@ -737,10 +740,10 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
                   disabled={!canViewWorkList.language || isWorklistLoading}
                   title="My Work Items"
                   className={`px-4 py-2 rounded-lg transition flex-none flex justify-center items-center ${(!isWorklistLoading && !canViewWorkList.language)
-                      ? 'bg-[var(--bg-input)] text-[var(--text-muted)] cursor-not-allowed border border-[var(--border-main)]'
-                      : isWorklistLoading
-                        ? 'bg-[var(--color-secondary)] text-white cursor-wait opacity-80 shadow-md shadow-orange-500/20'
-                        : 'bg-[var(--color-secondary)] text-white hover:opacity-90 shadow-md shadow-orange-500/20'
+                    ? 'bg-[var(--bg-input)] text-[var(--text-muted)] cursor-not-allowed border border-[var(--border-main)]'
+                    : isWorklistLoading
+                      ? 'bg-[var(--color-secondary)] text-white cursor-wait opacity-80 shadow-md shadow-orange-500/20'
+                      : 'bg-[var(--color-secondary)] text-white hover:opacity-90 shadow-md shadow-orange-500/20'
                     }`}
                 >
                   {isWorklistLoading ? <LoadingSpinner size="sm" color="white" /> : <ListBulletIcon className="w-5 h-5" />}

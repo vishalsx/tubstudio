@@ -211,6 +211,7 @@ export interface Book {
   education_board?: string;
   grade_level?: string;
   tags?: string[];
+  front_cover_image?: string;
   chapters: Chapter[];
   // New Count Fields
   chapter_count?: number;

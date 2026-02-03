@@ -18,6 +18,7 @@ export const useCurriculum = (userContext: UserContext | null) => {
   const [searchAttempted, setSearchAttempted] = useState(false);
 
   const [activeBook, setActiveBook] = useState<Book | null>(null);
+  const [activeChapter, setActiveChapter] = useState<Chapter | null>(null);
   const [isDirty, setIsDirty] = useState(false);
 
   // State to hold the counters for new ID generation
@@ -117,6 +118,7 @@ export const useCurriculum = (userContext: UserContext | null) => {
       setBooks(prevBooks => prevBooks.map(b => (b._id === bookId ? fullBook : b)));
 
       setActiveBook(fullBook);
+      setActiveChapter(null); // Reset active chapter when book changes
       setSelectedPage(null);
       setIdCounters({
         chapter: fullBook.chapter_count || 0,
@@ -131,6 +133,11 @@ export const useCurriculum = (userContext: UserContext | null) => {
     } finally {
       setIsLoading(false);
     }
+  }, []);
+
+  const selectChapter = useCallback((chapter: Chapter) => {
+    setActiveChapter(chapter);
+    setSelectedPage(null);
   }, []);
 
   const updateActiveBook = useCallback((updater: (book: Book) => Book, options: { markDirty: boolean } = { markDirty: true }) => {
@@ -211,6 +218,7 @@ export const useCurriculum = (userContext: UserContext | null) => {
     const chapterId = chapter.chapter_id;
 
     if (page.imagesLoaded || page.isNew) {
+      if (chapter) setActiveChapter(chapter);
       setSelectedPage(page);
       return;
     }
@@ -234,6 +242,7 @@ export const useCurriculum = (userContext: UserContext | null) => {
       ...page,
       images: page.images.map(img => ({ ...img, isLoading: !!img.image_id && !img.isNew }))
     };
+    if (chapter) setActiveChapter(chapter);
     setSelectedPage(pageWithPlaceholders);
     updateActiveBook(book => {
       const c = book.chapters.find(c => c.chapter_id === chapterId);
@@ -711,6 +720,7 @@ export const useCurriculum = (userContext: UserContext | null) => {
   return {
     books,
     activeBook,
+    activeChapter,
     isLoading,
     isStoryLoading,
     searchQuery,
@@ -726,6 +736,7 @@ export const useCurriculum = (userContext: UserContext | null) => {
     handleSearch,
     createBook,
     selectBook,
+    selectChapter,
     saveBook,
     handleNodeExpansion,
     selectPage,

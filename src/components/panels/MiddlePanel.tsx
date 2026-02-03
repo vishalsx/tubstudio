@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { XMarkIcon, StarIcon, ArrowUpCircleIcon, CheckCircleIcon, CheckBadgeIcon, XCircleIcon, ArrowRightCircleIcon, PencilIcon, EyeIcon, ArrowDownTrayIcon, ChevronRightIcon, ArrowLeftIcon } from '@heroicons/react/24/solid';
 import { PlusCircleIcon, TrashIcon, SparklesIcon, ArrowPathIcon, AcademicCapIcon, PhotoIcon, BookOpenIcon, FolderIcon, DocumentIcon, InformationCircleIcon, DocumentArrowDownIcon, CircleStackIcon } from '@heroicons/react/24/outline';
-import { LanguageResult, SaveStatus, PermissionCheck, CurriculumImage, DatabaseImage, CommonData, Page, Book, OrgObject } from '../../types';
+import { LanguageResult, SaveStatus, PermissionCheck, CurriculumImage, DatabaseImage, CommonData, Page, Book, Chapter, OrgObject } from '../../types';
 import { StatusWorkflow } from '../common/StatusWorkflow';
 import { ImageSearchModal } from '../common/ImageSearchModal';
 import { QuizQAModal } from '../common/QuizQAModal';
@@ -53,7 +53,14 @@ interface MiddlePanelProps {
   onSetError?: (error: string | null) => void;
 
   // Curriculum View props
+  books?: Book[];
   activeBook: Book | null;
+  activeChapter: Chapter | null;
+  onSelectBook?: (bookId: string) => void;
+  onSelectChapter?: (chapter: Chapter) => void;
+  onSelectPage?: (page: Page) => void;
+  onSelectNode?: (node: Book | Chapter | Page) => void;
+  onNodeExpansion?: (node: Book | Chapter) => void;
   isLoading: boolean;
   selectedPageData: Page | null;
   onCurriculumImageDoubleClick: (image: CurriculumImage, language: string) => void;
@@ -104,7 +111,14 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = (props) => {
     onSkip,
     onToggleEdit,
     // curriculum props
+    books = [],
     activeBook,
+    activeChapter,
+    onSelectBook,
+    onSelectChapter,
+    onSelectPage,
+    onSelectNode,
+    onNodeExpansion,
     isLoading: isCurriculumLoading,
     selectedPageData,
     onCurriculumImageDoubleClick,
@@ -634,257 +648,463 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = (props) => {
     const pageTitle = selectedPageData?.title || `Page ${selectedPageData?.page_number}`;
     const isPageDirty = selectedPageData?.images?.some(img => img.isNew);
 
-    return (
-      <div className="h-full flex flex-col">
-        {!selectedPageData ? (
-          <div className="flex flex-col items-center justify-center h-full text-[var(--text-muted)]">
-            <PhotoIcon className="w-16 h-16 mb-4 opacity-20" />
-            <p className="italic">Select a page from the curriculum tree to view its images.</p>
-          </div>
-        ) : isCurriculumLoading && !imageLoadingProgress ? (
-          <div className="flex items-center justify-center h-full">
-            <LoadingSpinner text="Loading page..." />
-          </div>
-        ) : (
-          <>
-            {/* Breadcrumbs */}
-            <div className="flex items-center space-x-1 text-xs text-[var(--text-muted)] mb-4 bg-[var(--bg-input)]/50 backdrop-blur-sm p-2 rounded-lg border border-[var(--border-main)]">
-              <BookOpenIcon className="w-3.5 h-3.5 text-blue-500" />
-              <span className="hover:text-[var(--text-main)] cursor-default">{activeBook?.title}</span>
-              <ChevronRightIcon className="w-3 h-3" />
-              <FolderIcon className="w-3.5 h-3.5 text-amber-500" />
-              <span className="hover:text-[var(--text-main)] cursor-default">{chapterName}</span>
-              <ChevronRightIcon className="w-3 h-3" />
-              <span className="font-semibold text-[var(--text-main)]">{pageTitle}</span>
-              {selectedPageData.story && (
-                <div className="ml-auto flex items-center bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full text-[10px] font-medium animate-pulse">
-                  <SparklesIcon className="w-3 h-3 mr-1" /> Story Ready
-                </div>
-              )}
-            </div>
-
-            <div className="flex justify-between items-center mb-4">
-              <div className="flex items-center space-x-2">
-                <h2 className="text-xl font-bold text-[var(--text-main)]">{pageTitle}</h2>
-                {isPageDirty && <span className="text-[10px] bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full font-medium">Unsaved Changes</span>}
-              </div>
-              <div className="flex items-center space-x-3">
-                {isDirty && (
-                  <button
-                    onClick={onSaveBook}
-                    className="flex items-center space-x-2 bg-[var(--color-primary)] hover:opacity-90 text-white px-4 py-1.5 rounded-lg text-sm font-bold shadow-md shadow-[var(--color-primary)]/20 transition-all active:scale-95"
+    if (!selectedPageData) {
+      return (
+        <div className="h-full flex flex-col overflow-y-auto">
+          {/* Search Results */}
+          {books.length > 0 && !activeBook && (
+            <div className="mb-6 p-4">
+              <h3 className="text-lg font-bold text-[var(--text-main)] mb-4">Search Results</h3>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+                {books.map((book) => (
+                  <div
+                    key={book._id}
+                    onClick={() => {
+                      onSelectBook?.(book._id);
+                      onSelectNode?.(book);
+                    }}
+                    className="group cursor-pointer flex flex-col bg-[var(--bg-input)] rounded-xl overflow-hidden border border-[var(--border-main)] hover:border-[var(--color-primary)] hover:shadow-xl transition-all duration-300"
                   >
-                    <CheckCircleIcon className="w-4 h-4" />
-                    <span>Save Changes</span>
-                  </button>
-                )}
-                {imageLoadingProgress && (
-                  <div className="text-sm text-[var(--text-muted)] flex items-center">
-                    <LoadingSpinner size="sm" color="gray" className="mr-2" />
-                    <span>Loading... {imageLoadingProgress.loaded} / {imageLoadingProgress.total}</span>
+                    <div className="aspect-[3/4] relative bg-gray-100 overflow-hidden">
+                      {book.front_cover_image ? (
+                        <img
+                          src={book.front_cover_image.startsWith('data:') ? book.front_cover_image : `data:image/jpeg;base64,${book.front_cover_image}`}
+                          alt={book.title}
+                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-gray-300">
+                          <BookOpenIcon className="w-12 h-12 opacity-20" />
+                        </div>
+                      )}
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <span className="text-white text-xs font-bold px-3 py-1.5 bg-[var(--color-primary)] rounded-full">Open Book</span>
+                      </div>
+                    </div>
+                    <div className="p-3">
+                      <h4 className="font-bold text-sm text-[var(--text-main)] truncate group-hover:text-[var(--color-primary)] transition-colors">{book.title}</h4>
+                      <p className="text-[10px] text-[var(--text-muted)] mt-1 truncate">{book.author || 'Unknown Author'}</p>
+                      <div className="flex items-center gap-2 mt-2">
+                        <span className="text-[9px] px-1.5 py-0.5 bg-blue-50 text-blue-600 rounded-md font-medium border border-blue-100">{book.language}</span>
+                        <span className="text-[9px] px-1.5 py-0.5 bg-amber-50 text-amber-600 rounded-md font-medium border border-amber-100">{book.grade_level || 'General'}</span>
+                      </div>
+                    </div>
                   </div>
-                )}
-                <button
-                  onClick={onCreateStory}
-                  disabled={isStoryLoading || !!isPageDirty || !!selectedPageData.story || (selectedPageData.images?.length || 0) < 1}
-                  title={
-                    isPageDirty
-                      ? "Save page changes before creating a story"
-                      : !!selectedPageData.story
-                        ? "Story already exists for this page"
-                        : (selectedPageData.images?.length || 0) < 1
-                          ? "Add at least 1 image to create a story"
-                          : "Create Story"
-                  }
-                  className="p-2 rounded-lg transition text-[var(--text-muted)] hover:text-purple-600 hover:bg-purple-50 disabled:opacity-50 disabled:cursor-not-allowed disabled:text-[var(--text-muted)]/50 disabled:bg-transparent"
-                >
-                  <SparklesIcon className="w-5 h-5" />
-                </button>
+                ))}
               </div>
             </div>
-            <div className="border-2 border-dashed border-[var(--border-main)] rounded-lg p-4 flex-1 overflow-y-auto bg-transparent">
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                {selectedPageData.images?.map((image, index) => {
-                  if (image.isLoading) {
-                    return (
-                      <div key={image.image_id || `loader-${index}`} className="relative group rounded-xl bg-[var(--bg-input)] aspect-square animate-pulse border border-[var(--border-main)]">
-                        <div className="absolute top-2 left-2 z-20 bg-[var(--color-primary)]/50 text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center border border-white/20">
-                          {image.position || index + 1}
-                        </div>
+          )}
+
+          {/* Book Overview with Chapters */}
+          {activeBook && !activeChapter && (
+            <div className="mb-6 p-4">
+              <div className="flex items-center gap-3 mb-6 bg-[var(--color-primary-light)]/30 p-4 rounded-xl border border-[var(--color-primary)]/10">
+                <div className="w-12 h-16 bg-gray-100 rounded-lg overflow-hidden border border-[var(--border-main)] flex-shrink-0 shadow-sm">
+                  {activeBook.front_cover_image ? (
+                    <img
+                      src={activeBook.front_cover_image.startsWith('data:') ? activeBook.front_cover_image : `data:image/jpeg;base64,${activeBook.front_cover_image}`}
+                      alt={activeBook.title}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-gray-300">
+                      <BookOpenIcon className="w-6 h-6 opacity-20" />
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-[var(--text-main)] leading-tight">{activeBook.title}</h3>
+                  <p className="text-sm text-[var(--text-muted)]">Select a chapter below or a page from the curriculum tree</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+                {activeBook.chapters.map((chapter) => (
+                  <div
+                    key={chapter.chapter_id}
+                    onClick={() => {
+                      onSelectChapter?.(chapter);
+                      onSelectNode?.(chapter);
+                      onNodeExpansion?.(chapter);
+                    }}
+                    className="group cursor-pointer flex flex-col bg-[var(--bg-input)] rounded-xl overflow-hidden border border-[var(--border-main)] hover:border-[var(--color-primary)] hover:shadow-xl transition-all duration-300"
+                  >
+                    <div className="aspect-square relative bg-gray-100 overflow-hidden flex items-center justify-center">
+                      {activeBook.front_cover_image ? (
+                        <img
+                          src={activeBook.front_cover_image.startsWith('data:') ? activeBook.front_cover_image : `data:image/jpeg;base64,${activeBook.front_cover_image}`}
+                          alt={chapter.chapter_name}
+                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                        />
+                      ) : (
+                        <img
+                          src="/assets/thumbnails/chapter_default.png"
+                          alt="Chapter Placeholder"
+                          className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity"
+                        />
+                      )}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <span className="text-white text-xs font-bold px-3 py-1.5 bg-[var(--color-primary)] rounded-full">View Chapter</span>
                       </div>
-                    );
-                  }
-
-                  const isDraggingThis = draggedImageHash === image.image_hash;
-                  const isDropTarget = dragOverImageHash === image.image_hash;
-
-                  return (
-                    <div
-                      key={image.image_id || image.image_hash}
-                      draggable={!image.isLoading}
-                      onDragStart={(e) => handleDragStart(e, image.image_hash)}
-                      onDragEnter={(e) => handleDragEnter(e, image.image_hash)}
-                      onDragOver={(e) => handleDragOver(e, image.image_hash)}
-                      onDragLeave={(e) => handleDragLeave(e, image.image_hash)}
-                      onDrop={(e) => handleDrop(e, image.image_hash)}
-                      onDragEnd={handleDragEnd}
-                      onDoubleClick={() => onCurriculumImageDoubleClick(image, activeBook?.language || languageForImageSearch)}
-                      className={`relative group rounded-2xl overflow-hidden bg-white shadow-sm ring-1 ring-gray-200 aspect-square transition-all duration-300
-                        ${isDraggingThis ? 'opacity-40 scale-90' : 'opacity-100 scale-100'}
-                        ${isDropTarget ? 'ring-4 ring-[#00AEEF] ring-offset-4 z-30' : 'hover:shadow-xl hover:-translate-y-1'}`}
-                    >
-                      {/* Action Buttons Overlay - Top Right Container */}
-                      <div className="absolute top-2 right-2 flex flex-col space-y-2 z-30 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                        {/* Delete Button */}
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onRemoveImageFromCurriculumPage(image.image_hash);
-                          }}
-                          className="p-1.5 bg-white shadow-md rounded-lg text-gray-500 hover:text-red-600 hover:bg-red-50 transition-all border border-gray-100"
-                          title="Remove image"
-                        >
-                          <TrashIcon className="w-4 h-4" />
-                        </button>
-
-                        {/* Refresh Button (Only if translation missing) */}
-                        {!image.object_name && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (onCheckTranslation && selectedPageData?.page_id) {
-                                onCheckTranslation(selectedPageData.page_id, image.image_hash);
-                              }
-                            }}
-                            className="p-1.5 bg-white shadow-md rounded-lg text-blue-500 hover:text-blue-700 hover:bg-blue-50 transition-all border border-gray-100 group/refresh"
-                            title="Check for translation"
-                          >
-                            <ArrowPathIcon className="w-4 h-4 group-hover/refresh:rotate-180 transition-transform duration-500" />
-                          </button>
-                        )}
+                      <div className="absolute top-3 left-3 w-8 h-8 rounded-full bg-white/90 shadow-md flex items-center justify-center text-[var(--color-primary)] font-bold text-sm z-10">
+                        {chapter.chapter_number}
                       </div>
+                    </div>
+                    <div className="p-3">
+                      <h4 className="font-bold text-sm text-[var(--text-main)] truncate group-hover:text-[var(--color-primary)] transition-colors">{chapter.chapter_name}</h4>
+                      <div className="flex items-center justify-between mt-2">
+                        <span className="text-[10px] text-[var(--text-muted)] font-medium uppercase tracking-wider">{chapter.pages.length} Pages</span>
+                        <ChevronRightIcon className="w-3 h-3 text-[var(--text-muted)] group-hover:text-[var(--color-primary)]" />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
-                      {/* Translation missing indicator (Red Dot) */}
-                      {!image.object_name && (
-                        <div className="absolute top-2 right-2 w-3 h-3 bg-red-600 rounded-full border-2 border-white z-20 shadow-sm animate-pulse group-hover:hidden" title="Translation missing"></div>
+          {/* Chapter Overview with Pages */}
+          {activeBook && activeChapter && (
+            <div className="mb-6 p-4">
+              <div className="flex items-center gap-2 text-xs text-[var(--text-muted)] mb-4">
+                <span className="cursor-pointer hover:text-[var(--color-primary)]" onClick={() => {
+                  onSelectBook?.(activeBook._id);
+                  onSelectNode?.(activeBook);
+                }}>{activeBook.title}</span>
+                <ChevronRightIcon className="w-3 h-3" />
+                <span className="font-bold text-[var(--text-main)]">{activeChapter.chapter_name}</span>
+              </div>
+
+              <div className="flex items-center gap-3 mb-6 bg-[var(--color-secondary-light)]/30 p-4 rounded-xl border border-[var(--color-secondary)]/10">
+                <div className="w-12 h-12 bg-white rounded-lg flex items-center justify-center border border-[var(--border-main)] flex-shrink-0 shadow-sm">
+                  <FolderIcon className="w-8 h-8 text-[var(--color-secondary)]" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-[var(--text-main)] leading-tight">{activeChapter.chapter_name}</h3>
+                  <p className="text-sm text-[var(--text-muted)]">Select a page to view and edit its images</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+                {activeChapter.pages.map((page) => (
+                  <div
+                    key={page.page_id}
+                    onClick={() => {
+                      onSelectPage?.(page);
+                      onSelectNode?.(page);
+                    }}
+                    className="group cursor-pointer flex flex-col bg-[var(--bg-input)] rounded-xl overflow-hidden border border-[var(--border-main)] hover:border-[var(--color-primary)] hover:shadow-xl transition-all duration-300"
+                  >
+                    <div className="aspect-video relative bg-gray-100 overflow-hidden flex items-center justify-center">
+                      {page.images && page.images.length > 0 && page.images[0].thumbnail ? (
+                        <img
+                          src={page.images[0].thumbnail}
+                          alt={page.title}
+                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                        />
+                      ) : (
+                        <img
+                          src="/assets/thumbnails/page_default.png"
+                          alt="Page Placeholder"
+                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                        />
                       )}
 
-                      {/* Position indicator badge - High contrast and encircled */}
-                      <div className="absolute top-2 left-2 z-20 bg-[var(--color-primary)] text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center shadow-md border border-white/20">
-                        {image.position || index + 1}
+                      <div className="absolute top-2 left-2 w-6 h-6 rounded-md bg-white/90 shadow-md flex items-center justify-center text-[var(--text-muted)] font-bold text-[10px] z-10">
+                        {page.page_number}
                       </div>
 
-                      <div className="w-full h-full relative overflow-hidden">
-                        <img
-                          src={image.thumbnail}
-                          alt={image.object_name}
-                          className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-110 pointer-events-none"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                      </div>
-
-                      <div className="absolute bottom-0 left-0 right-0 p-2 transform translate-y-1 group-hover:translate-y-0 transition-transform duration-300">
-                        {editingImageHash === image.image_hash ? (
-                          <input
-                            type="text"
-                            value={editingNameValue}
-                            onChange={(e) => setEditingNameValue(e.target.value)}
-                            onBlur={() => saveImageName(image.image_hash)}
-                            onKeyDown={(e) => handleNameKeyDown(e, image.image_hash)}
-                            onClick={(e) => e.stopPropagation()}
-                            className="w-full text-xs px-2 py-1 rounded-lg border-2 border-[var(--color-primary)] focus:ring-0 text-[var(--text-main)] bg-[var(--bg-panel)] pointer-events-auto shadow-lg"
-                            autoFocus
-                          />
-                        ) : (
-                          <div className="flex items-center justify-between bg-black/60 backdrop-blur-sm rounded-lg px-2 py-1.5 border border-white/10 cursor-text pointer-events-auto" onClick={(e) => startEditingImageName(e, image)}>
-                            <p className="text-white font-bold text-xs truncate select-none flex-1">
-                              {image.object_name || 'Pending Translation'}
-                            </p>
-                            <PencilIcon className="w-3 h-3 text-white/50 ml-1 flex-shrink-0" />
+                      {/* Indicators for images and story */}
+                      <div className="absolute top-2 right-2 flex flex-col gap-1">
+                        {page.images && page.images.length > 0 && (
+                          <div className="px-1.5 py-0.5 bg-green-500 text-white text-[8px] font-bold rounded flex items-center gap-1 shadow-sm">
+                            <PhotoIcon className="w-2.5 h-2.5" />
+                            {page.images.length}
+                          </div>
+                        )}
+                        {page.story && (
+                          <div className="p-1 bg-purple-500 text-white rounded shadow-sm" title="Story Available">
+                            <SparklesIcon className="w-2.5 h-2.5" />
                           </div>
                         )}
                       </div>
 
-                      {image.isNew && (
-                        <div className="absolute top-2 right-10 w-2 h-2 bg-[#00AEEF] rounded-full border-2 border-white pointer-events-none shadow-sm" title="Not saved"></div>
-                      )}
-                    </div>
-                  );
-                })}
-                {/* Add Image Box */}
-                <div
-                  className="relative group rounded-2xl border-2 border-dashed border-[var(--border-main)] hover:border-[var(--color-primary)] hover:bg-[var(--color-primary-light)]/50 flex flex-col items-center justify-center cursor-pointer aspect-square transition-all duration-300 shadow-sm hover:shadow-md"
-                  onClick={() => setIsImageSearchModalOpen(true)}
-                  title="Add a new image to this page"
-                >
-                  <PlusCircleIcon className="w-10 h-10 text-[var(--text-muted)] opacity-30 group-hover:text-[var(--color-primary)] group-hover:scale-110 transition-all duration-300" />
-                  <p className="text-[10px] font-bold text-[var(--text-muted)] group-hover:text-[var(--color-primary)] mt-2 uppercase tracking-wider">Add Image</p>
-                </div>
-              </div>
-            </div>
-            {!!selectedPageData?.story && (
-              <div className="mt-6 pt-6 border-t border-gray-100 flex-shrink-0">
-                <div className="bg-gradient-to-br from-[var(--color-primary-light)] via-[var(--bg-panel)] to-[var(--color-secondary-light)]/30 p-4 rounded-2xl border border-[var(--border-main)] shadow-sm relative overflow-hidden group/prompt">
-                  <div className="absolute top-0 right-0 w-32 h-32 -mr-16 -mt-16 bg-[var(--color-primary)] opacity-[0.05] rounded-full pointer-events-none transition-transform duration-700 group-hover/prompt:scale-110"></div>
-
-                  <div className="relative">
-                    <div className="flex items-center justify-between mb-3">
-                      <label htmlFor="userComments" className="flex items-center text-xs font-bold text-[var(--text-muted)] uppercase tracking-widest">
-                        <SparklesIcon className="w-3.5 h-3.5 mr-1.5 text-amber-500" />
-                        Regeneration Instructions
-                      </label>
-                      {userComments && (
-                        <button
-                          onClick={() => setUserComments('')}
-                          className="text-[10px] text-[var(--text-muted)] hover:text-[var(--text-main)] font-medium transition-colors"
-                        >
-                          Clear
-                        </button>
-                      )}
-                    </div>
-
-                    <div className="relative bg-[var(--bg-panel)] rounded-xl border border-[var(--border-main)] shadow-inner focus-within:ring-2 focus-within:ring-[var(--color-primary)]/10 focus-within:border-[var(--color-primary)] transition-all overflow-hidden">
-                      <textarea
-                        id="userComments"
-                        rows={2}
-                        value={userComments}
-                        onChange={(e) => setUserComments(e.target.value)}
-                        className="w-full p-4 pr-32 text-sm bg-transparent outline-none resize-none placeholder-[var(--text-muted)] opacity-60 leading-relaxed min-h-[80px]"
-                        placeholder="e.g., Make the story more adventurous, mention the blue bird..."
-                        disabled={isStoryLoading}
-                      />
-
-                      <div className="absolute top-3 right-3 flex items-center space-x-2">
-                        <button
-                          onClick={() => onGenerateStory?.(selectedPageData!.page_id!, userComments)}
-                          disabled={isStoryLoading || !!isPageDirty}
-                          className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-xs font-bold transition-all active:scale-95 shadow-md shadow-blue-500/10 
-                            ${isPageDirty
-                              ? 'bg-[var(--bg-input)] text-[var(--text-muted)] cursor-not-allowed bg-transparent border border-[var(--border-main)]'
-                              : 'bg-[var(--color-primary)] text-white hover:opacity-90 shadow-lg'}`}
-                          title={isPageDirty ? "Save changes before regenerating" : "Regenerate story"}
-                        >
-                          {isStoryLoading ? (
-                            <LoadingSpinner size="sm" color="white" className="mr-1" />
-                          ) : (
-                            <ArrowPathIcon className="w-4 h-4" />
-                          )}
-                          <span>{isStoryLoading ? 'Regenerating...' : 'Regenerate'}</span>
-                        </button>
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <span className="text-white text-xs font-bold px-3 py-1.5 bg-[var(--color-primary)] rounded-full">Open Page</span>
                       </div>
                     </div>
-
-                    {isPageDirty && (
-                      <p className="mt-2 text-[10px] text-amber-600 flex items-center font-medium animate-pulse">
-                        <InformationCircleIcon className="w-3 h-3 mr-1" />
-                        Please save your image sequence changes before regenerating.
-                      </p>
-                    )}
+                    <div className="p-3">
+                      <h4 className="font-bold text-sm text-[var(--text-main)] truncate group-hover:text-[var(--color-primary)] transition-colors">{page.title || `Page ${page.page_number}`}</h4>
+                      <div className="flex items-center justify-between mt-2">
+                        <span className="text-[10px] text-[var(--text-muted)] font-medium uppercase tracking-wider">
+                          {page.images && page.images.length > 0 ? `${page.images.length} Objects` : 'No Objects'}
+                        </span>
+                        {page.story && <span className="text-[9px] text-purple-600 font-bold bg-purple-50 px-1 rounded">Story</span>}
+                      </div>
+                    </div>
                   </div>
-                </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Fallback Empty State */}
+          {!activeBook && books.length === 0 && (
+            <div className="flex flex-col items-center justify-center flex-1 text-[var(--text-muted)] p-8">
+              <PhotoIcon className="w-16 h-16 mb-4 opacity-20" />
+              <p className="italic text-center">Select a page from the curriculum tree to view its images.</p>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    if (isCurriculumLoading && !imageLoadingProgress) {
+      return (
+        <div className="flex items-center justify-center h-full">
+          <LoadingSpinner text="Loading page..." />
+        </div>
+      );
+    }
+
+    return (
+      <div className="h-full flex flex-col">
+        {/* Breadcrumbs */}
+        <div className="flex items-center space-x-1 text-xs text-[var(--text-muted)] mb-4 bg-[var(--bg-input)]/50 backdrop-blur-sm p-2 rounded-lg border border-[var(--border-main)]">
+          <BookOpenIcon className="w-3.5 h-3.5 text-blue-500" />
+          <span className="hover:text-[var(--text-main)] cursor-default">{activeBook?.title}</span>
+          <ChevronRightIcon className="w-3 h-3" />
+          <FolderIcon className="w-3.5 h-3.5 text-amber-500" />
+          <span className="hover:text-[var(--text-main)] cursor-default">{chapterName}</span>
+          <ChevronRightIcon className="w-3 h-3" />
+          <span className="font-semibold text-[var(--text-main)]">{pageTitle}</span>
+          {selectedPageData.story && (
+            <div className="ml-auto flex items-center bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full text-[10px] font-medium animate-pulse">
+              <SparklesIcon className="w-3 h-3 mr-1" /> Story Ready
+            </div>
+          )}
+        </div>
+
+        <div className="flex justify-between items-center mb-4">
+          <div className="flex items-center space-x-2">
+            <h2 className="text-xl font-bold text-[var(--text-main)]">{pageTitle}</h2>
+            {isPageDirty && <span className="text-[10px] bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full font-medium">Unsaved Changes</span>}
+          </div>
+          <div className="flex items-center space-x-3">
+            {isDirty && (
+              <button
+                onClick={onSaveBook}
+                className="flex items-center space-x-2 bg-[var(--color-primary)] hover:opacity-90 text-white px-4 py-1.5 rounded-lg text-sm font-bold shadow-md shadow-[var(--color-primary)]/20 transition-all active:scale-95"
+              >
+                <CheckCircleIcon className="w-4 h-4" />
+                <span>Save Changes</span>
+              </button>
+            )}
+            {imageLoadingProgress && (
+              <div className="text-sm text-[var(--text-muted)] flex items-center">
+                <LoadingSpinner size="sm" color="gray" className="mr-2" />
+                <span>Loading... {imageLoadingProgress.loaded} / {imageLoadingProgress.total}</span>
               </div>
             )}
-          </>
+            <button
+              onClick={onCreateStory}
+              disabled={isStoryLoading || !!isPageDirty || !!selectedPageData.story || (selectedPageData.images?.length || 0) < 1}
+              title={
+                isPageDirty
+                  ? "Save page changes before creating a story"
+                  : !!selectedPageData.story
+                    ? "Story already exists for this page"
+                    : (selectedPageData.images?.length || 0) < 1
+                      ? "Add at least 1 image to create a story"
+                      : "Create Story"
+              }
+              className="p-2 rounded-lg transition text-[var(--text-muted)] hover:text-purple-600 hover:bg-purple-50 disabled:opacity-50 disabled:cursor-not-allowed disabled:text-[var(--text-muted)]/50 disabled:bg-transparent"
+            >
+              <SparklesIcon className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+        <div className="border-2 border-dashed border-[var(--border-main)] rounded-lg p-4 flex-1 overflow-y-auto bg-transparent">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+            {selectedPageData.images?.map((image, index) => {
+              if (image.isLoading) {
+                return (
+                  <div key={image.image_id || `loader-${index}`} className="relative group rounded-xl bg-[var(--bg-input)] aspect-square animate-pulse border border-[var(--border-main)]">
+                    <div className="absolute top-2 left-2 z-20 bg-[var(--color-primary)]/50 text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center border border-white/20">
+                      {image.position || index + 1}
+                    </div>
+                  </div>
+                );
+              }
+
+              const isDraggingThis = draggedImageHash === image.image_hash;
+              const isDropTarget = dragOverImageHash === image.image_hash;
+
+              return (
+                <div
+                  key={image.image_id || image.image_hash}
+                  draggable={!image.isLoading}
+                  onDragStart={(e) => handleDragStart(e, image.image_hash)}
+                  onDragEnter={(e) => handleDragEnter(e, image.image_hash)}
+                  onDragOver={(e) => handleDragOver(e, image.image_hash)}
+                  onDragLeave={(e) => handleDragLeave(e, image.image_hash)}
+                  onDrop={(e) => handleDrop(e, image.image_hash)}
+                  onDragEnd={handleDragEnd}
+                  onDoubleClick={() => onCurriculumImageDoubleClick(image, activeBook?.language || languageForImageSearch)}
+                  className={`relative group rounded-2xl overflow-hidden bg-white shadow-sm ring-1 ring-gray-200 aspect-square transition-all duration-300
+                    ${isDraggingThis ? 'opacity-40 scale-90' : 'opacity-100 scale-100'}
+                    ${isDropTarget ? 'ring-4 ring-[#00AEEF] ring-offset-4 z-30' : 'hover:shadow-xl hover:-translate-y-1'}`}
+                >
+                  {/* Action Buttons Overlay - Top Right Container */}
+                  <div className="absolute top-2 right-2 flex flex-col space-y-2 z-30 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                    {/* Delete Button */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onRemoveImageFromCurriculumPage(image.image_hash);
+                      }}
+                      className="p-1.5 bg-white shadow-md rounded-lg text-gray-500 hover:text-red-600 hover:bg-red-50 transition-all border border-gray-100"
+                      title="Remove image"
+                    >
+                      <TrashIcon className="w-4 h-4" />
+                    </button>
+
+                    {/* Refresh Button (Only if translation missing) */}
+                    {!image.object_name && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (onCheckTranslation && selectedPageData?.page_id) {
+                            onCheckTranslation(selectedPageData.page_id, image.image_hash);
+                          }
+                        }}
+                        className="p-1.5 bg-white shadow-md rounded-lg text-blue-500 hover:text-blue-700 hover:bg-blue-50 transition-all border border-gray-100 group/refresh"
+                        title="Check for translation"
+                      >
+                        <ArrowPathIcon className="w-4 h-4 group-hover/refresh:rotate-180 transition-transform duration-500" />
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Translation missing indicator (Red Dot) */}
+                  {!image.object_name && (
+                    <div className="absolute top-2 right-2 w-3 h-3 bg-red-600 rounded-full border-2 border-white z-20 shadow-sm animate-pulse group-hover:hidden" title="Translation missing"></div>
+                  )}
+
+                  {/* Position indicator badge - High contrast and encircled */}
+                  <div className="absolute top-2 left-2 z-20 bg-[var(--color-primary)] text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center shadow-md border border-white/20">
+                    {image.position || index + 1}
+                  </div>
+
+                  <div className="w-full h-full relative overflow-hidden">
+                    <img
+                      src={image.thumbnail}
+                      alt={image.object_name}
+                      className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-110 pointer-events-none"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                  </div>
+
+                  <div className="absolute bottom-0 left-0 right-0 p-2 transform translate-y-1 group-hover:translate-y-0 transition-transform duration-300">
+                    {editingImageHash === image.image_hash ? (
+                      <input
+                        type="text"
+                        value={editingNameValue}
+                        onChange={(e) => setEditingNameValue(e.target.value)}
+                        onBlur={() => saveImageName(image.image_hash)}
+                        onKeyDown={(e) => handleNameKeyDown(e, image.image_hash)}
+                        onClick={(e) => e.stopPropagation()}
+                        className="w-full text-xs px-2 py-1 rounded-lg border-2 border-[var(--color-primary)] focus:ring-0 text-[var(--text-main)] bg-[var(--bg-panel)] pointer-events-auto shadow-lg"
+                        autoFocus
+                      />
+                    ) : (
+                      <div className="flex items-center justify-between bg-black/60 backdrop-blur-sm rounded-lg px-2 py-1.5 border border-white/10 cursor-text pointer-events-auto" onClick={(e) => startEditingImageName(e, image)}>
+                        <p className="text-white font-bold text-xs truncate select-none flex-1">
+                          {image.object_name || 'Pending Translation'}
+                        </p>
+                        <PencilIcon className="w-3 h-3 text-white/50 ml-1 flex-shrink-0" />
+                      </div>
+                    )}
+                  </div>
+
+                  {image.isNew && (
+                    <div className="absolute top-2 right-10 w-2 h-2 bg-[#00AEEF] rounded-full border-2 border-white pointer-events-none shadow-sm" title="Not saved"></div>
+                  )}
+                </div>
+              );
+            })}
+            {/* Add Image Box */}
+            <div
+              className="relative group rounded-2xl border-2 border-dashed border-[var(--border-main)] hover:border-[var(--color-primary)] hover:bg-[var(--color-primary-light)]/50 flex flex-col items-center justify-center cursor-pointer aspect-square transition-all duration-300 shadow-sm hover:shadow-md"
+              onClick={() => setIsImageSearchModalOpen(true)}
+              title="Add a new image to this page"
+            >
+              <PlusCircleIcon className="w-10 h-10 text-[var(--text-muted)] opacity-30 group-hover:text-[var(--color-primary)] group-hover:scale-110 transition-all duration-300" />
+              <p className="text-[10px] font-bold text-[var(--text-muted)] group-hover:text-[var(--color-primary)] mt-2 uppercase tracking-wider">Add Image</p>
+            </div>
+          </div>
+        </div>
+        {!!selectedPageData?.story && (
+          <div className="mt-6 pt-6 border-t border-gray-100 flex-shrink-0">
+            <div className="bg-gradient-to-br from-[var(--color-primary-light)] via-[var(--bg-panel)] to-[var(--color-secondary-light)]/30 p-4 rounded-2xl border border-[var(--border-main)] shadow-sm relative overflow-hidden group/prompt">
+              <div className="absolute top-0 right-0 w-32 h-32 -mr-16 -mt-16 bg-[var(--color-primary)] opacity-[0.05] rounded-full pointer-events-none transition-transform duration-700 group-hover/prompt:scale-110"></div>
+
+              <div className="relative">
+                <div className="flex items-center justify-between mb-3">
+                  <label htmlFor="userComments" className="flex items-center text-xs font-bold text-[var(--text-muted)] uppercase tracking-widest">
+                    <SparklesIcon className="w-3.5 h-3.5 mr-1.5 text-amber-500" />
+                    Regeneration Instructions
+                  </label>
+                  {userComments && (
+                    <button
+                      onClick={() => setUserComments('')}
+                      className="text-[10px] text-[var(--text-muted)] hover:text-[var(--text-main)] font-medium transition-colors"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+
+                <div className="relative bg-[var(--bg-panel)] rounded-xl border border-[var(--border-main)] shadow-inner focus-within:ring-2 focus-within:ring-[var(--color-primary)]/10 focus-within:border-[var(--color-primary)] transition-all overflow-hidden">
+                  <textarea
+                    id="userComments"
+                    rows={2}
+                    value={userComments}
+                    onChange={(e) => setUserComments(e.target.value)}
+                    className="w-full p-4 pr-32 text-sm bg-transparent outline-none resize-none placeholder-[var(--text-muted)] opacity-60 leading-relaxed min-h-[80px]"
+                    placeholder="e.g., Make the story more adventurous, mention the blue bird..."
+                    disabled={isStoryLoading}
+                  />
+
+                  <div className="absolute top-3 right-3 flex items-center space-x-2">
+                    <button
+                      onClick={() => onGenerateStory?.(selectedPageData!.page_id!, userComments)}
+                      disabled={isStoryLoading || !!isPageDirty}
+                      className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-xs font-bold transition-all active:scale-95 shadow-md shadow-blue-500/10 
+                      ${isPageDirty
+                          ? 'bg-[var(--bg-input)] text-[var(--text-muted)] cursor-not-allowed bg-transparent border border-[var(--border-main)]'
+                          : 'bg-[var(--color-primary)] text-white hover:opacity-90 shadow-lg'}`}
+                      title={isPageDirty ? "Save changes before regenerating" : "Regenerate story"}
+                    >
+                      {isStoryLoading ? (
+                        <LoadingSpinner size="sm" color="white" className="mr-1" />
+                      ) : (
+                        <ArrowPathIcon className="w-4 h-4" />
+                      )}
+                      <span>{isStoryLoading ? 'Regenerating...' : 'Regenerate'}</span>
+                    </button>
+                  </div>
+                </div>
+
+                {isPageDirty && (
+                  <p className="mt-2 text-[10px] text-amber-600 flex items-center font-medium animate-pulse">
+                    <InformationCircleIcon className="w-3 h-3 mr-1" />
+                    Please save your image sequence changes before regenerating.
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
         )}
       </div>
     );

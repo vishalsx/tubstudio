@@ -1,6 +1,7 @@
 // src/components/curriculum/CreateBookModal.tsx
 import React, { useState, useEffect } from 'react';
 import { XMarkIcon } from '@heroicons/react/24/solid';
+import { PhotoIcon } from '@heroicons/react/24/outline';
 import { Book } from '../../types';
 import { LoadingSpinner } from '../common/LoadingSpinner';
 
@@ -15,7 +16,7 @@ interface CreateBookModalProps {
 
 export const CreateBookModal: React.FC<CreateBookModalProps> = ({ isOpen, onClose, onCreate, languageOptions }) => {
   const [formData, setFormData] = useState<Omit<BookCreateData, 'tags'>>({
-    title: '', language: '', author: '', subject: '', education_board: '', grade_level: '',
+    title: '', language: '', author: '', subject: '', education_board: '', grade_level: '', front_cover_image: ''
   });
   const [tagsInput, setTagsInput] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -28,7 +29,8 @@ export const CreateBookModal: React.FC<CreateBookModalProps> = ({ isOpen, onClos
         author: '',
         subject: '',
         education_board: '',
-        grade_level: ''
+        grade_level: '',
+        front_cover_image: ''
       });
       setTagsInput('');
       setIsSubmitting(false);
@@ -40,9 +42,26 @@ export const CreateBookModal: React.FC<CreateBookModalProps> = ({ isOpen, onClos
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) { // 5MB limit
+        alert("File is too large. Please upload an image smaller than 5MB.");
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFormData(prev => ({ ...prev, front_cover_image: reader.result as string }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (Object.values(formData).some(val => !val.trim())) {
+    const requiredFields = ['title', 'language', 'author', 'subject', 'education_board', 'grade_level'];
+    if (requiredFields.some(field => !(formData[field as keyof typeof formData] || '').trim())) {
       alert('Please fill out all required fields.');
       return;
     }
@@ -71,6 +90,35 @@ export const CreateBookModal: React.FC<CreateBookModalProps> = ({ isOpen, onClos
           <button onClick={onClose} className="p-1 rounded-full text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--bg-input)] transition-colors" disabled={isSubmitting}><XMarkIcon className="w-6 h-6" /></button>
         </div>
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-4">
+
+          {/* Cover Image Upload */}
+          <div className="flex justify-center mb-6">
+            <div className="relative group cursor-pointer w-32 h-44 border-2 border-dashed border-[var(--border-main)] rounded-lg flex flex-col items-center justify-center bg-[var(--bg-input)] hover:border-[var(--color-primary)] transition-colors overflow-hidden">
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleImageUpload}
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                title="Upload Cover Image"
+              />
+
+              {formData.front_cover_image ? (
+                <img src={formData.front_cover_image} alt="Cover Preview" className="w-full h-full object-cover" />
+              ) : (
+                <div className="text-center p-2">
+                  <PhotoIcon className="w-8 h-8 text-[var(--text-muted)] mx-auto mb-1 group-hover:text-[var(--color-primary)]/80" />
+                  <span className="text-[10px] text-[var(--text-muted)] group-hover:text-[var(--color-primary)]">Upload Cover</span>
+                </div>
+              )}
+
+              {formData.front_cover_image && (
+                <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                  <span className="text-white text-xs font-medium">Change</span>
+                </div>
+              )}
+            </div>
+          </div>
+
           {[
             { name: 'title', placeholder: 'e.g., Biology Grade 10' },
             { name: 'author', placeholder: 'e.g., John Smith' },

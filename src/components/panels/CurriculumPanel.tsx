@@ -271,6 +271,7 @@ interface CurriculumPanelProps {
   onAddPage: (bookId: string, chapterId: string) => void;
   onDeletePage: (chapterId: string, pageId: string) => void;
   onUpdatePageTitle: (chapterId: string, pageId: string, newTitle: string) => void;
+  onSelectChapter: (chapter: Chapter) => void;
   onCollapseAll: () => void;
 }
 
@@ -282,12 +283,13 @@ interface TreeNodeProps extends Omit<CurriculumPanelProps, 'books' | 'searchAtte
   parentChapter?: Chapter;
   bookId: string;
   onSelectBook: (bookId: string) => Promise<boolean>;
+  onSelectChapter: (chapter: Chapter) => void;
 }
 
 const TreeNode: React.FC<TreeNodeProps> = (props) => {
   const { node, type, level, isExpanded, expansionState, isDirty, onSelectNode, onSelectPage,
     onSaveBook, onNodeExpansion, onAddChapter, onDeleteChapter, onUpdateChapterName,
-    onAddPage, onDeletePage, onUpdatePageTitle, parentChapter, onSelectBook, bookId } = props;
+    onAddPage, onDeletePage, onUpdatePageTitle, parentChapter, onSelectBook, bookId, onSelectChapter } = props;
 
   const [isEditingName, setIsEditingName] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -333,6 +335,9 @@ const TreeNode: React.FC<TreeNodeProps> = (props) => {
     }
 
     if (canProceed) {
+      if (type === 'chapter') {
+        onSelectChapter(node as Chapter);
+      }
       onNodeExpansion(node as Book | Chapter);
     }
   };

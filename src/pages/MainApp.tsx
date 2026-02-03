@@ -853,6 +853,7 @@ export const MainApp: React.FC<MainAppProps> = ({ authData }) => {
           curriculumProps={curriculum}
           myContentProps={myContent}
           onSelectBook={curriculum.selectBook}
+          onSelectChapter={curriculum.selectChapter}
           onSelectPage={curriculum.selectPage}
           onSelectNode={setSelectedCurriculumNode}
           onCollapseAll={curriculum.collapseAll}
@@ -908,7 +909,14 @@ export const MainApp: React.FC<MainAppProps> = ({ authData }) => {
           onSetError={worklist.setError}
 
           // Curriculum view props
+          books={curriculum.books}
           activeBook={curriculum.activeBook}
+          activeChapter={curriculum.activeChapter}
+          onSelectBook={curriculum.selectBook}
+          onSelectChapter={curriculum.selectChapter}
+          onSelectPage={curriculum.selectPage}
+          onSelectNode={setSelectedCurriculumNode}
+          onNodeExpansion={curriculum.handleNodeExpansion}
           isLoading={curriculum.isLoading}
           selectedPageData={curriculum.selectedPageData}
           onCurriculumImageDoubleClick={handleCurriculumImageDoubleClick}
