@@ -565,7 +565,17 @@ export const MainApp: React.FC<MainAppProps> = ({ authData }) => {
       let sharedCommonData: any = null, sharedFileInfo: any = null, commonDataMapped = false;
       const identifyPromises = languagesToUse.map(async (language: string) => {
         try {
-          const externalOrgId = languageResults.currentCommonData?.external_org_id;
+          console.log(`[DEBUG] Identifying for language: ${language}`);
+          console.log(`[DEBUG] cameFromCurriculum: ${cameFromCurriculum}`);
+          console.log(`[DEBUG] activeBook?.language: ${curriculum.activeBook?.language}`);
+
+          // Only pass external_org_id if the language matches the book's language from curriculum context
+          const externalOrgId = (cameFromCurriculum && curriculum.activeBook?.language === language)
+            ? languageResults.currentCommonData?.external_org_id
+            : undefined;
+
+          console.log(`[DEBUG] externalOrgId passed: ${externalOrgId}`);
+
           const data = await translationService.identifyObject(imageUpload.file!, language, imageUpload.imageHash, controller.signal, undefined, externalOrgId);
           if (commonDataMode === 'shared' && !commonDataMapped) {
             commonDataMapped = true;
