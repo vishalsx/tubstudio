@@ -84,11 +84,21 @@ const handleResponseError = async (response: Response) => {
 
   // Parse error details from the response
   const errorData = await response.json().catch(() => ({}));
-  const errorDetail = errorData.detail || errorData.message || response.statusText;
+  let errorDetail = errorData.detail || errorData.message || response.statusText;
+
+  // Handle case where errorDetail is an object (e.g. validation summary)
+  let detailString = "";
+  if (typeof errorDetail === 'object' && errorDetail !== null) {
+    detailString = errorDetail.message || JSON.stringify(errorDetail);
+  } else {
+    detailString = String(errorDetail);
+  }
 
   // Format and throw user-friendly error
-  const userFriendlyMessage = formatUserFriendlyError(response.status, errorDetail);
-  throw new Error(userFriendlyMessage);
+  const userFriendlyMessage = formatUserFriendlyError(response.status, detailString);
+  const error = new Error(userFriendlyMessage);
+  (error as any).data = errorData;
+  throw error;
 };
 
 class ApiClient {

@@ -1,7 +1,7 @@
 // components/panels/MiddlePanel.tsx
 import React, { useState, useEffect } from 'react';
-import { XMarkIcon, StarIcon, ArrowUpCircleIcon, CheckCircleIcon, CheckBadgeIcon, XCircleIcon, ArrowRightCircleIcon, PencilIcon, EyeIcon, ArrowDownTrayIcon, ChevronRightIcon, ArrowLeftIcon } from '@heroicons/react/24/solid';
-import { PlusCircleIcon, TrashIcon, SparklesIcon, ArrowPathIcon, AcademicCapIcon, PhotoIcon, BookOpenIcon, FolderIcon, DocumentIcon, InformationCircleIcon, DocumentArrowDownIcon, CircleStackIcon } from '@heroicons/react/24/outline';
+import { XMarkIcon, StarIcon, ArrowUpCircleIcon, CheckCircleIcon, CheckBadgeIcon, XCircleIcon, ArrowRightCircleIcon, PencilIcon, EyeIcon, ArrowDownTrayIcon, ChevronRightIcon, ArrowLeftIcon, PaperAirplaneIcon } from '@heroicons/react/24/solid';
+import { PlusCircleIcon, TrashIcon, SparklesIcon, ArrowPathIcon, AcademicCapIcon, PhotoIcon, BookOpenIcon, FolderIcon, DocumentIcon, InformationCircleIcon, DocumentArrowDownIcon, CircleStackIcon, ShoppingBagIcon, PencilSquareIcon, QueueListIcon } from '@heroicons/react/24/outline';
 import { LanguageResult, SaveStatus, PermissionCheck, CurriculumImage, DatabaseImage, CommonData, Page, Book, Chapter, OrgObject } from '../../types';
 import { StatusWorkflow } from '../common/StatusWorkflow';
 import { ImageSearchModal } from '../common/ImageSearchModal';
@@ -12,6 +12,8 @@ import { ContestMiddlePanel } from './contest/ContestMiddlePanel';
 import { UserContext } from '../../types';
 import { useContest } from '../../hooks/useContest';
 import { useMyContent } from '../../hooks/useMyContent';
+
+import { ValidationSummaryModal } from '../modals/ValidationSummaryModal';
 
 interface MiddlePanelProps {
   leftPanelView: 'upload' | 'database' | 'curriculum' | 'contest' | 'my_content';
@@ -56,18 +58,20 @@ interface MiddlePanelProps {
   books?: Book[];
   activeBook: Book | null;
   activeChapter: Chapter | null;
-  onSelectBook?: (bookId: string) => void;
+  onSelectBook?: (bookId: string | null) => void;
   onSelectChapter?: (chapter: Chapter) => void;
   onSelectPage?: (page: Page) => void;
   onSelectNode?: (node: Book | Chapter | Page) => void;
   onNodeExpansion?: (node: Book | Chapter) => void;
   isLoading: boolean;
   selectedPageData: Page | null;
-  onCurriculumImageDoubleClick: (image: CurriculumImage, language: string) => void;
+  onCurriculumImageDoubleClick: (image: CurriculumImage, language: string, orgId?: string) => void;
   languageForImageSearch: string;
   onAddImageToCurriculumPage: (image: DatabaseImage) => void;
   onRemoveImageFromCurriculumPage: (imageHash: string) => void;
   onAddNewImageFromSearch: (searchQuery: string) => void;
+  onAddChapter?: (bookId: string) => void;
+  onAddPage?: (bookId: string, chapterId: string) => void;
   isStoryLoading: boolean;
   onCreateStory: () => void;
   onGenerateStory?: (pageId: string, userComments?: string) => void;
@@ -76,8 +80,14 @@ interface MiddlePanelProps {
   onUpdateImageName?: (imageHash: string, newName: string) => void;
   onReIdentify?: (language: string, context: string) => void;
   isDirty?: boolean;
-  onSaveBook?: () => void;
+  onSaveBook?: (action?: 'SaveDraft' | 'Publish') => void;
   onCheckTranslation?: (pageId: string, imageHash: string) => void;
+  validationResult?: {
+    isValid: boolean;
+    message: string;
+    summary: any[];
+    totals: { valid: number; missing: number };
+  } | null;
 
   // Contest Props
   contestProps: ReturnType<typeof useContest>;
@@ -110,6 +120,7 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = (props) => {
     onSave,
     onSkip,
     onToggleEdit,
+    currentCommonData,
     // curriculum props
     books = [],
     activeBook,
@@ -126,6 +137,8 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = (props) => {
     onAddImageToCurriculumPage,
     onRemoveImageFromCurriculumPage,
     onAddNewImageFromSearch,
+    onAddChapter,
+    onAddPage,
     isStoryLoading,
     onCreateStory,
     onGenerateStory,
@@ -136,6 +149,7 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = (props) => {
     isDirty,
     onSaveBook,
     onCheckTranslation,
+    validationResult,
     // Contest Props
     contestProps,
     userContext,
@@ -146,10 +160,20 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = (props) => {
   } = props;
 
   const [isImageSearchModalOpen, setIsImageSearchModalOpen] = useState(false);
+  const [isValidationModalOpen, setIsValidationModalOpen] = useState(false);
+
+  useEffect(() => {
+    if (validationResult) {
+      setIsValidationModalOpen(true);
+    }
+  }, [validationResult]);
+
   const [isQuizModalOpen, setIsQuizModalOpen] = useState(false);
   const [isRefreshingQuizQA, setIsRefreshingQuizQA] = useState(false);
   const [userComments, setUserComments] = useState('');
   const [validationErrors, setValidationErrors] = useState<Set<string>>(new Set());
+
+  // const isPurchasedBook = activeBook?.ownership_type === 'purchased'; // Moved to common calculation block
 
   // Drag and drop state
   const [draggedImageHash, setDraggedImageHash] = useState<string | null>(null);
@@ -304,12 +328,17 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = (props) => {
     setDragOverImageHash(null);
   };
 
+  // Check Read-Only Status
+  const isPurchasedBook = activeBook?.ownership_type === 'purchased';
+  const isPublishedBook = activeBook?.book_status === 'Published';
+  const isReadOnly = isPurchasedBook || isPublishedBook;
+
   // Image Name Editing Handlers
-  const startEditingImageName = (e: React.MouseEvent, image: CurriculumImage) => {
-    e.preventDefault();
-    e.stopPropagation();
+  const startEditingImageName = (image: CurriculumImage) => {
+    // Rely on calculated isReadOnly from state
+    if (isReadOnly) return;
     setEditingImageHash(image.image_hash);
-    setEditingNameValue(image.object_name || '');
+    setEditingNameValue(image.object_name || "");
   };
 
   const saveImageName = (imageHash: string) => {
@@ -437,17 +466,21 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = (props) => {
 
   const renderTranslationEditor = () => (
     <div className="flex flex-col h-full overflow-y-auto">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold">Object Details</h2>
-        {cameFromCurriculum && onBackToCurriculum && (
-          <button
-            onClick={onBackToCurriculum}
-            className="flex items-center space-x-1.5 px-3 py-1.5 bg-[var(--color-primary-light)] text-[var(--color-primary)] hover:bg-[var(--color-primary)] hover:text-white rounded-lg transition-all text-sm font-medium border border-[var(--color-primary)]/20 shadow-sm active:scale-95"
-          >
-            <ArrowLeftIcon className="w-4 h-4" />
-            <span>Back to Curriculum</span>
-          </button>
-        )}
+      <div className="flex flex-col mb-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <h2 className="text-lg font-semibold whitespace-nowrap">Object Details</h2>
+          </div>
+          {cameFromCurriculum && onBackToCurriculum && (
+            <button
+              onClick={onBackToCurriculum}
+              className="flex items-center space-x-1.5 px-3 py-1.5 bg-[var(--color-primary-light)] text-[var(--color-primary)] hover:bg-[var(--color-primary)] hover:text-white rounded-lg transition-all text-sm font-medium border border-[var(--color-primary)]/20 shadow-sm active:scale-95"
+            >
+              <ArrowLeftIcon className="w-4 h-4" />
+              <span>Back to Curriculum</span>
+            </button>
+          )}
+        </div>
       </div>
       {selectedLanguages.length > 0 && (
         <div className="flex flex-wrap gap-2 mb-4">
@@ -542,6 +575,8 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = (props) => {
                   >
                     <AcademicCapIcon className="w-5 h-5" />
                   </button>
+
+
                   {leftPanelView === 'upload' && (
                     <button
                       onClick={handleImportText}
@@ -586,7 +621,20 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = (props) => {
                           <StatusWorkflow statuses={['Draft', 'Released', 'Verified', 'Approved']} currentStatus={currentResult.translation_status} /> :
                           <p className="text-[var(--text-main)] bg-[var(--bg-input)] p-2 rounded-md">-</p>
                       ) : (
-                        <p className="text-[var(--text-main)] bg-[var(--bg-input)] p-2 rounded-md">{currentResult[key as keyof LanguageResult] as string || '-'}</p>
+                        <div className="relative bg-[var(--bg-input)] rounded-md overflow-hidden group">
+                          {currentResult?.isPurchased && key === 'object_description' && (
+                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none z-0 overflow-hidden">
+                              <div className="border-[6px] border-red-600/60 rounded-xl px-6 py-2 -rotate-12 transform transition-all duration-500 group-hover:scale-105 group-hover:-rotate-6">
+                                <span className="text-2xl md:text-2xl font-black text-red-600/60 uppercase tracking-[0.15em] whitespace-nowrap">
+                                  PURCHASED CONTENT
+                                </span>
+                              </div>
+                            </div>
+                          )}
+                          <p className="relative z-10 text-[var(--text-main)] p-2 min-h-[38px] bg-transparent whitespace-pre-wrap">
+                            {currentResult[key as keyof LanguageResult] as string || '-'}
+                          </p>
+                        </div>
                       )}
                     </div>
                   );
@@ -647,6 +695,8 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = (props) => {
     const chapterName = chapter ? chapter.chapter_name : '';
     const pageTitle = selectedPageData?.title || `Page ${selectedPageData?.page_number}`;
     const isPageDirty = selectedPageData?.images?.some(img => img.isNew);
+    const isPublishedBook = activeBook?.book_status === 'Published';
+    const isReadOnly = isPurchasedBook || isPublishedBook;
 
     if (!selectedPageData) {
       return (
@@ -654,52 +704,74 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = (props) => {
           {/* Search Results */}
           {books.length > 0 && !activeBook && (
             <div className="mb-6 p-4">
-              <h3 className="text-lg font-bold text-[var(--text-main)] mb-4">Search Results</h3>
+              <h3 className="text-lg font-bold text-[var(--text-main)] mb-4">My Book Shelf</h3>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
-                {books.map((book) => (
-                  <div
-                    key={book._id}
-                    onClick={() => {
-                      onSelectBook?.(book._id);
-                      onSelectNode?.(book);
-                    }}
-                    className="group cursor-pointer flex flex-col bg-[var(--bg-input)] rounded-xl overflow-hidden border border-[var(--border-main)] hover:border-[var(--color-primary)] hover:shadow-xl transition-all duration-300"
-                  >
-                    <div className="aspect-[3/4] relative bg-gray-100 overflow-hidden">
-                      {book.front_cover_image ? (
-                        <img
-                          src={book.front_cover_image.startsWith('data:') ? book.front_cover_image : `data:image/jpeg;base64,${book.front_cover_image}`}
-                          alt={book.title}
-                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                        />
-                      ) : (
-                        <div className="w-full h-full relative">
+                {books.map((book) => {
+                  const isPurchased = book.ownership_type === 'purchased';
+                  return (
+                    <div
+                      key={book._id}
+                      onClick={() => {
+                        onSelectBook?.(book._id);
+                        onSelectNode?.(book);
+                      }}
+                      className={`group cursor-pointer flex flex-col rounded-xl overflow-hidden border transition-all duration-300 ${isPurchased
+                        ? 'bg-amber-50 border-amber-300 hover:border-amber-500 hover:shadow-lg hover:shadow-amber-100'
+                        : 'bg-[var(--bg-input)] border-[var(--border-main)] hover:border-[var(--color-primary)] hover:shadow-xl'
+                        }`}
+                    >
+                      <div className="aspect-[3/4] relative bg-gray-100 overflow-hidden">
+                        {book.front_cover_image ? (
                           <img
-                            src="/assets/thumbnails/book_default.png"
-                            alt="Book Cover Placeholder"
-                            className="w-full h-full object-cover opacity-90"
+                            src={book.front_cover_image.startsWith('data:') ? book.front_cover_image : `data:image/jpeg;base64,${book.front_cover_image}`}
+                            alt={book.title}
+                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                           />
-                          <div className="absolute inset-0 flex items-center justify-center p-4">
-                            <h5 className="text-white font-extrabold text-xs text-center leading-tight drop-shadow-md uppercase tracking-tighter">
-                              {book.title}
-                            </h5>
+                        ) : (
+                          <div className="w-full h-full relative">
+                            <img
+                              src="/assets/thumbnails/book_default.png"
+                              alt="Book Cover Placeholder"
+                              className="w-full h-full object-cover opacity-90"
+                            />
+                            <div className="absolute inset-0 flex items-center justify-center p-4">
+                              <h5 className="text-white font-extrabold text-xs text-center leading-tight drop-shadow-md uppercase tracking-tighter">
+                                {book.title}
+                              </h5>
+                            </div>
                           </div>
+                        )}
+
+                        {/* Purchased Badge */}
+                        {isPurchased && (
+                          <div className="absolute top-2 right-2 z-10 bg-amber-500 text-white p-1 rounded-full shadow-md" title="Purchased - Read Only">
+                            <ShoppingBagIcon className="w-3.5 h-3.5" />
+                          </div>
+                        )}
+                        {/* Published Badge (if not purchased) */}
+                        {!isPurchased && book.book_status === 'Published' && (
+                          <div className="absolute top-2 right-2 z-10 bg-green-500 text-white p-1 rounded-full shadow-md" title="Published">
+                            <PaperAirplaneIcon className="w-3.5 h-3.5" />
+                          </div>
+                        )}
+
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                          <span className={`text-white text-xs font-bold px-3 py-1.5 rounded-full ${isPurchased ? 'bg-amber-600' : 'bg-[var(--color-primary)]'}`}>
+                            {isPurchased ? 'Read Book' : 'Open Book'}
+                          </span>
                         </div>
-                      )}
-                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                        <span className="text-white text-xs font-bold px-3 py-1.5 bg-[var(--color-primary)] rounded-full">Open Book</span>
+                      </div>
+                      <div className="p-3">
+                        <h4 className={`font-bold text-sm truncate transition-colors ${isPurchased ? 'text-amber-900 group-hover:text-amber-700' : 'text-[var(--text-main)] group-hover:text-[var(--color-primary)]'}`}>{book.title}</h4>
+                        <p className="text-[10px] text-[var(--text-muted)] mt-1 truncate">{book.author || 'Unknown Author'}</p>
+                        <div className="flex items-center gap-2 mt-2">
+                          <span className="text-[9px] px-1.5 py-0.5 bg-blue-50 text-blue-600 rounded-md font-medium border border-blue-100">{book.language}</span>
+                          <span className="text-[9px] px-1.5 py-0.5 bg-amber-50 text-amber-600 rounded-md font-medium border border-amber-100">{book.grade_level || 'General'}</span>
+                        </div>
                       </div>
                     </div>
-                    <div className="p-3">
-                      <h4 className="font-bold text-sm text-[var(--text-main)] truncate group-hover:text-[var(--color-primary)] transition-colors">{book.title}</h4>
-                      <p className="text-[10px] text-[var(--text-muted)] mt-1 truncate">{book.author || 'Unknown Author'}</p>
-                      <div className="flex items-center gap-2 mt-2">
-                        <span className="text-[9px] px-1.5 py-0.5 bg-blue-50 text-blue-600 rounded-md font-medium border border-blue-100">{book.language}</span>
-                        <span className="text-[9px] px-1.5 py-0.5 bg-amber-50 text-amber-600 rounded-md font-medium border border-amber-100">{book.grade_level || 'General'}</span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}
@@ -707,8 +779,26 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = (props) => {
           {/* Book Overview with Chapters */}
           {activeBook && !activeChapter && (
             <div className="mb-6 p-4">
-              <div className="flex items-center gap-3 mb-6 bg-[var(--color-primary-light)]/30 p-4 rounded-xl border border-[var(--color-primary)]/10">
-                <div className="w-12 h-16 bg-gray-100 rounded-lg overflow-hidden border border-[var(--border-main)] flex-shrink-0 shadow-sm relative">
+              {/* Breadcrumb */}
+              <div className="flex items-center space-x-1 text-xs text-[var(--text-muted)] mb-4 bg-[var(--bg-input)]/50 backdrop-blur-sm p-2 rounded-lg border border-[var(--border-main)]">
+                <QueueListIcon className="w-3.5 h-3.5 text-[var(--text-muted)]" />
+                <span
+                  onClick={() => onSelectBook?.(null)}
+                  className="hover:text-[var(--color-primary)] cursor-pointer hover:underline transition-colors font-medium"
+                >
+                  Books
+                </span>
+                <ChevronRightIcon className="w-3 h-3" />
+                <BookOpenIcon className={`w-3.5 h-3.5 ${activeBook.ownership_type === 'purchased' ? 'text-amber-500' : 'text-blue-500'}`} />
+                <span className="font-semibold text-[var(--text-main)]">{activeBook.title}</span>
+              </div>
+
+              <div className={`flex items-center gap-3 mb-6 p-4 rounded-xl border transition-all ${activeBook.ownership_type === 'purchased'
+                ? 'bg-amber-100/50 border-amber-300 dark:bg-amber-900/40 dark:border-amber-700 shadow-sm'
+                : 'bg-[var(--color-primary-light)]/30 border-[var(--color-primary)]/10'
+                }`}>
+                <div className={`w-12 h-16 rounded-lg overflow-hidden flex-shrink-0 shadow-sm relative border ${activeBook.ownership_type === 'purchased' ? 'border-amber-400' : 'border-[var(--border-main)]'
+                  } bg-gray-100`}>
                   {activeBook.front_cover_image ? (
                     <img
                       src={activeBook.front_cover_image.startsWith('data:') ? activeBook.front_cover_image : `data:image/jpeg;base64,${activeBook.front_cover_image}`}
@@ -729,11 +819,40 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = (props) => {
                       </div>
                     </div>
                   )}
+                  {activeBook.ownership_type === 'purchased' && (
+                    <div className="absolute top-1 right-1 bg-amber-500 text-white p-0.5 rounded shadow-sm">
+                      <ShoppingBagIcon className="w-2.5 h-2.5" />
+                    </div>
+                  )}
+                  {/* Badge for published book thumbnail in details view */}
+                  {!isPurchasedBook && isPublishedBook && (
+                    <div className="absolute top-1 right-1 bg-green-500 text-white p-0.5 rounded shadow-sm">
+                      <PaperAirplaneIcon className="w-2.5 h-2.5" />
+                    </div>
+                  )}
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold text-[var(--text-main)] leading-tight">{activeBook.title}</h3>
-                  <p className="text-sm text-[var(--text-muted)]">Select a chapter below or a page from the curriculum tree</p>
+                  <h3 className={`text-xl font-bold leading-tight ${activeBook.ownership_type === 'purchased' ? 'text-amber-900 dark:text-amber-100' : 'text-[var(--text-main)]'}`}>{activeBook.title}</h3>
+                  <p className="text-sm text-[var(--text-muted)]">
+                    {activeBook.ownership_type === 'purchased'
+                      ? 'This is a purchased book and is in Read-Only mode.'
+                      : isPublishedBook
+                        ? 'This book is published and is in Read-Only mode.'
+                        : 'Select a chapter below or a page from the curriculum tree'}
+                  </p>
                 </div>
+                {/* Publish Button */}
+                {!isReadOnly && onSaveBook && (
+                  <div className="ml-auto">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onSaveBook('Publish'); }}
+                      className="flex items-center space-x-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-md transition-all active:scale-95"
+                    >
+                      <PaperAirplaneIcon className="w-4 h-4" />
+                      <span>Publish Book</span>
+                    </button>
+                  </div>
+                )}
               </div>
 
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
@@ -777,6 +896,17 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = (props) => {
                     </div>
                   </div>
                 ))}
+                {/* Create Chapter Card */}
+                {!isReadOnly && onAddChapter && (
+                  <div
+                    className="group rounded-xl border-2 border-dashed border-[var(--border-main)] hover:border-[var(--color-primary)] hover:bg-[var(--color-primary-light)]/50 flex flex-col items-center justify-center cursor-pointer aspect-square transition-all duration-300 shadow-sm hover:shadow-md"
+                    onClick={() => onAddChapter(activeBook._id)}
+                    title="Add a new chapter"
+                  >
+                    <PlusCircleIcon className="w-10 h-10 text-[var(--text-muted)] opacity-30 group-hover:text-[var(--color-primary)] group-hover:scale-110 transition-all duration-300" />
+                    <p className="text-[10px] font-bold text-[var(--text-muted)] group-hover:text-[var(--color-primary)] mt-2 uppercase tracking-wider">Add Chapter</p>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -784,13 +914,23 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = (props) => {
           {/* Chapter Overview with Pages */}
           {activeBook && activeChapter && (
             <div className="mb-6 p-4">
-              <div className="flex items-center gap-2 text-xs text-[var(--text-muted)] mb-4">
-                <span className="cursor-pointer hover:text-[var(--color-primary)]" onClick={() => {
+              <div className="flex items-center space-x-1 text-xs text-[var(--text-muted)] mb-4 bg-[var(--bg-input)]/50 backdrop-blur-sm p-2 rounded-lg border border-[var(--border-main)]">
+                <QueueListIcon className="w-3.5 h-3.5 text-[var(--text-muted)]" />
+                <span
+                  onClick={() => onSelectBook?.(null)}
+                  className="hover:text-[var(--color-primary)] cursor-pointer hover:underline transition-colors font-medium"
+                >
+                  Books
+                </span>
+                <ChevronRightIcon className="w-3 h-3" />
+                <BookOpenIcon className={`w-3.5 h-3.5 ${activeBook.ownership_type === 'purchased' ? 'text-amber-500' : 'text-blue-500'}`} />
+                <span className="hover:text-[var(--color-primary)] cursor-pointer hover:underline transition-colors font-medium" onClick={() => {
                   onSelectBook?.(activeBook._id);
                   onSelectNode?.(activeBook);
                 }}>{activeBook.title}</span>
                 <ChevronRightIcon className="w-3 h-3" />
-                <span className="font-bold text-[var(--text-main)]">{activeChapter.chapter_name}</span>
+                <FolderIcon className="w-3.5 h-3.5 text-amber-500" />
+                <span className="font-semibold text-[var(--text-main)]">{activeChapter.chapter_name}</span>
               </div>
 
               <div className="flex items-center gap-3 mb-6 bg-[var(--color-secondary-light)]/30 p-4 rounded-xl border border-[var(--color-secondary)]/10">
@@ -862,6 +1002,17 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = (props) => {
                     </div>
                   </div>
                 ))}
+                {/* Create Page Card */}
+                {!isReadOnly && onAddPage && (
+                  <div
+                    className="group rounded-xl border-2 border-dashed border-[var(--border-main)] hover:border-[var(--color-primary)] hover:bg-[var(--color-primary-light)]/50 flex flex-col items-center justify-center cursor-pointer aspect-video transition-all duration-300 shadow-sm hover:shadow-md"
+                    onClick={() => onAddPage(activeBook._id, activeChapter.chapter_id!)}
+                    title="Add a new page"
+                  >
+                    <PlusCircleIcon className="w-10 h-10 text-[var(--text-muted)] opacity-30 group-hover:text-[var(--color-primary)] group-hover:scale-110 transition-all duration-300" />
+                    <p className="text-[10px] font-bold text-[var(--text-muted)] group-hover:text-[var(--color-primary)] mt-2 uppercase tracking-wider">Add Page</p>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -889,11 +1040,39 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = (props) => {
       <div className="h-full flex flex-col">
         {/* Breadcrumbs */}
         <div className="flex items-center space-x-1 text-xs text-[var(--text-muted)] mb-4 bg-[var(--bg-input)]/50 backdrop-blur-sm p-2 rounded-lg border border-[var(--border-main)]">
-          <BookOpenIcon className="w-3.5 h-3.5 text-blue-500" />
-          <span className="hover:text-[var(--text-main)] cursor-default">{activeBook?.title}</span>
+          <QueueListIcon className="w-3.5 h-3.5 text-[var(--text-muted)]" />
+          <span
+            onClick={() => onSelectBook?.(null)}
+            className="hover:text-[var(--color-primary)] cursor-pointer hover:underline transition-colors font-medium"
+          >
+            Books
+          </span>
+          <ChevronRightIcon className="w-3 h-3" />
+          <BookOpenIcon className={`w-3.5 h-3.5 ${isPurchasedBook ? 'text-amber-500' : 'text-blue-500'}`} />
+          <span
+            onClick={() => {
+              if (activeBook) {
+                onSelectBook?.(activeBook._id);
+                onSelectNode?.(activeBook);
+              }
+            }}
+            className="hover:text-[var(--color-primary)] cursor-pointer hover:underline transition-colors font-medium"
+          >
+            {activeBook?.title}
+          </span>
           <ChevronRightIcon className="w-3 h-3" />
           <FolderIcon className="w-3.5 h-3.5 text-amber-500" />
-          <span className="hover:text-[var(--text-main)] cursor-default">{chapterName}</span>
+          <span
+            onClick={() => {
+              if (chapter) {
+                onSelectChapter?.(chapter);
+                onSelectNode?.(chapter);
+              }
+            }}
+            className="hover:text-[var(--color-primary)] cursor-pointer hover:underline transition-colors font-medium"
+          >
+            {chapterName}
+          </span>
           <ChevronRightIcon className="w-3 h-3" />
           <span className="font-semibold text-[var(--text-main)]">{pageTitle}</span>
           {selectedPageData.story && (
@@ -904,19 +1083,38 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = (props) => {
         </div>
 
         <div className="flex justify-between items-center mb-4">
-          <div className="flex items-center space-x-2">
-            <h2 className="text-xl font-bold text-[var(--text-main)]">{pageTitle}</h2>
-            {isPageDirty && <span className="text-[10px] bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full font-medium">Unsaved Changes</span>}
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center space-x-2">
+              <h2 className="text-xl font-bold text-[var(--text-main)]">{pageTitle}</h2>
+              {isPageDirty && <span className="text-[10px] bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full font-medium">Unsaved Changes</span>}
+            </div>
+            {isPurchasedBook && (
+              <div className="inline-flex items-center space-x-1.5 px-3 py-1 bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-100 rounded-lg border border-amber-200 dark:border-amber-800 text-xs font-bold w-fit shadow-sm">
+                <ShoppingBagIcon className="w-3.5 h-3.5 text-amber-600" />
+                <span>Purchased Book - Read Only</span>
+              </div>
+            )}
+            {isPublishedBook && !isPurchasedBook && (
+              <div className="inline-flex items-center space-x-1.5 px-3 py-1 bg-green-100 text-green-800 rounded-lg border border-green-200 text-xs font-bold w-fit shadow-sm">
+                <PaperAirplaneIcon className="w-3.5 h-3.5 text-green-600" />
+                <span>Published - Read Only</span>
+              </div>
+            )}
           </div>
           <div className="flex items-center space-x-3">
-            {isDirty && (
-              <button
-                onClick={onSaveBook}
-                className="flex items-center space-x-2 bg-[var(--color-primary)] hover:opacity-90 text-white px-4 py-1.5 rounded-lg text-sm font-bold shadow-md shadow-[var(--color-primary)]/20 transition-all active:scale-95"
-              >
-                <CheckCircleIcon className="w-4 h-4" />
-                <span>Save Changes</span>
-              </button>
+            {!isReadOnly && (
+              <>
+                {isDirty && (
+                  <button
+                    onClick={() => onSaveBook?.('SaveDraft')}
+                    className="flex items-center space-x-2 bg-[var(--color-primary)] hover:opacity-90 text-white px-4 py-1.5 rounded-lg text-sm font-bold shadow-md shadow-[var(--color-primary)]/20 transition-all active:scale-95"
+                  >
+                    <CheckCircleIcon className="w-4 h-4" />
+                    <span>Save Draft</span>
+                  </button>
+                )}
+
+              </>
             )}
             {imageLoadingProgress && (
               <div className="text-sm text-[var(--text-muted)] flex items-center">
@@ -924,22 +1122,24 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = (props) => {
                 <span>Loading... {imageLoadingProgress.loaded} / {imageLoadingProgress.total}</span>
               </div>
             )}
-            <button
-              onClick={onCreateStory}
-              disabled={isStoryLoading || !!isPageDirty || !!selectedPageData.story || (selectedPageData.images?.length || 0) < 1}
-              title={
-                isPageDirty
-                  ? "Save page changes before creating a story"
-                  : !!selectedPageData.story
-                    ? "Story already exists for this page"
-                    : (selectedPageData.images?.length || 0) < 1
-                      ? "Add at least 1 image to create a story"
-                      : "Create Story"
-              }
-              className="p-2 rounded-lg transition text-[var(--text-muted)] hover:text-purple-600 hover:bg-purple-50 disabled:opacity-50 disabled:cursor-not-allowed disabled:text-[var(--text-muted)]/50 disabled:bg-transparent"
-            >
-              <SparklesIcon className="w-5 h-5" />
-            </button>
+            {!isReadOnly && (
+              <button
+                onClick={onCreateStory}
+                disabled={isStoryLoading || !!isPageDirty || !!selectedPageData.story || (selectedPageData.images?.length || 0) < 1}
+                title={
+                  isPageDirty
+                    ? "Save page changes before creating a story"
+                    : !!selectedPageData.story
+                      ? "Story already exists for this page"
+                      : (selectedPageData.images?.length || 0) < 1
+                        ? "Add at least 1 image to create a story"
+                        : "Create Story"
+                }
+                className="p-2 rounded-lg transition text-[var(--text-muted)] hover:text-purple-600 hover:bg-purple-50 disabled:opacity-50 disabled:cursor-not-allowed disabled:text-[var(--text-muted)]/50 disabled:bg-transparent"
+              >
+                <SparklesIcon className="w-5 h-5" />
+              </button>
+            )}
           </div>
         </div>
         <div className="border-2 border-dashed border-[var(--border-main)] rounded-lg p-4 flex-1 overflow-y-auto bg-transparent">
@@ -961,48 +1161,60 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = (props) => {
               return (
                 <div
                   key={image.image_id || image.image_hash}
-                  draggable={!image.isLoading}
+                  draggable={!image.isLoading && !isReadOnly}
                   onDragStart={(e) => handleDragStart(e, image.image_hash)}
                   onDragEnter={(e) => handleDragEnter(e, image.image_hash)}
                   onDragOver={(e) => handleDragOver(e, image.image_hash)}
                   onDragLeave={(e) => handleDragLeave(e, image.image_hash)}
                   onDrop={(e) => handleDrop(e, image.image_hash)}
                   onDragEnd={handleDragEnd}
-                  onDoubleClick={() => onCurriculumImageDoubleClick(image, activeBook?.language || languageForImageSearch)}
+                  onDoubleClick={() => onCurriculumImageDoubleClick(image, activeBook?.language || languageForImageSearch, isPurchasedBook ? activeBook?.org_id : undefined)}
                   className={`relative group rounded-2xl overflow-hidden bg-white shadow-sm ring-1 ring-gray-200 aspect-square transition-all duration-300
                     ${isDraggingThis ? 'opacity-40 scale-90' : 'opacity-100 scale-100'}
                     ${isDropTarget ? 'ring-4 ring-[#00AEEF] ring-offset-4 z-30' : 'hover:shadow-xl hover:-translate-y-1'}`}
                 >
                   {/* Action Buttons Overlay - Top Right Container */}
-                  <div className="absolute top-2 right-2 flex flex-col space-y-2 z-30 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                    {/* Delete Button */}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onRemoveImageFromCurriculumPage(image.image_hash);
-                      }}
-                      className="p-1.5 bg-white shadow-md rounded-lg text-gray-500 hover:text-red-600 hover:bg-red-50 transition-all border border-gray-100"
-                      title="Remove image"
-                    >
-                      <TrashIcon className="w-4 h-4" />
-                    </button>
-
-                    {/* Refresh Button (Only if translation missing) */}
-                    {!image.object_name && (
+                  {!isReadOnly && (
+                    <div className="absolute top-2 right-2 flex flex-col space-y-2 z-30 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                      {/* Delete Button */}
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          if (onCheckTranslation && selectedPageData?.page_id) {
-                            onCheckTranslation(selectedPageData.page_id, image.image_hash);
-                          }
+                          onRemoveImageFromCurriculumPage(image.image_hash);
                         }}
-                        className="p-1.5 bg-white shadow-md rounded-lg text-blue-500 hover:text-blue-700 hover:bg-blue-50 transition-all border border-gray-100 group/refresh"
-                        title="Check for translation"
+                        className="p-1.5 bg-white shadow-md rounded-lg text-gray-500 hover:text-red-600 hover:bg-red-50 transition-all border border-gray-100"
+                        title="Remove image"
                       >
-                        <ArrowPathIcon className="w-4 h-4 group-hover/refresh:rotate-180 transition-transform duration-500" />
+                        <TrashIcon className="w-4 h-4" />
                       </button>
-                    )}
-                  </div>
+
+                      {/* Rename Button */}
+                      <button
+                        onClick={(e) => { e.stopPropagation(); startEditingImageName(image); }}
+                        className="p-1.5 bg-white shadow-md rounded-lg text-gray-500 hover:text-[var(--color-primary)] hover:bg-[var(--color-primary-light)] transition-all border border-gray-100"
+                        title="Rename"
+                        disabled={isReadOnly}
+                      >
+                        <PencilIcon className="w-4 h-4" />
+                      </button>
+
+                      {/* Refresh Button (Only if translation missing) */}
+                      {!image.object_name && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (onCheckTranslation && selectedPageData?.page_id) {
+                              onCheckTranslation(selectedPageData.page_id, image.image_hash);
+                            }
+                          }}
+                          className="p-1.5 bg-white shadow-md rounded-lg text-blue-500 hover:text-blue-700 hover:bg-blue-50 transition-all border border-gray-100 group/refresh"
+                          title="Check for translation"
+                        >
+                          <ArrowPathIcon className="w-4 h-4 group-hover/refresh:rotate-180 transition-transform duration-500" />
+                        </button>
+                      )}
+                    </div>
+                  )}
 
                   {/* Translation missing indicator (Red Dot) */}
                   {!image.object_name && (
@@ -1036,11 +1248,14 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = (props) => {
                         autoFocus
                       />
                     ) : (
-                      <div className="flex items-center justify-between bg-black/60 backdrop-blur-sm rounded-lg px-2 py-1.5 border border-white/10 cursor-text pointer-events-auto" onClick={(e) => startEditingImageName(e, image)}>
+                      <div
+                        className={`flex items-center justify-between bg-black/60 backdrop-blur-sm rounded-lg px-2 py-1.5 border border-white/10 pointer-events-auto ${!isReadOnly ? 'cursor-text' : ''}`}
+                        onClick={(e) => !isReadOnly && startEditingImageName(e, image)}
+                      >
                         <p className="text-white font-bold text-xs truncate select-none flex-1">
                           {image.object_name || 'Pending Translation'}
                         </p>
-                        <PencilIcon className="w-3 h-3 text-white/50 ml-1 flex-shrink-0" />
+                        {!isReadOnly && <PencilIcon className="w-3 h-3 text-white/50 ml-1 flex-shrink-0" />}
                       </div>
                     )}
                   </div>
@@ -1052,14 +1267,16 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = (props) => {
               );
             })}
             {/* Add Image Box */}
-            <div
-              className="relative group rounded-2xl border-2 border-dashed border-[var(--border-main)] hover:border-[var(--color-primary)] hover:bg-[var(--color-primary-light)]/50 flex flex-col items-center justify-center cursor-pointer aspect-square transition-all duration-300 shadow-sm hover:shadow-md"
-              onClick={() => setIsImageSearchModalOpen(true)}
-              title="Add a new image to this page"
-            >
-              <PlusCircleIcon className="w-10 h-10 text-[var(--text-muted)] opacity-30 group-hover:text-[var(--color-primary)] group-hover:scale-110 transition-all duration-300" />
-              <p className="text-[10px] font-bold text-[var(--text-muted)] group-hover:text-[var(--color-primary)] mt-2 uppercase tracking-wider">Add Image</p>
-            </div>
+            {!isReadOnly && (
+              <div
+                className="relative group rounded-2xl border-2 border-dashed border-[var(--border-main)] hover:border-[var(--color-primary)] hover:bg-[var(--color-primary-light)]/50 flex flex-col items-center justify-center cursor-pointer aspect-square transition-all duration-300 shadow-sm hover:shadow-md"
+                onClick={() => setIsImageSearchModalOpen(true)}
+                title="Add a new image to this page"
+              >
+                <PlusCircleIcon className="w-10 h-10 text-[var(--text-muted)] opacity-30 group-hover:text-[var(--color-primary)] group-hover:scale-110 transition-all duration-300" />
+                <p className="text-[10px] font-bold text-[var(--text-muted)] group-hover:text-[var(--color-primary)] mt-2 uppercase tracking-wider">Add Image</p>
+              </div>
+            )}
           </div>
         </div>
         {!!selectedPageData?.story && (
@@ -1073,7 +1290,7 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = (props) => {
                     <SparklesIcon className="w-3.5 h-3.5 mr-1.5 text-amber-500" />
                     Regeneration Instructions
                   </label>
-                  {userComments && (
+                  {!isReadOnly && userComments && (
                     <button
                       onClick={() => setUserComments('')}
                       className="text-[10px] text-[var(--text-muted)] hover:text-[var(--text-main)] font-medium transition-colors"
@@ -1090,28 +1307,30 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = (props) => {
                     value={userComments}
                     onChange={(e) => setUserComments(e.target.value)}
                     className="w-full p-4 pr-32 text-sm bg-transparent outline-none resize-none placeholder-[var(--text-muted)] opacity-60 leading-relaxed min-h-[80px]"
-                    placeholder="e.g., Make the story more adventurous, mention the blue bird..."
-                    disabled={isStoryLoading}
+                    placeholder={isReadOnly ? "Story regeneration is disabled for read-only books." : "e.g., Make the story more adventurous, mention the blue bird..."}
+                    disabled={isStoryLoading || isReadOnly}
                   />
 
-                  <div className="absolute top-3 right-3 flex items-center space-x-2">
-                    <button
-                      onClick={() => onGenerateStory?.(selectedPageData!.page_id!, userComments)}
-                      disabled={isStoryLoading || !!isPageDirty}
-                      className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-xs font-bold transition-all active:scale-95 shadow-md shadow-blue-500/10 
+                  {!isReadOnly && (
+                    <div className="absolute top-3 right-3 flex items-center space-x-2">
+                      <button
+                        onClick={() => onGenerateStory?.(selectedPageData!.page_id!, userComments)}
+                        disabled={isStoryLoading || !!isPageDirty}
+                        className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-xs font-bold transition-all active:scale-95 shadow-md shadow-blue-500/10 
                       ${isPageDirty
-                          ? 'bg-[var(--bg-input)] text-[var(--text-muted)] cursor-not-allowed bg-transparent border border-[var(--border-main)]'
-                          : 'bg-[var(--color-primary)] text-white hover:opacity-90 shadow-lg'}`}
-                      title={isPageDirty ? "Save changes before regenerating" : "Regenerate story"}
-                    >
-                      {isStoryLoading ? (
-                        <LoadingSpinner size="sm" color="white" className="mr-1" />
-                      ) : (
-                        <ArrowPathIcon className="w-4 h-4" />
-                      )}
-                      <span>{isStoryLoading ? 'Regenerating...' : 'Regenerate'}</span>
-                    </button>
-                  </div>
+                            ? 'bg-[var(--bg-input)] text-[var(--text-muted)] cursor-not-allowed bg-transparent border border-[var(--border-main)]'
+                            : 'bg-[var(--color-primary)] text-white hover:opacity-90 shadow-lg'}`}
+                        title={isPageDirty ? "Save changes before regenerating" : "Regenerate story"}
+                      >
+                        {isStoryLoading ? (
+                          <LoadingSpinner size="sm" color="white" className="mr-1" />
+                        ) : (
+                          <ArrowPathIcon className="w-4 h-4" />
+                        )}
+                        <span>{isStoryLoading ? 'Regenerating...' : 'Regenerate'}</span>
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 {isPageDirty && (
@@ -1206,6 +1425,12 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = (props) => {
           isRefreshing={isRefreshingQuizQA}
         />
       )}
+      {/* Validation Summary Modal */}
+      <ValidationSummaryModal
+        isOpen={isValidationModalOpen}
+        onClose={() => setIsValidationModalOpen(false)}
+        result={validationResult ?? null}
+      />
     </div>
   );
 };

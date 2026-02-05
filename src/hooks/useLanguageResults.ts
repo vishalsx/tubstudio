@@ -219,6 +219,7 @@ export const useLanguageResults = () => {
         [currentTab]: {
           ...prev[currentTab],
           translation_id: returned_data[0]?.translation_id || prev[currentTab]?.translation_id,
+          isPurchased: false,
         },
       }));
 
@@ -335,6 +336,7 @@ export const useLanguageResults = () => {
       setLanguageResults((prev) => ({
         ...prev,
         [tab]: {
+          ...(prev[tab] || {}),
           object_name: data.translations?.object_name || "",
           object_description: data.translations?.object_description || "",
           object_hint: data.translations?.object_hint || "",
@@ -345,6 +347,7 @@ export const useLanguageResults = () => {
           isLoading: false,
           error: undefined,
           flag_translation: data.flag_translation || false,
+          object_category: data.common_data?.metadata?.object_category || "",
         },
       }));
 
@@ -353,6 +356,7 @@ export const useLanguageResults = () => {
       setOriginalResults((prev) => ({
         ...prev,
         [tab]: {
+          ...(prev[tab] || {}),
           object_name: data.translations?.object_name || "",
           object_description: data.translations?.object_description || "",
           object_hint: data.translations?.object_hint || "",
@@ -361,6 +365,7 @@ export const useLanguageResults = () => {
           translation_status: data.translations?.translation_status || "",
           translation_id: data.translations?._id || "",
           flag_translation: data.flag_translation || false,
+          object_category: data.common_data?.metadata?.object_category || "",
         },
       }));
 

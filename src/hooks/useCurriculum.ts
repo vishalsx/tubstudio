@@ -30,6 +30,12 @@ export const useCurriculum = (userContext: UserContext | null) => {
   const username = userContext?.username;
   const [isStoryLoading, setIsStoryLoading] = useState(false);
   const [imageLoadingProgress, setImageLoadingProgress] = useState<{ loaded: number, total: number } | null>(null);
+  const [validationResult, setValidationResult] = useState<{
+    isValid: boolean;
+    message: string;
+    summary: any[];
+    totals: { valid: number; missing: number };
+  } | null>(null);
 
   // Ref to track the current page loading operation to prevent race conditions
   const pageLoadIdRef = useRef(0);
@@ -107,7 +113,14 @@ export const useCurriculum = (userContext: UserContext | null) => {
     }
   }, [username]);
 
-  const selectBook = useCallback(async (bookId: string) => {
+  const selectBook = useCallback(async (bookId: string | null) => {
+    if (!bookId) {
+      setActiveBook(null);
+      setActiveChapter(null);
+      setSelectedPage(null);
+      return;
+    }
+
     setIsLoading(true);
     try {
       const fullBook = await curriculumService.fetchBookDetails(bookId);
@@ -134,6 +147,16 @@ export const useCurriculum = (userContext: UserContext | null) => {
       setIsLoading(false);
     }
   }, []);
+
+  // Sync activeChapter with activeBook updates to ensure added pages/chapters appear immediately
+  useEffect(() => {
+    if (activeBook && activeChapter) {
+      const updatedChapter = activeBook.chapters.find(c => c.chapter_id === activeChapter.chapter_id);
+      if (updatedChapter && updatedChapter !== activeChapter) {
+        setActiveChapter(updatedChapter);
+      }
+    }
+  }, [activeBook, activeChapter]);
 
   const selectChapter = useCallback((chapter: Chapter) => {
     setActiveChapter(chapter);
@@ -385,16 +408,20 @@ export const useCurriculum = (userContext: UserContext | null) => {
     });
   }, [updateActiveBook, activeBook, selectedPage]);
 
-  const updateChapterName = useCallback((chapterId: string, newName: string) => {
+  const updateChapterAttributes = useCallback((chapterId: string, updates: Partial<Chapter>) => {
     updateActiveBook(book => {
       const chapter = book.chapters.find(c => c.chapter_id === chapterId);
       if (chapter) {
-        chapter.chapter_name = newName;
+        Object.assign(chapter, updates);
         chapter.isModified = true;
       }
       return book;
     });
   }, [updateActiveBook]);
+
+  const updateChapterName = useCallback((chapterId: string, newName: string) => {
+    updateChapterAttributes(chapterId, { chapter_name: newName });
+  }, [updateChapterAttributes]);
 
   const deletePage = useCallback((chapterId: string, pageId: string) => {
     updateActiveBook(book => {
@@ -411,16 +438,15 @@ export const useCurriculum = (userContext: UserContext | null) => {
     }
   }, [updateActiveBook, selectedPage]);
 
-  const updatePageTitle = useCallback((chapterId: string, pageId: string, newTitle: string) => {
+  const updatePageAttributes = useCallback((chapterId: string, pageId: string, updates: Partial<Page>) => {
     updateActiveBook(book => {
       const chapter = book.chapters.find(c => c.chapter_id === chapterId);
       const page = chapter?.pages.find(p => p.page_id === pageId);
       if (page && chapter) {
-        page.title = newTitle;
+        Object.assign(page, updates);
         page.isModified = true;
         chapter.isModified = true;
 
-        // If the updated page is the currently selected one, update that state too.
         if (selectedPage?.page_id === pageId) {
           setSelectedPage({ ...page });
         }
@@ -428,6 +454,10 @@ export const useCurriculum = (userContext: UserContext | null) => {
       return book;
     });
   }, [updateActiveBook, selectedPage, setSelectedPage]);
+
+  const updatePageTitle = useCallback((chapterId: string, pageId: string, newTitle: string) => {
+    updatePageAttributes(chapterId, pageId, { title: newTitle });
+  }, [updatePageAttributes]);
 
   const generateStoryForPage = useCallback(async (pageId: string, userComments?: string) => {
     if (!activeBook) return;
@@ -660,11 +690,13 @@ export const useCurriculum = (userContext: UserContext | null) => {
     }
   }, [activeBook, selectedPage, updateActiveBook]);
 
-  const saveBook = useCallback(async () => {
+  const saveBook = useCallback(async (action: 'SaveDraft' | 'Publish' = 'SaveDraft') => {
     if (!activeBook || !username) return;
 
     setIsLoading(true);
     setNotification(null);
+    setValidationResult(null);
+
     try {
       const payload: BookSavePayload = {
         ...activeBook,
@@ -686,8 +718,24 @@ export const useCurriculum = (userContext: UserContext | null) => {
         }),
       };
 
-      const savedBook = await curriculumService.saveBook(payload, username);
-      const fullRefreshedBook = await curriculumService.fetchBookDetails(savedBook._id);
+      const response: any = await curriculumService.saveBook(payload, username, action);
+
+      let finalBook: Book;
+
+      if (response && response.summary && response.book) {
+        // Wrapped response (Publish Success)
+        finalBook = response.book;
+        setValidationResult({
+          isValid: true,
+          message: response.message,
+          summary: response.summary,
+          totals: response.totals
+        });
+      } else {
+        finalBook = response as Book;
+      }
+
+      const fullRefreshedBook = await curriculumService.fetchBookDetails(finalBook._id);
 
       setBooks(prev => {
         const exists = prev.some(b => b._id === fullRefreshedBook._id);
@@ -707,6 +755,19 @@ export const useCurriculum = (userContext: UserContext | null) => {
       setNotification({ message: 'Book saved successfully!', type: 'success' });
 
     } catch (error) {
+      const errData = (error as any).data;
+      // Backend returns structure { detail: { summary: [], ... } }
+      // api.ts attaches the root response to .data
+      const validationData = errData?.detail?.summary ? errData.detail : (errData?.summary ? errData : null);
+
+      if (validationData && validationData.summary) {
+        setValidationResult({
+          isValid: false,
+          message: validationData.message,
+          summary: validationData.summary,
+          totals: validationData.totals
+        });
+      }
       setNotification({ message: (error as Error).message, type: 'error' });
     } finally {
       setIsLoading(false);
@@ -754,5 +815,9 @@ export const useCurriculum = (userContext: UserContext | null) => {
     updateStory,
     checkTranslation,
     collapseAll,
+    updateBookAttributes: (updates: Partial<Book>) => updateActiveBook(book => ({ ...book, ...updates })),
+    updateChapterAttributes,
+    updatePageAttributes,
+    validationResult,
   };
 };

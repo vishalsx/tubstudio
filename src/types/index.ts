@@ -10,6 +10,7 @@ export interface CommonData {
   object_id?: string;
   image_base64?: string;
   flag_object?: boolean;
+  external_org_id?: string;
 }
 
 export interface QuizQAItem {
@@ -29,6 +30,8 @@ export interface LanguageResult {
   isLoading?: boolean;
   error?: string;
   flag_translation?: boolean;
+  object_category?: string;
+  isPurchased?: boolean;
 }
 
 export interface ImageMetadata {
@@ -202,6 +205,13 @@ export interface Chapter {
   isModified?: boolean;
 }
 
+export interface BasePricing {
+  is_free: boolean;
+  one_time_purchase_price: number;
+  subscription_price: number;
+  subscription_period_days: number;
+}
+
 export interface Book {
   _id: string; // From backend, will be local for new books
   title: string;
@@ -219,4 +229,17 @@ export interface Book {
   image_count?: number;
   created_at?: string;
   updated_at?: string;
+
+  is_public: boolean;
+  is_commercial: boolean;
+  base_pricing?: BasePricing;
+
+  // Ownership metadata (for purchased books)
+  ownership_type?: 'own' | 'purchased';
+  purchase_date?: string;
+  access_type?: string;
+  expiry_date?: string;
+  display_order?: number;
+  org_id?: string;
+  book_status?: 'Draft' | 'Published';
 }

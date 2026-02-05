@@ -94,10 +94,15 @@ export const MainApp: React.FC<MainAppProps> = ({ authData }) => {
     const newActiveBookId = curriculum.activeBook?._id || null;
 
     if (newActiveBookId !== activeBookIdRef.current) {
+      // Book ID changed (different book selected)
       setSelectedCurriculumNode(curriculum.activeBook);
       activeBookIdRef.current = newActiveBookId;
+    } else if (selectedCurriculumNode && 'chapters' in selectedCurriculumNode && '_id' in selectedCurriculumNode && (selectedCurriculumNode as Book)._id === newActiveBookId) {
+      // Same book ID, but valid content update for the root book node. 
+      // Refresh selected node to ensure status/metadata is current.
+      setSelectedCurriculumNode(curriculum.activeBook);
     }
-  }, [curriculum.activeBook]);
+  }, [curriculum.activeBook, selectedCurriculumNode]);
 
   // Permission checks
   const currentMetadataState = languageResults.currentCommonData?.image_status || "";
@@ -419,6 +424,20 @@ export const MainApp: React.FC<MainAppProps> = ({ authData }) => {
     setLeftPanelView('upload');
     const languagesToIdentify = image.untranslated_languages || [];
     if (languagesToIdentify.length > 0) {
+      // Initialize language results with the object_category to support tab-scoped indicators
+      const initialResults: { [key: string]: any } = {};
+      languagesToIdentify.forEach(lang => {
+        initialResults[lang] = {
+          object_name: common_data.object_name_en || '',
+          object_description: '',
+          object_hint: '',
+          object_short_hint: '',
+          object_category: common_data.object_category,
+          isLoading: false,
+          isPurchased: !!common_data.external_org_id
+        };
+      });
+      languageResults.setLanguageResults(initialResults);
       languageResults.setSelectedLanguages(languagesToIdentify);
       setPendingIdentify(languagesToIdentify);
     }
@@ -445,7 +464,7 @@ export const MainApp: React.FC<MainAppProps> = ({ authData }) => {
     setCameFromCurriculum(false);
   };
 
-  const handleCurriculumImageDoubleClick = async (image: CurriculumImage, language: string) => {
+  const handleCurriculumImageDoubleClick = async (image: CurriculumImage, language: string, orgId?: string) => {
     // Use the full base64 image if available, otherwise fall back to the thumbnail.
     const imageDataSource = image.image_base64 || image.thumbnail;
 
@@ -479,6 +498,7 @@ export const MainApp: React.FC<MainAppProps> = ({ authData }) => {
         object_name_en: image.object_name,
         object_category: "From Curriculum", tags: ['education'],
         object_id: image.image_id,
+        external_org_id: orgId,
       },
       untranslated_languages: [language],
     };
@@ -502,7 +522,9 @@ export const MainApp: React.FC<MainAppProps> = ({ authData }) => {
     languageResults.setSaveMessages({});
     setIsLanguageDropdownOpen(false);
     worklist.setError(null);
-    setSelectedCurriculumNode(null);
+    // Remove the clearing of the selected curriculum node to maintain RightPanel context
+    // when returning from the identification view.
+    // setSelectedCurriculumNode(null);
 
     if (!imageUpload.file && !imageUpload.imageHash) {
       worklist.setError("Please upload an image or provide an image hash.");
@@ -529,7 +551,11 @@ export const MainApp: React.FC<MainAppProps> = ({ authData }) => {
 
     const initialResults: any = {};
     languagesToUse.forEach((lang: string) => {
-      initialResults[lang] = { isLoading: true };
+      initialResults[lang] = {
+        ...(languageResults.languageResults[lang] || {}),
+        isLoading: true,
+        isPurchased: false // Reset; will be set based on API response
+      };
     });
     languageResults.setLanguageResults(initialResults);
     languageResults.setAvailableTabs(languagesToUse);
@@ -539,10 +565,12 @@ export const MainApp: React.FC<MainAppProps> = ({ authData }) => {
       let sharedCommonData: any = null, sharedFileInfo: any = null, commonDataMapped = false;
       const identifyPromises = languagesToUse.map(async (language: string) => {
         try {
-          const data = await translationService.identifyObject(imageUpload.file!, language, imageUpload.imageHash, controller.signal);
+          const externalOrgId = languageResults.currentCommonData?.external_org_id;
+          const data = await translationService.identifyObject(imageUpload.file!, language, imageUpload.imageHash, controller.signal, undefined, externalOrgId);
           if (commonDataMode === 'shared' && !commonDataMapped) {
             commonDataMapped = true;
             sharedCommonData = {
+              ...languageResults.currentCommonData,
               object_name_en: data.object_name_en, object_category: data.object_category,
               tags: data.tags, field_of_study: data.field_of_study, age_appropriate: data.age_appropriate,
               image_status: data.image_status, object_id: data.object_id, image_base64: data.image_base64,
@@ -556,6 +584,7 @@ export const MainApp: React.FC<MainAppProps> = ({ authData }) => {
             languageResults.setCurrentFileInfo(sharedFileInfo);
           } else if (commonDataMode === 'per-tab') {
             const languageSpecificCommonData = {
+              ...languageResults.currentCommonData,
               object_name_en: data.object_name_en, object_category: data.object_category,
               tags: data.tags, field_of_study: data.field_of_study, age_appropriate: data.age_appropriate,
               image_status: data.image_status, object_id: data.object_id, image_base64: data.image_base64,
@@ -580,7 +609,12 @@ export const MainApp: React.FC<MainAppProps> = ({ authData }) => {
           languageResults.updateLanguageResult(language, 'translation_status', data.translation_status);
           languageResults.updateLanguageResult(language, 'translation_id', data.translation_id);
           languageResults.updateLanguageResult(language, 'flag_translation', data.flag_translation);
+          languageResults.updateLanguageResult(language, 'object_category', data.object_category);
+          // Set isPurchased based on whether the returned translation_org_id matches the sent external_org_id
+          const isPurchasedContent = !!(externalOrgId && data.translation_org_id && data.translation_org_id === externalOrgId);
+          console.log(`[isPurchased Check] Language: ${language}, externalOrgId: ${externalOrgId}, translation_org_id: ${data.translation_org_id}, isPurchased: ${isPurchasedContent}`);
           languageResults.updateLanguageResult(language, 'isLoading', false);
+          languageResults.updateLanguageResult(language, 'isPurchased', isPurchasedContent);
           languageResults.setSaveStatus(prev => ({ ...prev, [language]: "unsaved" }));
         } catch (err) {
           if ((err as Error).name === 'AbortError') {
@@ -683,6 +717,7 @@ export const MainApp: React.FC<MainAppProps> = ({ authData }) => {
   };
 
   const handleNewFile = (file: File) => {
+    setCameFromCurriculum(false);
     languageResults.clearResults();
     worklist.setError(null);
     imageUpload.handleFileChange(file);
@@ -694,7 +729,10 @@ export const MainApp: React.FC<MainAppProps> = ({ authData }) => {
     e.preventDefault();
     e.stopPropagation();
     const droppedFile = e.dataTransfer.files[0];
-    if (droppedFile) handleNewFile(droppedFile);
+    if (droppedFile) {
+      setCameFromCurriculum(false);
+      handleNewFile(droppedFile);
+    }
   };
 
   const handleCreateStory = () => {
@@ -797,6 +835,13 @@ export const MainApp: React.FC<MainAppProps> = ({ authData }) => {
     }
   };
 
+  const handleUpdatePageAttributes = (pageId: string, updates: Partial<Page>) => {
+    const chapter = curriculum.activeBook?.chapters.find(c => c.pages.some(p => p.page_id === pageId));
+    if (chapter?.chapter_id) {
+      curriculum.updatePageAttributes(chapter.chapter_id, pageId, updates);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[var(--bg-main)] text-[var(--text-main)] font-sans antialiased transition-colors duration-500" >
       <Header
@@ -804,7 +849,7 @@ export const MainApp: React.FC<MainAppProps> = ({ authData }) => {
         onLogout={logout}
         onViewChange={handleLeftPanelViewChange}
       />
-      <main className="flex-1 flex flex-col md:flex-row md:items-start p-4 gap-4 min-h-[calc(100vh-80px)]">
+      <main className="flex-1 flex flex-col md:flex-row md:items-stretch p-4 gap-4 h-[calc(100vh-80px)] max-h-[calc(100vh-80px)]">
         <LeftPanel
           leftPanelView={leftPanelView}
           fileInputRef={imageUpload.fileInputRef}
@@ -849,7 +894,7 @@ export const MainApp: React.FC<MainAppProps> = ({ authData }) => {
           onGalleryPrevious={handleGalleryPrevious}
           isCollapsed={isLeftPanelCollapsed}
           onToggleCollapse={handleToggleLeftPanel}
-          className={`md:flex-shrink-0 transition-all duration-300 ease-in-out min-h-[600px] ${isLeftPanelCollapsed ? 'md:w-16 md:flex-none' : 'md:flex-[2_0_0%] min-w-0'}`}
+          className={`md:flex-shrink-0 transition-all duration-300 ease-in-out h-full max-h-full overflow-y-auto ${isLeftPanelCollapsed ? 'md:w-16 md:flex-none' : 'md:flex-[2_0_0%] min-w-0'}`}
           curriculumProps={curriculum}
           myContentProps={myContent}
           onSelectBook={curriculum.selectBook}
@@ -874,7 +919,7 @@ export const MainApp: React.FC<MainAppProps> = ({ authData }) => {
 
         <MiddlePanel
           leftPanelView={leftPanelView}
-          className={`transition-all duration-300 ease-in-out min-h-[600px] ${isLeftPanelCollapsed ? 'md:flex-[3_0_0%] min-w-0' : 'md:flex-[5_0_0%] min-w-0'}`}
+          className={`transition-all duration-300 ease-in-out h-full max-h-full overflow-y-auto ${isLeftPanelCollapsed ? 'md:flex-[3_0_0%] min-w-0' : 'md:flex-[5_0_0%] min-w-0'}`}
 
           // Upload view props
           previewUrl={imageUpload.previewUrl}
@@ -924,6 +969,8 @@ export const MainApp: React.FC<MainAppProps> = ({ authData }) => {
           onAddImageToCurriculumPage={curriculum.addImageToPage}
           onRemoveImageFromCurriculumPage={curriculum.removeImageFromPage}
           onAddNewImageFromSearch={handleAddNewImageFromSearch}
+          onAddChapter={curriculum.addChapter}
+          onAddPage={curriculum.addPage}
           isStoryLoading={curriculum.isStoryLoading}
           onCreateStory={handleCreateStory}
           onGenerateStory={curriculum.generateStoryForPage}
@@ -934,6 +981,8 @@ export const MainApp: React.FC<MainAppProps> = ({ authData }) => {
           isDirty={curriculum.isDirty}
           onSaveBook={curriculum.saveBook}
           onCheckTranslation={curriculum.checkTranslation}
+          validationResult={curriculum.validationResult}
+
           contestProps={contest}
           userContext={userContext}
           cameFromCurriculum={cameFromCurriculum}
@@ -942,6 +991,7 @@ export const MainApp: React.FC<MainAppProps> = ({ authData }) => {
         />
 
         <RightPanel
+          activeBook={curriculum.activeBook}
           leftPanelView={leftPanelView}
           selectedCurriculumNode={nodeForRightPanel}
           currentCommonData={currentDataForPanels}
@@ -952,7 +1002,7 @@ export const MainApp: React.FC<MainAppProps> = ({ authData }) => {
           commonDataMode={commonDataMode}
           permissions={{ canSwitchToEditMode }}
           onUpdateCommonData={languageResults.updateCommonData}
-          className={`transition-all duration-300 ease-in-out min-h-[600px] ${isLeftPanelCollapsed ? 'md:flex-[2_0_0%] min-w-0' : 'md:flex-[3_0_0%] min-w-0'}`}
+          className={`transition-all duration-300 ease-in-out h-full max-h-full overflow-y-auto ${isLeftPanelCollapsed ? 'md:flex-[2_0_0%] min-w-0' : 'md:flex-[3_0_0%] min-w-0'}`}
           showContent={leftPanelView === 'contest' || Object.keys(languageResults.languageResults).length > 0 || !!selectedCurriculumNode}
           isDirty={curriculum.isDirty}
           onSaveBook={curriculum.saveBook}
@@ -963,6 +1013,9 @@ export const MainApp: React.FC<MainAppProps> = ({ authData }) => {
           contestProps={contest}
           myContentProps={myContent}
           userContext={userContext}
+          onUpdateBook={curriculum.updateBookAttributes}
+          onUpdateChapter={curriculum.updateChapterAttributes}
+          onUpdatePage={handleUpdatePageAttributes}
         />
       </main>
     </div >

@@ -4,8 +4,7 @@ import { LanguageResult, CommonData } from '../types';
 
 export class TranslationService {
   // async identifyObject(file: File, language: string, imageHash?: string | null): Promise<any> {
-  async identifyObject(file: File, language: string, imageHash?: string | null, signal?: AbortSignal, additionalContext?: string): Promise<any> {
-
+  async identifyObject(file: File, language: string, imageHash?: string | null, signal?: AbortSignal, additionalContext?: string, externalOrgId?: string): Promise<any> {
     const formData = new FormData();
 
     if (imageHash) {
@@ -19,6 +18,9 @@ export class TranslationService {
     formData.append("language", language);
     if (additionalContext) {
       formData.append("additional_context", additionalContext);
+    }
+    if (externalOrgId) {
+      formData.append("external_org_id", externalOrgId);
     }
     console.log("Identify Object Request:", formData);
     return apiClient.post('identify/object', formData, { signal });

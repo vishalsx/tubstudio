@@ -248,7 +248,8 @@
 // src/components/panels/CurriculumPanel.tsx
 import React, { useState, useEffect, useRef } from 'react';
 import { Book, Chapter, Page } from '../../types';
-import { PencilIcon, PlusCircleIcon, TrashIcon, BookOpenIcon, FolderIcon, DocumentIcon, CloudArrowUpIcon, PlusIcon, MinusIcon, ChevronRightIcon, ChevronDownIcon, MagnifyingGlassIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { PencilIcon, PlusCircleIcon, TrashIcon, BookOpenIcon, FolderIcon, DocumentIcon, CloudArrowUpIcon, PlusIcon, MinusIcon, ChevronRightIcon, ChevronDownIcon, MagnifyingGlassIcon, XMarkIcon, ShoppingBagIcon, PaperAirplaneIcon, PencilSquareIcon } from '@heroicons/react/24/outline';
+import { BookOpenIcon as BookOpenIconSolid } from '@heroicons/react/24/solid';
 import { LoadingSpinner } from '../common/LoadingSpinner';
 import { useConfirmation } from '../../contexts/ConfirmationContext';
 
@@ -284,12 +285,14 @@ interface TreeNodeProps extends Omit<CurriculumPanelProps, 'books' | 'searchAtte
   bookId: string;
   onSelectBook: (bookId: string) => Promise<boolean>;
   onSelectChapter: (chapter: Chapter) => void;
+  isPurchased?: boolean;  // Whether this book is purchased (read-only)
+  isPublishedBook?: boolean; // Whether the book (or parent book) is published (read-only)
 }
 
 const TreeNode: React.FC<TreeNodeProps> = (props) => {
   const { node, type, level, isExpanded, expansionState, isDirty, onSelectNode, onSelectPage,
     onSaveBook, onNodeExpansion, onAddChapter, onDeleteChapter, onUpdateChapterName,
-    onAddPage, onDeletePage, onUpdatePageTitle, parentChapter, onSelectBook, bookId, onSelectChapter } = props;
+    onAddPage, onDeletePage, onUpdatePageTitle, parentChapter, onSelectBook, bookId, onSelectChapter, isPurchased, isPublishedBook } = props;
 
   const [isEditingName, setIsEditingName] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -299,6 +302,19 @@ const TreeNode: React.FC<TreeNodeProps> = (props) => {
   const id = nodeAsAny._id || nodeAsAny.chapter_id || nodeAsAny.page_id;
   const name = nodeAsAny.title || nodeAsAny.chapter_name || `Page ${nodeAsAny.page_number}`;
   const isNodeDirty = nodeAsAny.isNew || nodeAsAny.isModified;
+  const bookStatus = type === 'book' ? (node as Book).book_status : undefined;
+  const isPublished = bookStatus === 'Published';
+
+  // Disable editing if purchased OR published (for book/chapter/page modification)
+  // For 'book' node: can't add chapter.
+  // For 'chapter' node: can't add page, edit name, delete.
+  // For 'page' node: can't edit title, delete.
+  // Note: We need to check if the *root book* is published for chapter/page nodes.
+  // However, TreeNode doesn't easily know parent book status without passing it down.
+  // BUT, 'isPurchased' is passed down. We might need to pass 'isPublishedBook' down too.
+  // For now, let's look at how we can infer it. 
+  // Actually, 'isPurchased' property on TreeNodeProps comes from mapped books in renderContent. 
+  // We can add 'isPublished' prop to TreeNodeProps.
 
   const [editValue, setEditValue] = useState(name);
 
@@ -368,24 +384,41 @@ const TreeNode: React.FC<TreeNodeProps> = (props) => {
   const children = (node as Book).chapters || (node as Chapter).pages;
   const canExpand = type !== 'page';
 
-  const icon = type === 'book' ? <BookOpenIcon className="w-4 h-4 text-[var(--color-primary)]" /> :
+  let bookIconColor = 'text-[var(--color-primary)]';
+  if (type === 'book') {
+    if ((node as Book).book_status === 'Published') {
+      bookIconColor = 'text-green-600';
+    } else if ((node as Book).book_status === 'Draft') {
+      bookIconColor = 'text-gray-500';
+    }
+  }
+
+  const icon = type === 'book' ?
+    <BookOpenIconSolid className={`w-4 h-4 ${bookIconColor} stroke-black stroke-[1.5]`} /> :
     type === 'chapter' ? <FolderIcon className="w-4 h-4 text-[var(--color-secondary)]" /> :
       <DocumentIcon className="w-4 h-4 text-[var(--text-muted)]" />;
 
   const isSaveable = isDirty && props.activeBook?._id === (node as Book)._id;
 
+  // Read-only state: if Purchased or Published
+  const isReadOnly = isPurchased || (isPublishedBook ?? false);
+
   const bgStyles = type === 'book' ? 'hover:bg-[var(--color-primary-light)]/50' :
     type === 'chapter' ? 'hover:bg-[var(--color-secondary-light)]/50' :
       'hover:bg-[var(--bg-input)]';
 
-  const textStyles = type === 'book' ? 'font-semibold text-[var(--text-main)]' :
-    type === 'chapter' ? 'font-medium text-[var(--text-main)]' :
+  // Purchased book styling: Amber/Gold theme
+  const purchasedStyles = (type === 'book' && isPurchased) ? 'bg-amber-100 dark:bg-amber-900/40 border-l-4 border-amber-500 text-amber-900 dark:text-amber-100' : '';
+
+  const textStyles = type === 'book'
+    ? (isPurchased ? 'font-semibold text-amber-900 dark:text-amber-100' : 'font-semibold text-[var(--text-main)]')
+    : type === 'chapter' ? 'font-medium text-[var(--text-main)]' :
       'text-[var(--text-muted)]';
 
   return (
     <div className="text-xs">
       <div
-        className={`flex items-center space-x-2 py-1 px-1.5 rounded-lg transition-colors group cursor-pointer ${bgStyles}`}
+        className={`flex items-center space-x-2 py-1 px-1.5 rounded-lg transition-colors group cursor-pointer ${bgStyles} ${purchasedStyles}`}
         style={{ paddingLeft: `${level * 1}rem` }}
         onClick={handleNodeClick}
       >
@@ -407,12 +440,17 @@ const TreeNode: React.FC<TreeNodeProps> = (props) => {
             />
           ) : name}
           {type === 'book' && isSaveable && <div className="w-1.5 h-1.5 bg-[var(--color-primary)] rounded-full flex-shrink-0 ml-1.5 animate-pulse" title="Unsaved changes"></div>}
+          {type === 'book' && isPurchased && (
+            <span className="ml-1.5 px-1.5 py-0.5 text-[10px] font-medium bg-amber-200 dark:bg-amber-700/50 text-amber-800 dark:text-amber-100 rounded-md flex items-center gap-0.5" title="Purchased Book - Read Only">
+              <ShoppingBagIcon className="w-3 h-3" />
+            </span>
+          )}
           {(type === 'chapter' || type === 'page') && isNodeDirty && <div className="w-1.5 h-1.5 bg-[var(--color-primary)] rounded-full flex-shrink-0 ml-1.5 animate-pulse" title="Unsaved changes"></div>}
         </span>
         <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
-          {type !== 'page' && <button onClick={handleAdd} title={`Add ${type === 'book' ? 'Chapter' : 'Page'}`} className="p-1 rounded text-[var(--text-muted)] hover:text-green-600 hover:bg-[var(--bg-panel)] transition-colors"><PlusCircleIcon className="w-3.5 h-3.5" /></button>}
-          {(type === 'chapter' || type === 'page') && <button onClick={(e) => { e.stopPropagation(); setIsEditingName(true); }} title="Edit" className="p-1 rounded text-[var(--text-muted)] hover:text-[var(--color-secondary)] hover:bg-[var(--bg-panel)] transition-colors"><PencilIcon className="w-3.5 h-3.5" /></button>}
-          {(type === 'chapter' || type === 'page') && <button onClick={handleDelete} title="Delete" className="p-1 rounded text-[var(--text-muted)] hover:text-red-500 hover:bg-[var(--bg-panel)] transition-colors"><TrashIcon className="w-3.5 h-3.5" /></button>}
+          {type !== 'page' && !isReadOnly && <button onClick={handleAdd} title={`Add ${type === 'book' ? 'Chapter' : 'Page'}`} className="p-1 rounded text-[var(--text-muted)] hover:text-green-600 hover:bg-[var(--bg-panel)] transition-colors"><PlusCircleIcon className="w-3.5 h-3.5" /></button>}
+          {(type === 'chapter' || type === 'page') && !isReadOnly && <button onClick={(e) => { e.stopPropagation(); setIsEditingName(true); }} title="Edit" className="p-1 rounded text-[var(--text-muted)] hover:text-[var(--color-secondary)] hover:bg-[var(--bg-panel)] transition-colors"><PencilIcon className="w-3.5 h-3.5" /></button>}
+          {(type === 'chapter' || type === 'page') && !isReadOnly && <button onClick={handleDelete} title="Delete" className="p-1 rounded text-[var(--text-muted)] hover:text-red-500 hover:bg-[var(--bg-panel)] transition-colors"><TrashIcon className="w-3.5 h-3.5" /></button>}
         </div>
       </div>
       {isExpanded && children && children.map((child: Chapter | Page) => {
@@ -429,6 +467,7 @@ const TreeNode: React.FC<TreeNodeProps> = (props) => {
             type={childIsChapter ? 'chapter' : 'page'}
             level={level + 1}
             isExpanded={!!expansionState[childId]}
+            isPublishedBook={props.isPublishedBook ?? (type === 'book' ? (node as Book).book_status === 'Published' : false)}
           />
         )
       })}
@@ -485,6 +524,7 @@ export const CurriculumPanel: React.FC<CurriculumPanelProps> = (props) => {
     if (filteredBooks.length > 0) {
       return filteredBooks.map(book => {
         const bookNodeId = book._id;
+        const isPurchased = book.ownership_type === 'purchased';
         return (
           <TreeNode
             {...props}
@@ -495,10 +535,13 @@ export const CurriculumPanel: React.FC<CurriculumPanelProps> = (props) => {
             isExpanded={!!props.expansionState[bookNodeId]}
             onSelectBook={handleBookSelect}
             bookId={book._id}
+            isPurchased={isPurchased}
+            isPublishedBook={book.book_status === 'Published'}
           />
         );
       });
     }
+
 
     if (searchAttempted) {
       return (

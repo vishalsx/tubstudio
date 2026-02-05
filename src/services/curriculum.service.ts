@@ -155,14 +155,14 @@ class CurriculumService {
     /**
      * Creates or updates a book. The same endpoint handles both.
      */
-    async saveBook(bookData: BookSavePayload | BookCreatePayload, username: string): Promise<Book> {
-        console.log("Saving book data for user:", username, bookData);
+    async saveBook(bookData: BookSavePayload | BookCreatePayload, username: string, action: 'SaveDraft' | 'Publish' = 'SaveDraft'): Promise<Book> {
+        console.log("Saving book data for user:", username, action, bookData);
         // Add user information to the payload for auditing/attribution on the backend.
         const payload = {
             ...bookData,
             updated_by: username
         };
-        return apiClient.post('curriculum/books/create_book', payload);
+        return apiClient.post(`curriculum/books/create_book?action=${action}`, payload);
     }
 
     /**

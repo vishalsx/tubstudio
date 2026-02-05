@@ -1,6 +1,6 @@
 // components/panels/LeftPanel.tsx
 import React, { useState } from 'react';
-import { Bars3Icon, ChevronDownIcon, XMarkIcon, SparklesIcon, ListBulletIcon, ArrowUpTrayIcon, PhotoIcon, MagnifyingGlassIcon, BookOpenIcon, StarIcon, StopIcon, CloudArrowUpIcon, CircleStackIcon, TrophyIcon, CheckCircleIcon } from '@heroicons/react/24/solid';
+import { Bars3Icon, ChevronDownIcon, XMarkIcon, SparklesIcon, ListBulletIcon, ArrowUpTrayIcon, PhotoIcon, MagnifyingGlassIcon, BookOpenIcon, StarIcon, StopIcon, CloudArrowUpIcon, CircleStackIcon, TrophyIcon, CheckCircleIcon, ShoppingCartIcon } from '@heroicons/react/24/solid';
 import { CommonData, RecentTranslation, PermissionCheck, DatabaseImage, Book, Chapter, Page, OrgObject, RepositoryItem } from '../../types';
 import { CurriculumPanel } from './CurriculumPanel';
 import { useCurriculum } from '../../hooks/useCurriculum';
@@ -163,6 +163,7 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
   myContentProps,
 }) => {
   const [isCreateBookModalOpen, setIsCreateBookModalOpen] = useState(false);
+  const [curriculumTab, setCurriculumTab] = useState<'my_books' | 'purchase_books'>('my_books');
   const confirm = useConfirmation();
 
   const handleCurriculumSearch = async () => {
@@ -438,6 +439,26 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
     } else if (leftPanelView === 'curriculum') {
       return (
         <>
+          {/* Curriculum Tab Selector: My Books / Purchase Books */}
+          <div className="flex bg-[var(--bg-input)]/50 backdrop-blur-sm p-1 rounded-xl mb-3 border border-[var(--border-main)] transition-colors duration-300">
+            <button
+              onClick={() => setCurriculumTab('my_books')}
+              title="View and manage your own books"
+              className={`flex-1 flex items-center justify-center space-x-2 py-1.5 rounded-lg text-xs font-bold transition-all ${curriculumTab === 'my_books' ? 'bg-[var(--bg-panel)] text-[var(--color-primary)] shadow-sm' : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'}`}
+            >
+              <BookOpenIcon className="w-4 h-4" />
+              <span>My Books</span>
+            </button>
+            <button
+              onClick={() => setCurriculumTab('purchase_books')}
+              title="Browse and purchase books from marketplace"
+              className={`flex-1 flex items-center justify-center space-x-2 py-1.5 rounded-lg text-xs font-bold transition-all ${curriculumTab === 'purchase_books' ? 'bg-[var(--bg-panel)] text-[var(--color-primary)] shadow-sm' : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'}`}
+            >
+              <ShoppingCartIcon className="w-4 h-4" />
+              <span>Purchase Books</span>
+            </button>
+          </div>
+
           <div className="border border-[var(--border-main)] rounded-lg p-3 mb-3 flex flex-col gap-2 bg-[var(--bg-input)] shadow-sm">
             <div className="flex items-center gap-2 w-full">
               <select
@@ -481,14 +502,16 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
           </div>
 
           {curriculumProps.isDirty && (
-            <button
-              onClick={curriculumProps.saveBook}
-              disabled={curriculumProps.isLoading}
-              className="w-full py-2 bg-[var(--color-primary)] text-white rounded-lg font-bold shadow-md shadow-[var(--color-primary)]/20 hover:opacity-90 transition-all active:scale-95 disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center gap-2 mb-3"
-            >
-              <CloudArrowUpIcon className="w-5 h-5" />
-              <span>Save Book Changes</span>
-            </button>
+            <div className="border border-[var(--border-main)] rounded-lg p-3 mb-3 flex flex-col gap-2 bg-[var(--bg-input)] shadow-sm">
+              <button
+                onClick={curriculumProps.saveBook}
+                disabled={curriculumProps.isLoading}
+                className="w-full py-2 bg-[var(--color-primary)] text-white rounded-lg font-bold shadow-md shadow-[var(--color-primary)]/20 hover:opacity-90 transition-all active:scale-95 disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center gap-2"
+              >
+                <CloudArrowUpIcon className="w-5 h-5" />
+                <span>Save Book Changes</span>
+              </button>
+            </div>
           )}
 
           <div className="border border-[var(--border-main)] rounded-lg p-3 flex-1 min-h-0 bg-[var(--bg-input)] shadow-inner overflow-hidden">

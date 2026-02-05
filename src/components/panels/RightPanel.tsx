@@ -4,7 +4,7 @@ import { StatusWorkflow } from '../common/StatusWorkflow';
 import { ContestRightPanel } from './contest/ContestRightPanel';
 import { useContest } from '../../hooks/useContest';
 import { useMyContent } from '../../hooks/useMyContent';
-import { PencilIcon, CheckIcon, XMarkIcon, IdentificationIcon, AcademicCapIcon, BookOpenIcon, SparklesIcon, InformationCircleIcon } from '@heroicons/react/24/solid';
+import { PencilIcon, CheckIcon, XMarkIcon, IdentificationIcon, AcademicCapIcon, BookOpenIcon, SparklesIcon, InformationCircleIcon, ShoppingCartIcon, ShoppingBagIcon } from '@heroicons/react/24/solid';
 import { ArrowPathIcon } from '@heroicons/react/24/outline';
 
 // Define the new spinner component locally
@@ -61,6 +61,11 @@ interface RightPanelProps {
   userContext: UserContext | null;
   // My Content Props
   myContentProps: ReturnType<typeof useMyContent>;
+  // Curriculum Update Props
+  onUpdateBook?: (updates: Partial<Book>) => void;
+  onUpdateChapter?: (chapterId: string, updates: Partial<Chapter>) => void;
+  onUpdatePage?: (pageId: string, updates: Partial<Page>) => void;
+  activeBook?: Book | null;
 }
 
 export const RightPanel: React.FC<RightPanelProps> = ({
@@ -83,23 +88,73 @@ export const RightPanel: React.FC<RightPanelProps> = ({
   contestProps,
   userContext,
   myContentProps,
+  onUpdateBook,
+  onUpdateChapter,
+  onUpdatePage,
+  activeBook,
 }) => {
+  // Global check for purchased status
+  const isPurchasedBook = activeBook?.ownership_type === 'purchased';
+  const isPublishedBook = activeBook?.book_status === 'Published';
+  const isReadOnly = isPurchasedBook || isPublishedBook;
+
   const [isStoryEditing, setIsStoryEditing] = useState(false);
   const [editedStory, setEditedStory] = useState('');
   const [editedMoral, setEditedMoral] = useState('');
 
+  // Curriculum node editing state
+  const [isDetailsEditing, setIsDetailsEditing] = useState(false);
+  const [detailsFormData, setDetailsFormData] = useState<any>(null);
+
   // Update local edit state when selected node changes
   useEffect(() => {
-    if (selectedCurriculumNode && 'story' in selectedCurriculumNode) {
-      setEditedStory(selectedCurriculumNode.story || '');
-      setEditedMoral(selectedCurriculumNode.moral || '');
+    if (selectedCurriculumNode) {
+      if ('story' in selectedCurriculumNode) {
+        setEditedStory(selectedCurriculumNode.story || '');
+        setEditedMoral(selectedCurriculumNode.moral || '');
+      }
+      // Shallow clone for editing
+      setDetailsFormData({ ...selectedCurriculumNode });
+    } else {
+      setDetailsFormData(null);
     }
     setIsStoryEditing(false);
+    setIsDetailsEditing(false);
   }, [selectedCurriculumNode]);
+
+  // Reset editing states if read-only becomes true
+  useEffect(() => {
+    if (isReadOnly) {
+      setIsDetailsEditing(false);
+      setIsStoryEditing(false);
+    }
+  }, [isReadOnly]);
+
+  const handleDetailsChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setDetailsFormData((prev: any) => ({ ...prev, [name]: value }));
+  };
+
+  const handleSaveDetails = () => {
+    if (!selectedCurriculumNode || !detailsFormData) return;
+
+    if ('chapters' in selectedCurriculumNode) { // Book
+      onUpdateBook?.(detailsFormData);
+    } else if ('pages' in selectedCurriculumNode) { // Chapter
+      const chId = (selectedCurriculumNode as Chapter).chapter_id;
+      if (chId) onUpdateChapter?.(chId, detailsFormData);
+    } else if ('images' in selectedCurriculumNode) { // Page
+      const pgId = (selectedCurriculumNode as Page).page_id;
+      if (pgId) onUpdatePage?.(pgId, detailsFormData);
+    }
+    setIsDetailsEditing(false);
+  };
 
   const hasResults = Object.keys(languageResults).length > 0;
 
   const getEditCondition = () => {
+    if (isReadOnly) return false;
+
     if (commonDataMode === 'shared') {
       return isEditing['English'] && activeTab === 'English' && permissions.canSwitchToEditMode.metadata;
     } else {
@@ -209,17 +264,84 @@ export const RightPanel: React.FC<RightPanelProps> = ({
       );
     }
 
+    const handleCancelDetails = () => {
+      setDetailsFormData({ ...selectedCurriculumNode });
+      setIsDetailsEditing(false);
+    };
+
     if ('chapters' in selectedCurriculumNode) { // It's a Book
       const book = selectedCurriculumNode as Book;
+      const isPurchased = book.ownership_type === 'purchased';
+      const isPublished = book.book_status === 'Published';
+      const isReadOnlyNode = isPurchased || isPublished;
+
       details = (
         <div className="space-y-4">
+          {/* Purchased Book Banner */}
+          {isPurchased && (
+            <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 p-3 rounded-xl flex items-start space-x-3 shadow-sm">
+              <div className="bg-amber-100 dark:bg-amber-800 p-2 rounded-full shadow-inner">
+                <ShoppingBagIcon className="w-5 h-5 text-amber-600 dark:text-amber-300" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-sm font-bold text-amber-900 dark:text-amber-100">Purchased Book</h3>
+                <p className="text-xs text-amber-700 dark:text-amber-300 mt-1">
+                  This book is read-only. Contents are managed by the publisher.
+                </p>
+                <div className="mt-2 flex flex-wrap gap-2 text-[10px]">
+                  <span className="px-2 py-0.5 bg-white/70 dark:bg-black/20 rounded-md border border-amber-200 dark:border-amber-700 text-amber-800 dark:text-amber-200 font-medium">
+                    Purchased: {book.purchase_date ? new Date(book.purchase_date).toLocaleDateString() : 'N/A'}
+                  </span>
+                  <span className="px-2 py-0.5 bg-white/70 dark:bg-black/20 rounded-md border border-amber-200 dark:border-amber-700 text-amber-800 dark:text-amber-200 font-medium">
+                    Type: {book.access_type || 'Permanent'}
+                  </span>
+                  {book.expiry_date && (
+                    <span className="px-2 py-0.5 bg-white/70 dark:bg-black/20 rounded-md border border-amber-200 dark:border-amber-700 text-amber-800 dark:text-amber-200 font-medium">
+                      Expires: {new Date(book.expiry_date).toLocaleDateString()}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Published Book Banner */}
+          {!isPurchased && isPublished && (
+            <div className="bg-green-50 text-green-800 border-green-200 border p-3 rounded-xl flex items-start space-x-3 shadow-sm">
+              <div className="bg-green-100 p-2 rounded-full shadow-inner">
+                <CheckIcon className="w-5 h-5 text-green-600" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-sm font-bold text-green-900">Published Book</h3>
+                <p className="text-xs text-green-700 mt-1">
+                  This book is published and is currently in Read-Only mode. Unpublish (if allowed) or create a new version to edit.
+                </p>
+              </div>
+            </div>
+          )
+          }
+
           <div className="bg-[var(--bg-input)] border border-[var(--border-main)] p-3 rounded-xl shadow-sm">
             <h4 className="text-[10px] font-bold text-[var(--text-muted)] opacity-70 uppercase tracking-widest mb-2 flex items-center">
               <IdentificationIcon className="w-3 h-3 mr-1" /> Identity
             </h4>
             <div className="space-y-2">
-              <div><h3 className="text-xs font-semibold text-[var(--text-muted)]">Book Title</h3><p className="text-sm text-[var(--text-main)] font-medium">{book.title}</p></div>
-              <div><h3 className="text-xs font-semibold text-[var(--text-muted)]">Author</h3><p className="text-sm text-[var(--text-main)]">{book.author}</p></div>
+              <div>
+                <h3 className="text-xs font-semibold text-[var(--text-muted)]">Book Title</h3>
+                {isDetailsEditing ? (
+                  <input type="text" name="title" value={detailsFormData?.title || ''} onChange={handleDetailsChange} className="w-full mt-1 p-2 text-sm border border-[var(--border-main)] rounded bg-[var(--bg-panel)] text-[var(--text-main)]" />
+                ) : (
+                  <p className="text-sm text-[var(--text-main)] font-medium">{book.title}</p>
+                )}
+              </div>
+              <div>
+                <h3 className="text-xs font-semibold text-[var(--text-muted)]">Author</h3>
+                {isDetailsEditing ? (
+                  <input type="text" name="author" value={detailsFormData?.author || ''} onChange={handleDetailsChange} className="w-full mt-1 p-2 text-sm border border-[var(--border-main)] rounded bg-[var(--bg-panel)] text-[var(--text-main)]" />
+                ) : (
+                  <p className="text-sm text-[var(--text-main)]">{book.author}</p>
+                )}
+              </div>
             </div>
           </div>
           <div className="bg-[var(--bg-input)]/50 backdrop-blur-sm border border-[var(--border-main)] p-3 rounded-xl shadow-sm">
@@ -227,13 +349,99 @@ export const RightPanel: React.FC<RightPanelProps> = ({
               <AcademicCapIcon className="w-3 h-3 mr-1" /> Education Info
             </h4>
             <div className="grid grid-cols-2 gap-3">
-              <div><h3 className="text-xs font-semibold text-[var(--text-muted)]">Subject</h3><p className="text-sm text-[var(--text-main)]">{book.subject}</p></div>
-              <div><h3 className="text-xs font-semibold text-[var(--text-muted)]">Board</h3><p className="text-sm text-[var(--text-main)]">{book.education_board}</p></div>
-              <div><h3 className="text-xs font-semibold text-[var(--text-muted)]">Grade</h3><p className="text-sm text-[var(--text-main)]">{book.grade_level}</p></div>
-              <div><h3 className="text-xs font-semibold text-[var(--text-muted)]">Language</h3><p className="text-sm text-[var(--text-main)]">{book.language}</p></div>
+              <div>
+                <h3 className="text-xs font-semibold text-[var(--text-muted)]">Subject</h3>
+                {isDetailsEditing ? (
+                  <input type="text" name="subject" value={detailsFormData?.subject || ''} onChange={handleDetailsChange} className="w-full mt-1 p-2 text-sm border border-[var(--border-main)] rounded bg-[var(--bg-panel)] text-[var(--text-main)]" />
+                ) : (
+                  <p className="text-sm text-[var(--text-main)]">{book.subject}</p>
+                )}
+              </div>
+              <div>
+                <h3 className="text-xs font-semibold text-[var(--text-muted)]">Board</h3>
+                {isDetailsEditing ? (
+                  <input type="text" name="education_board" value={detailsFormData?.education_board || ''} onChange={handleDetailsChange} className="w-full mt-1 p-2 text-sm border border-[var(--border-main)] rounded bg-[var(--bg-panel)] text-[var(--text-main)]" />
+                ) : (
+                  <p className="text-sm text-[var(--text-main)]">{book.education_board}</p>
+                )}
+              </div>
+              <div>
+                <h3 className="text-xs font-semibold text-[var(--text-muted)]">Grade</h3>
+                {isDetailsEditing ? (
+                  <input type="text" name="grade_level" value={detailsFormData?.grade_level || ''} onChange={handleDetailsChange} className="w-full mt-1 p-2 text-sm border border-[var(--border-main)] rounded bg-[var(--bg-panel)] text-[var(--text-main)]" />
+                ) : (
+                  <p className="text-sm text-[var(--text-main)]">{book.grade_level}</p>
+                )}
+              </div>
+              <div>
+                <h3 className="text-xs font-semibold text-[var(--text-muted)]">Language</h3>
+                {isDetailsEditing ? (
+                  <input type="text" name="language" value={detailsFormData?.language || ''} onChange={handleDetailsChange} className="w-full mt-1 p-2 text-sm border border-[var(--border-main)] rounded bg-[var(--bg-panel)] text-[var(--text-main)]" />
+                ) : (
+                  <p className="text-sm text-[var(--text-main)]">{book.language}</p>
+                )}
+              </div>
             </div>
           </div>
-        </div>
+          <div className="bg-[var(--bg-input)]/30 border border-[var(--border-main)] p-3 rounded-xl">
+            <h4 className="text-[10px] font-bold text-[var(--text-muted)] opacity-70 uppercase tracking-widest mb-2 flex items-center">
+              Settings & Sharing
+            </h4>
+            <div className="flex space-x-6">
+              <label className="flex items-center space-x-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  name="is_public"
+                  checked={isDetailsEditing ? !!detailsFormData?.is_public : !!book.is_public}
+                  onChange={(e) => isDetailsEditing && setDetailsFormData((prev: any) => ({ ...prev, is_public: e.target.checked }))}
+                  disabled={!isDetailsEditing}
+                  className="w-4 h-4 rounded border-[var(--border-main)] text-[var(--color-primary)] focus:ring-[var(--color-primary)] bg-[var(--bg-panel)]"
+                />
+                <span className="text-sm text-[var(--text-main)]">Public Book</span>
+              </label>
+              <label className="flex items-center space-x-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  name="is_commercial"
+                  checked={isDetailsEditing ? !!detailsFormData?.is_commercial : !!book.is_commercial}
+                  onChange={(e) => isDetailsEditing && setDetailsFormData((prev: any) => ({ ...prev, is_commercial: e.target.checked }))}
+                  disabled={!isDetailsEditing}
+                  className="w-4 h-4 rounded border-[var(--border-main)] text-[var(--color-primary)] focus:ring-[var(--color-primary)] bg-[var(--bg-panel)]"
+                />
+                <span className="text-sm text-[var(--text-main)]">Commercial</span>
+              </label>
+            </div>
+
+            {(isDetailsEditing ? detailsFormData?.is_commercial : book.is_commercial) && (
+              <div className="mt-3 pt-3 border-t border-[var(--border-main)] grid grid-cols-3 gap-3">
+                <div>
+                  <h3 className="text-[10px] font-semibold text-[var(--text-muted)] uppercase">One-time Price</h3>
+                  {isDetailsEditing ? (
+                    <input type="number" name="one_time_purchase_price" value={detailsFormData?.base_pricing?.one_time_purchase_price || 0} onChange={(e) => setDetailsFormData((prev: any) => ({ ...prev, base_pricing: { ...prev.base_pricing, one_time_purchase_price: Number(e.target.value) } }))} className="w-full mt-1 p-1.5 text-xs border border-[var(--border-main)] rounded bg-[var(--bg-panel)] text-[var(--text-main)]" />
+                  ) : (
+                    <p className="text-sm font-medium text-[var(--text-main)]">${book.base_pricing?.one_time_purchase_price || 0}</p>
+                  )}
+                </div>
+                <div>
+                  <h3 className="text-[10px] font-semibold text-[var(--text-muted)] uppercase">Sub. Price</h3>
+                  {isDetailsEditing ? (
+                    <input type="number" name="subscription_price" value={detailsFormData?.base_pricing?.subscription_price || 0} onChange={(e) => setDetailsFormData((prev: any) => ({ ...prev, base_pricing: { ...prev.base_pricing, subscription_price: Number(e.target.value) } }))} className="w-full mt-1 p-1.5 text-xs border border-[var(--border-main)] rounded bg-[var(--bg-panel)] text-[var(--text-main)]" />
+                  ) : (
+                    <p className="text-sm font-medium text-[var(--text-main)]">${book.base_pricing?.subscription_price || 0}</p>
+                  )}
+                </div>
+                <div>
+                  <h3 className="text-[10px] font-semibold text-[var(--text-muted)] uppercase">Period (Days)</h3>
+                  {isDetailsEditing ? (
+                    <input type="number" name="subscription_period_days" value={detailsFormData?.base_pricing?.subscription_period_days || 30} onChange={(e) => setDetailsFormData((prev: any) => ({ ...prev, base_pricing: { ...prev.base_pricing, subscription_period_days: Number(e.target.value) } }))} className="w-full mt-1 p-1.5 text-xs border border-[var(--border-main)] rounded bg-[var(--bg-panel)] text-[var(--text-main)]" />
+                  ) : (
+                    <p className="text-sm font-medium text-[var(--text-main)]">{book.base_pricing?.subscription_period_days || 30} d</p>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div >
       );
     } else if ('pages' in selectedCurriculumNode) { // It's a Chapter
       const chapter = selectedCurriculumNode as Chapter;
@@ -245,12 +453,30 @@ export const RightPanel: React.FC<RightPanelProps> = ({
             </h4>
             <div className="space-y-3">
               <div className="flex justify-between">
-                <div><h3 className="text-xs font-semibold text-[var(--text-muted)]">Chapter Title</h3><p className="text-sm text-[var(--text-main)] font-medium">{chapter.chapter_name}</p></div>
-                <div className="text-right"><h3 className="text-xs font-semibold text-[var(--text-muted)]">Number</h3><p className="text-sm text-[var(--text-main)]">{chapter.chapter_number}</p></div>
+                <div className="flex-1">
+                  <h3 className="text-xs font-semibold text-[var(--text-muted)]">Chapter Title</h3>
+                  {isDetailsEditing ? (
+                    <input type="text" name="chapter_name" value={detailsFormData?.chapter_name || ''} onChange={handleDetailsChange} className="w-full mt-1 p-2 text-sm border border-[var(--border-main)] rounded bg-[var(--bg-panel)] text-[var(--text-main)]" />
+                  ) : (
+                    <p className="text-sm text-[var(--text-main)] font-medium">{chapter.chapter_name}</p>
+                  )}
+                </div>
+                <div className="text-right ml-4">
+                  <h3 className="text-xs font-semibold text-[var(--text-muted)]">Number</h3>
+                  {isDetailsEditing ? (
+                    <input type="number" name="chapter_number" value={detailsFormData?.chapter_number || ''} onChange={handleDetailsChange} className="w-20 mt-1 p-2 text-sm border border-[var(--border-main)] rounded bg-[var(--bg-panel)] text-[var(--text-main)] text-right" />
+                  ) : (
+                    <p className="text-sm text-[var(--text-main)]">{chapter.chapter_number}</p>
+                  )}
+                </div>
               </div>
               <div className="pt-2 border-t border-[var(--border-main)]">
                 <h3 className="text-xs font-semibold text-[var(--text-muted)] mb-1">Description</h3>
-                <p className="text-sm text-[var(--text-main)] opacity-90 leading-relaxed">{chapter.description || "No description provided."}</p>
+                {isDetailsEditing ? (
+                  <textarea name="description" value={detailsFormData?.description || ''} onChange={handleDetailsChange} className="w-full mt-1 p-2 text-sm border border-[var(--border-main)] rounded bg-[var(--bg-panel)] text-[var(--text-main)] min-h-[100px]" />
+                ) : (
+                  <p className="text-sm text-[var(--text-main)] opacity-90 leading-relaxed">{chapter.description || "No description provided."}</p>
+                )}
               </div>
             </div>
           </div>
@@ -265,8 +491,22 @@ export const RightPanel: React.FC<RightPanelProps> = ({
               <IdentificationIcon className="w-3 h-3 mr-1" /> Page Info
             </h4>
             <div className="flex justify-between items-start">
-              <div><h3 className="text-xs font-semibold text-[var(--text-muted)]">Page Title</h3><p className="text-sm text-[var(--text-main)] font-medium">{page.title}</p></div>
-              <div className="text-right"><h3 className="text-xs font-semibold text-[var(--text-muted)]">Number</h3><p className="text-sm text-[var(--text-main)]">{page.page_number}</p></div>
+              <div className="flex-1">
+                <h3 className="text-xs font-semibold text-[var(--text-muted)]">Page Title</h3>
+                {isDetailsEditing ? (
+                  <input type="text" name="title" value={detailsFormData?.title || ''} onChange={handleDetailsChange} className="w-full mt-1 p-2 text-sm border border-[var(--border-main)] rounded bg-[var(--bg-panel)] text-[var(--text-main)]" />
+                ) : (
+                  <p className="text-sm text-[var(--text-main)] font-medium">{page.title}</p>
+                )}
+              </div>
+              <div className="text-right ml-4">
+                <h3 className="text-xs font-semibold text-[var(--text-muted)]">Number</h3>
+                {isDetailsEditing ? (
+                  <input type="number" name="page_number" value={detailsFormData?.page_number || ''} onChange={handleDetailsChange} className="w-20 mt-1 p-2 text-sm border border-[var(--border-main)] rounded bg-[var(--bg-panel)] text-[var(--text-main)] text-right" />
+                ) : (
+                  <p className="text-sm text-[var(--text-main)]">{page.page_number}</p>
+                )}
+              </div>
             </div>
           </div>
 
@@ -279,7 +519,7 @@ export const RightPanel: React.FC<RightPanelProps> = ({
                   <SparklesIcon className="w-4 h-4 text-amber-500 mr-1.5" />
                   Generated Story
                 </h3>
-                {!isStoryEditing && onUpdateStory && (
+                {!isStoryEditing && onUpdateStory && !isReadOnly && (
                   <button
                     onClick={() => setIsStoryEditing(true)}
                     className="p-1.5 bg-[var(--bg-panel)] text-[var(--text-muted)] hover:text-[var(--color-primary)] rounded-lg shadow-sm border border-[var(--border-main)] transition-all hover:shadow-md"
@@ -353,9 +593,34 @@ export const RightPanel: React.FC<RightPanelProps> = ({
       );
     }
 
+
     return (
       <div className="h-full flex flex-col">
-        <h2 className="text-lg font-semibold mb-4 flex-shrink-0">{getCurriculumNodeTitle()}</h2>
+        <div className="flex items-center justify-between mb-4 flex-shrink-0">
+          <h2 className="text-lg font-semibold">{getCurriculumNodeTitle()}</h2>
+          <div className="flex items-center space-x-2">
+            {isDetailsEditing ? (
+              <>
+                <button onClick={handleCancelDetails} className="p-1.5 bg-[var(--bg-input)] text-[var(--text-muted)] hover:text-[var(--text-main)] rounded-lg border border-[var(--border-main)] transition-colors" title="Cancel">
+                  <XMarkIcon className="w-4 h-4" />
+                </button>
+                <button onClick={handleSaveDetails} className="p-1.5 bg-[var(--color-primary)] text-white rounded-lg shadow-sm border border-[var(--color-primary)] transition-all hover:opacity-90 active:scale-95" title="Save Changes">
+                  <CheckIcon className="w-4 h-4" />
+                </button>
+              </>
+            ) : (
+              !isReadOnly && (
+                <button
+                  onClick={() => setIsDetailsEditing(true)}
+                  className="p-1.5 bg-[var(--bg-input)] text-[var(--text-muted)] hover:text-[var(--color-primary)] rounded-lg border border-[var(--border-main)] transition-all hover:shadow-md"
+                  title="Edit Attributes"
+                >
+                  <PencilIcon className="w-4 h-4" />
+                </button>
+              )
+            )}
+          </div>
+        </div>
         <div className="space-y-2 flex-1 overflow-y-auto">{details}</div>
       </div>
     );
