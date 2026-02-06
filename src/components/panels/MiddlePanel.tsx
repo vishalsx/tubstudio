@@ -65,7 +65,7 @@ interface MiddlePanelProps {
   onNodeExpansion?: (node: Book | Chapter) => void;
   isLoading: boolean;
   selectedPageData: Page | null;
-  onCurriculumImageDoubleClick: (image: CurriculumImage, language: string, orgId?: string) => void;
+  onCurriculumImageDoubleClick: (image: CurriculumImage, languages: string[], orgId?: string, book?: Book) => void;
   languageForImageSearch: string;
   onAddImageToCurriculumPage: (image: DatabaseImage) => void;
   onRemoveImageFromCurriculumPage: (imageHash: string) => void;
@@ -1168,7 +1168,12 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = (props) => {
                   onDragLeave={(e) => handleDragLeave(e, image.image_hash)}
                   onDrop={(e) => handleDrop(e, image.image_hash)}
                   onDragEnd={handleDragEnd}
-                  onDoubleClick={() => onCurriculumImageDoubleClick(image, activeBook?.language || languageForImageSearch, isPurchasedBook ? activeBook?.org_id : undefined)}
+                  onDoubleClick={() => {
+                    const bookLanguages = activeBook
+                      ? [activeBook.language, ...(activeBook.additional_languages || [])]
+                      : [languageForImageSearch];
+                    onCurriculumImageDoubleClick(image, bookLanguages, isPurchasedBook ? activeBook?.org_id : undefined, activeBook || undefined);
+                  }}
                   className={`relative group rounded-2xl overflow-hidden bg-white shadow-sm ring-1 ring-gray-200 aspect-square transition-all duration-300
                     ${isDraggingThis ? 'opacity-40 scale-90' : 'opacity-100 scale-100'}
                     ${isDropTarget ? 'ring-4 ring-[#00AEEF] ring-offset-4 z-30' : 'hover:shadow-xl hover:-translate-y-1'}`}
@@ -1250,7 +1255,7 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = (props) => {
                     ) : (
                       <div
                         className={`flex items-center justify-between bg-black/60 backdrop-blur-sm rounded-lg px-2 py-1.5 border border-white/10 pointer-events-auto ${!isReadOnly ? 'cursor-text' : ''}`}
-                        onClick={(e) => !isReadOnly && startEditingImageName(e, image)}
+                        onClick={(e) => { e.stopPropagation(); !isReadOnly && startEditingImageName(image); }}
                       >
                         <p className="text-white font-bold text-xs truncate select-none flex-1">
                           {image.object_name || 'Pending Translation'}

@@ -4,7 +4,7 @@ import { StatusWorkflow } from '../common/StatusWorkflow';
 import { ContestRightPanel } from './contest/ContestRightPanel';
 import { useContest } from '../../hooks/useContest';
 import { useMyContent } from '../../hooks/useMyContent';
-import { PencilIcon, CheckIcon, XMarkIcon, IdentificationIcon, AcademicCapIcon, BookOpenIcon, SparklesIcon, InformationCircleIcon, ShoppingCartIcon, ShoppingBagIcon } from '@heroicons/react/24/solid';
+import { PencilIcon, CheckIcon, XMarkIcon, IdentificationIcon, AcademicCapIcon, BookOpenIcon, SparklesIcon, InformationCircleIcon, ShoppingCartIcon, ShoppingBagIcon, PhotoIcon } from '@heroicons/react/24/solid';
 import { ArrowPathIcon } from '@heroicons/react/24/outline';
 
 // Define the new spinner component locally
@@ -66,6 +66,7 @@ interface RightPanelProps {
   onUpdateChapter?: (chapterId: string, updates: Partial<Chapter>) => void;
   onUpdatePage?: (pageId: string, updates: Partial<Page>) => void;
   activeBook?: Book | null;
+  languageOptions?: string[];
 }
 
 export const RightPanel: React.FC<RightPanelProps> = ({
@@ -92,6 +93,7 @@ export const RightPanel: React.FC<RightPanelProps> = ({
   onUpdateChapter,
   onUpdatePage,
   activeBook,
+  languageOptions = [],
 }) => {
   // Global check for purchased status
   const isPurchasedBook = activeBook?.ownership_type === 'purchased';
@@ -326,6 +328,64 @@ export const RightPanel: React.FC<RightPanelProps> = ({
               <IdentificationIcon className="w-3 h-3 mr-1" /> Identity
             </h4>
             <div className="space-y-2">
+              {/* Book Cover Image */}
+              <div>
+                <h3 className="text-xs font-semibold text-[var(--text-muted)] mb-1">Book Cover</h3>
+                {isDetailsEditing ? (
+                  <label className="block cursor-pointer">
+                    <div className="relative w-24 h-32 rounded-lg overflow-hidden border-2 border-dashed border-[var(--border-main)] hover:border-[var(--color-primary)] transition-colors bg-[var(--bg-panel)] flex items-center justify-center group">
+                      {detailsFormData?.front_cover_image ? (
+                        <img
+                          src={detailsFormData.front_cover_image.startsWith('data:') ? detailsFormData.front_cover_image : `data:image/jpeg;base64,${detailsFormData.front_cover_image}`}
+                          alt="Book Cover"
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="flex flex-col items-center text-[var(--text-muted)] group-hover:text-[var(--color-primary)] transition-colors">
+                          <PhotoIcon className="w-6 h-6 mb-1" />
+                          <span className="text-[8px] font-medium">Upload Cover</span>
+                        </div>
+                      )}
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <span className="text-white text-[10px] font-bold">Change</span>
+                      </div>
+                    </div>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          if (file.size > 5 * 1024 * 1024) {
+                            alert("File is too large. Please upload an image smaller than 5MB.");
+                            return;
+                          }
+                          const reader = new FileReader();
+                          reader.onloadend = () => {
+                            setDetailsFormData((prev: any) => ({ ...prev, front_cover_image: reader.result as string }));
+                          };
+                          reader.readAsDataURL(file);
+                        }
+                      }}
+                    />
+                  </label>
+                ) : (
+                  <div className="w-24 h-32 rounded-lg overflow-hidden border border-[var(--border-main)] bg-[var(--bg-panel)]">
+                    {book.front_cover_image ? (
+                      <img
+                        src={book.front_cover_image.startsWith('data:') ? book.front_cover_image : `data:image/jpeg;base64,${book.front_cover_image}`}
+                        alt="Book Cover"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-[var(--text-muted)]">
+                        <PhotoIcon className="w-8 h-8 opacity-30" />
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
               <div>
                 <h3 className="text-xs font-semibold text-[var(--text-muted)]">Book Title</h3>
                 {isDetailsEditing ? (
@@ -381,6 +441,63 @@ export const RightPanel: React.FC<RightPanelProps> = ({
                   <p className="text-sm text-[var(--text-main)]">{book.language}</p>
                 )}
               </div>
+            </div>
+            {/* Additional Languages */}
+            <div className="mt-3 pt-2 border-t border-[var(--border-main)]">
+              <h3 className="text-xs font-semibold text-[var(--text-muted)] mb-1.5">Additional Languages</h3>
+              {isDetailsEditing ? (
+                <div className="flex flex-wrap gap-2">
+                  {languageOptions
+                    .filter(lang => lang !== (detailsFormData?.language || book.language))
+                    .map(lang => {
+                      const isSelected = detailsFormData?.additional_languages?.includes(lang) || false;
+                      return (
+                        <label key={lang} className="flex items-center space-x-1.5 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={(e) => {
+                              const checked = e.target.checked;
+                              setDetailsFormData((prev: any) => {
+                                const currentLangs = prev.additional_languages || [];
+                                const newLangs = checked
+                                  ? [...currentLangs, lang]
+                                  : currentLangs.filter((l: string) => l !== lang);
+
+                                // Clean up pricing if language is deselected
+                                const newPricing = { ...prev.base_pricing?.additional_language_prices };
+                                if (!checked) delete newPricing[lang];
+
+                                return {
+                                  ...prev,
+                                  additional_languages: newLangs,
+                                  base_pricing: { ...prev.base_pricing, additional_language_prices: newPricing }
+                                };
+                              });
+                            }}
+                            className="w-3.5 h-3.5 rounded border-[var(--border-main)] text-[var(--color-primary)] focus:ring-[var(--color-primary)] bg-[var(--bg-panel)]"
+                          />
+                          <span className="text-xs text-[var(--text-main)]">{lang}</span>
+                        </label>
+                      );
+                    })}
+                  {languageOptions.filter(lang => lang !== (detailsFormData?.language || book.language)).length === 0 && (
+                    <span className="text-xs text-[var(--text-muted)] italic">No additional languages available</span>
+                  )}
+                </div>
+              ) : (
+                <div className="flex flex-wrap gap-1.5">
+                  {book.additional_languages && book.additional_languages.length > 0 ? (
+                    book.additional_languages.map((lang: string) => (
+                      <span key={lang} className="px-2 py-0.5 text-[10px] font-medium bg-[var(--color-primary-light)] text-[var(--color-primary)] rounded-full">
+                        {lang}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-xs text-[var(--text-muted)] italic">None selected</span>
+                  )}
+                </div>
+              )}
             </div>
           </div>
           <div className="bg-[var(--bg-input)]/30 border border-[var(--border-main)] p-3 rounded-xl">
@@ -438,6 +555,58 @@ export const RightPanel: React.FC<RightPanelProps> = ({
                     <p className="text-sm font-medium text-[var(--text-main)]">{book.base_pricing?.subscription_period_days || 30} d</p>
                   )}
                 </div>
+              </div>
+            )}
+
+            {/* Additional Language Pricing */}
+            {(isDetailsEditing ? detailsFormData?.is_commercial : book.is_commercial) && (
+              <div className="mt-3 pt-2 border-t border-[var(--border-main)]">
+                <h3 className="text-[10px] font-semibold text-[var(--text-muted)] uppercase mb-2">Language Add-on Pricing</h3>
+                {isDetailsEditing ? (
+                  <div className="grid grid-cols-2 gap-2">
+                    {(detailsFormData?.additional_languages || []).map((lang: string) => (
+                      <div key={lang} className="flex items-center gap-2 bg-[var(--bg-panel)] px-2 py-1.5 rounded border border-[var(--border-main)]">
+                        <span className="text-xs text-[var(--text-main)] flex-1">{lang}</span>
+                        <div className="flex items-center gap-1">
+                          <span className="text-xs text-[var(--text-muted)]">$</span>
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={detailsFormData?.base_pricing?.additional_language_prices?.[lang] || 0}
+                            onChange={(e) => setDetailsFormData((prev: any) => ({
+                              ...prev,
+                              base_pricing: {
+                                ...prev.base_pricing,
+                                additional_language_prices: {
+                                  ...prev.base_pricing?.additional_language_prices,
+                                  [lang]: parseFloat(e.target.value) || 0
+                                }
+                              }
+                            }))}
+                            className="w-16 p-1 text-xs border border-[var(--border-main)] rounded bg-[var(--bg-input)] text-[var(--text-main)] text-right"
+                          />
+                        </div>
+                      </div>
+                    ))}
+                    {(detailsFormData?.additional_languages || []).length === 0 && (
+                      <span className="text-xs text-[var(--text-muted)] italic col-span-2">Select additional languages above to set pricing</span>
+                    )}
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-2">
+                    {book.base_pricing?.additional_language_prices && Object.keys(book.base_pricing.additional_language_prices).length > 0 ? (
+                      Object.entries(book.base_pricing.additional_language_prices).map(([lang, price]) => (
+                        <div key={lang} className="flex items-center justify-between bg-[var(--bg-panel)] px-2 py-1 rounded border border-[var(--border-main)]">
+                          <span className="text-xs text-[var(--text-main)]">{lang}</span>
+                          <span className="text-xs font-semibold text-[var(--color-primary)]">${price as number}</span>
+                        </div>
+                      ))
+                    ) : (
+                      <span className="text-xs text-[var(--text-muted)] italic col-span-2">No add-on pricing set</span>
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </div>

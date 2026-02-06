@@ -411,8 +411,8 @@ export const MainApp: React.FC<MainAppProps> = ({ authData }) => {
     }
   };
 
-  const handleDatabaseImageClick = async (image: DatabaseImage) => {
-    setCameFromCurriculum(false);
+  const handleDatabaseImageClick = async (image: DatabaseImage, fromCurriculum: boolean = false, perLanguageContext?: Record<string, string>) => {
+    setCameFromCurriculum(fromCurriculum);
     imageUpload.resetUpload();
     languageResults.clearResults();
 
@@ -434,7 +434,9 @@ export const MainApp: React.FC<MainAppProps> = ({ authData }) => {
           object_short_hint: '',
           object_category: common_data.object_category,
           isLoading: false,
-          isPurchased: !!common_data.external_org_id
+          isPurchased: !!common_data.external_org_id,
+          external_org_id: common_data.external_org_id,
+          additional_context: perLanguageContext?.[lang]
         };
       });
       languageResults.setLanguageResults(initialResults);
@@ -464,7 +466,7 @@ export const MainApp: React.FC<MainAppProps> = ({ authData }) => {
     setCameFromCurriculum(false);
   };
 
-  const handleCurriculumImageDoubleClick = async (image: CurriculumImage, language: string, orgId?: string) => {
+  const handleCurriculumImageDoubleClick = async (image: CurriculumImage, languages: string[], orgId?: string, book?: Book) => {
     // Use the full base64 image if available, otherwise fall back to the thumbnail.
     const imageDataSource = image.image_base64 || image.thumbnail;
 
@@ -500,10 +502,34 @@ export const MainApp: React.FC<MainAppProps> = ({ authData }) => {
         object_id: image.image_id,
         external_org_id: orgId,
       },
-      untranslated_languages: [language],
+      untranslated_languages: languages,
     };
-    await handleDatabaseImageClick(mockFullImage);
-    setCameFromCurriculum(true);
+
+    // Construct additional text for each language based on book metadata
+    const perLanguageContext: Record<string, string> = {};
+    if (book) {
+      const subject = book.subject || 'N/A';
+
+      let gradePart = "";
+      const grade = book.grade_level;
+      const isGradeMissing = !grade || ['null', 'na', 'none', 'n/a'].includes(grade.toLowerCase());
+      if (isGradeMissing) {
+        gradePart = "all adults";
+      } else {
+        gradePart = `for grade ${grade}`;
+      }
+
+      let boardPart = "";
+      if (book.education_board) {
+        boardPart = ` students of ${book.education_board}`;
+      }
+
+      languages.forEach(lang => {
+        perLanguageContext[lang] = `Refine the object description, Hints, Q&A considering its for subject ${subject}, ${gradePart}${boardPart}, in Language ${lang}`;
+      });
+    }
+
+    await handleDatabaseImageClick(mockFullImage, true, perLanguageContext);
   };
 
   const handleCancelIdentify = useCallback(() => {
@@ -569,14 +595,18 @@ export const MainApp: React.FC<MainAppProps> = ({ authData }) => {
           console.log(`[DEBUG] cameFromCurriculum: ${cameFromCurriculum}`);
           console.log(`[DEBUG] activeBook?.language: ${curriculum.activeBook?.language}`);
 
-          // Only pass external_org_id if the language matches the book's language from curriculum context
-          const externalOrgId = (cameFromCurriculum && curriculum.activeBook?.language === language)
-            ? languageResults.currentCommonData?.external_org_id
+          // Pass external_org_id for each language if available in its state
+          const externalOrgId = cameFromCurriculum
+            ? initialResults[language]?.external_org_id
             : undefined;
 
-          console.log(`[DEBUG] externalOrgId passed: ${externalOrgId}`);
+          // Retrieve per-language additional context (contextual prompt)
+          const additionalContext = initialResults[language]?.additional_context;
 
-          const data = await translationService.identifyObject(imageUpload.file!, language, imageUpload.imageHash, controller.signal, undefined, externalOrgId);
+          console.log(`[DEBUG] externalOrgId passed: ${externalOrgId}`);
+          console.log(`[DEBUG] additionalContext passed: ${additionalContext}`);
+
+          const data = await translationService.identifyObject(imageUpload.file!, language, imageUpload.imageHash, controller.signal, additionalContext, externalOrgId);
           if (commonDataMode === 'shared' && !commonDataMapped) {
             commonDataMapped = true;
             sharedCommonData = {
@@ -1026,6 +1056,7 @@ export const MainApp: React.FC<MainAppProps> = ({ authData }) => {
           onUpdateBook={curriculum.updateBookAttributes}
           onUpdateChapter={curriculum.updateChapterAttributes}
           onUpdatePage={handleUpdatePageAttributes}
+          languageOptions={languageOptions}
         />
       </main>
     </div >

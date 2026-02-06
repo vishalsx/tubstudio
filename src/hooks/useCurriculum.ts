@@ -118,6 +118,7 @@ export const useCurriculum = (userContext: UserContext | null) => {
       setActiveBook(null);
       setActiveChapter(null);
       setSelectedPage(null);
+      setExpansionState({});
       return;
     }
 
@@ -767,8 +768,9 @@ export const useCurriculum = (userContext: UserContext | null) => {
           summary: validationData.summary,
           totals: validationData.totals
         });
+      } else {
+        setNotification({ message: (error as Error).message, type: 'error' });
       }
-      setNotification({ message: (error as Error).message, type: 'error' });
     } finally {
       setIsLoading(false);
     }

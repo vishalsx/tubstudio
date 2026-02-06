@@ -18,6 +18,7 @@ export const CreateBookModal: React.FC<CreateBookModalProps> = ({ isOpen, onClos
   const [formData, setFormData] = useState<Omit<BookCreateData, 'tags'>>({
     title: '',
     language: '',
+    additional_languages: [],
     author: '',
     subject: '',
     education_board: '',
@@ -29,7 +30,8 @@ export const CreateBookModal: React.FC<CreateBookModalProps> = ({ isOpen, onClos
       is_free: true,
       one_time_purchase_price: 0,
       subscription_price: 0,
-      subscription_period_days: 30
+      subscription_period_days: 30,
+      additional_language_prices: {}
     }
   });
   const [tagsInput, setTagsInput] = useState('');
@@ -40,6 +42,7 @@ export const CreateBookModal: React.FC<CreateBookModalProps> = ({ isOpen, onClos
       setFormData({
         title: '',
         language: languageOptions.length > 0 ? languageOptions[0] : '',
+        additional_languages: [],
         author: '',
         subject: '',
         education_board: '',
@@ -51,7 +54,8 @@ export const CreateBookModal: React.FC<CreateBookModalProps> = ({ isOpen, onClos
           is_free: true,
           one_time_purchase_price: 0,
           subscription_price: 0,
-          subscription_period_days: 30
+          subscription_period_days: 30,
+          additional_language_prices: {}
         }
       });
       setTagsInput('');
@@ -64,6 +68,34 @@ export const CreateBookModal: React.FC<CreateBookModalProps> = ({ isOpen, onClos
 
     if (type === 'checkbox') {
       const checked = (e.target as HTMLInputElement).checked;
+
+      // Handle additional languages checkbox
+      if (name === 'additional_languages') {
+        const lang = value;
+        setFormData(prev => {
+          const currentLangs = prev.additional_languages || [];
+          const newLangs = checked
+            ? [...currentLangs, lang]
+            : currentLangs.filter(l => l !== lang);
+
+          // Also clean up pricing if language is deselected
+          const newPricing = { ...prev.base_pricing?.additional_language_prices };
+          if (!checked) {
+            delete newPricing[lang];
+          }
+
+          return {
+            ...prev,
+            additional_languages: newLangs,
+            base_pricing: {
+              ...prev.base_pricing!,
+              additional_language_prices: newPricing
+            }
+          };
+        });
+        return;
+      }
+
       setFormData(prev => ({ ...prev, [name]: checked }));
     } else if (name.startsWith('pricing.')) {
       const field = name.split('.')[1];
@@ -72,6 +104,18 @@ export const CreateBookModal: React.FC<CreateBookModalProps> = ({ isOpen, onClos
         base_pricing: {
           ...prev.base_pricing!,
           [field]: type === 'number' ? parseFloat(value) : value
+        }
+      }));
+    } else if (name.startsWith('additional_price.')) {
+      const lang = name.split('.')[1];
+      setFormData(prev => ({
+        ...prev,
+        base_pricing: {
+          ...prev.base_pricing!,
+          additional_language_prices: {
+            ...prev.base_pricing?.additional_language_prices,
+            [lang]: parseFloat(value)
+          }
         }
       }));
     } else {
@@ -129,6 +173,9 @@ export const CreateBookModal: React.FC<CreateBookModalProps> = ({ isOpen, onClos
   };
 
   if (!isOpen) return null;
+
+  // Filter out the selected primary language from additional options
+  const additionalLanguageOptions = languageOptions.filter(lang => lang !== formData.language);
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={onClose}>
@@ -203,6 +250,30 @@ export const CreateBookModal: React.FC<CreateBookModalProps> = ({ isOpen, onClos
                       <option key={lang} value={lang}>{lang}</option>
                     ))}
                   </select>
+                </div>
+
+                {/* Additional Languages Multiselect */}
+                <div className="space-y-1 md:col-span-2">
+                  <label className="block text-sm font-medium text-[var(--text-main)]">Additional Languages</label>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2 p-2 border border-[var(--border-main)] rounded-md bg-[var(--bg-input)] max-h-32 overflow-y-auto">
+                    {additionalLanguageOptions.length > 0 ? additionalLanguageOptions.map(lang => (
+                      <label key={lang} className="flex items-center space-x-2 cursor-pointer p-1 hover:bg-[var(--bg-panel)] rounded">
+                        <input
+                          type="checkbox"
+                          name="additional_languages"
+                          value={lang}
+                          checked={formData.additional_languages?.includes(lang) || false}
+                          onChange={handleChange}
+                          disabled={isSubmitting}
+                          className="text-[var(--color-primary)] bg-[var(--bg-panel)] border-[var(--border-main)] rounded focus:ring-[var(--color-primary)] pointer-events-none"
+                        />
+                        <span className="text-xs text-[var(--text-main)]">{lang}</span>
+                      </label>
+                    )) : (
+                      <span className="text-xs text-[var(--text-muted)] col-span-full">No other languages available</span>
+                    )}
+                  </div>
+                  <p className="text-[10px] text-[var(--text-muted)]">Select translations available for this book</p>
                 </div>
 
                 <div className="space-y-1 md:col-span-2">
@@ -295,6 +366,31 @@ export const CreateBookModal: React.FC<CreateBookModalProps> = ({ isOpen, onClos
                         </div>
                       </div>
                     </div>
+
+                    {/* Additional Language Pricing */}
+                    {(formData.additional_languages || []).length > 0 && (
+                      <div className="space-y-2 pt-2 border-t border-[var(--border-main)]">
+                        <span className="block text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wider">Additional Language Add-ons</span>
+                        {formData.additional_languages!.map(lang => (
+                          <div key={lang} className="grid grid-cols-3 gap-2 items-center">
+                            <label className="col-span-1 text-xs text-[var(--text-main)] truncate">{lang}</label>
+                            <div className="col-span-2 relative">
+                              <span className="absolute left-3 top-2 text-[var(--text-muted)]">$</span>
+                              <input
+                                type="number"
+                                name={`additional_price.${lang}`}
+                                value={formData.base_pricing?.additional_language_prices?.[lang] || ''}
+                                onChange={handleChange}
+                                disabled={isSubmitting}
+                                className="block w-full pl-7 pr-3 py-1.5 border border-[var(--border-main)] rounded-md bg-[var(--bg-panel)] text-[var(--text-main)] text-sm focus:ring-1 focus:ring-[var(--color-primary)]"
+                                placeholder="Add-on Price"
+                              />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
                     <div className="space-y-1">
                       <label htmlFor="pricing.subscription_period_days" className="block text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wider">Subscription Period (Days)</label>
                       <input

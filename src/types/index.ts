@@ -32,6 +32,8 @@ export interface LanguageResult {
   flag_translation?: boolean;
   object_category?: string;
   isPurchased?: boolean;
+  external_org_id?: string;
+  additional_context?: string;
 }
 
 export interface ImageMetadata {
@@ -210,12 +212,14 @@ export interface BasePricing {
   one_time_purchase_price: number;
   subscription_price: number;
   subscription_period_days: number;
+  additional_language_prices?: Record<string, number>;
 }
 
 export interface Book {
   _id: string; // From backend, will be local for new books
   title: string;
   language: string;
+  additional_languages?: string[];
   author?: string;
   subject?: string;
   education_board?: string;
