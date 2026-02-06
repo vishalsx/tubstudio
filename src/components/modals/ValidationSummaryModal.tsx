@@ -6,6 +6,7 @@ interface ValidationSummaryItem {
     page_title: string;
     valid_count: number;
     missing_count: number;
+    error?: string;
 }
 
 interface ValidationSummaryModalProps {
@@ -15,7 +16,12 @@ interface ValidationSummaryModalProps {
         isValid: boolean;
         message: string;
         summary: ValidationSummaryItem[];
-        totals: { valid: number; missing: number };
+        totals: {
+            valid: number;
+            missing: number;
+            empty_chapters?: number;
+            empty_pages?: number;
+        };
     } | null;
 }
 
@@ -72,6 +78,20 @@ export const ValidationSummaryModal: React.FC<ValidationSummaryModalProps> = ({ 
                             <span className="text-xs text-gray-400 uppercase font-bold tracking-wider">Missing Translations</span>
                             <p className="text-2xl font-mono text-red-400">{result.totals.missing}</p>
                         </div>
+
+                        {/* Additional Stats for Structure Errors */}
+                        {(result.totals.empty_chapters || 0) > 0 && (
+                            <div className="bg-[#2a2a2a] p-3 rounded-lg border border-gray-700 border-l-4 border-l-red-500">
+                                <span className="text-xs text-gray-400 uppercase font-bold tracking-wider">Empty Chapters</span>
+                                <p className="text-2xl font-mono text-red-400">{result.totals.empty_chapters}</p>
+                            </div>
+                        )}
+                        {(result.totals.empty_pages || 0) > 0 && (
+                            <div className="bg-[#2a2a2a] p-3 rounded-lg border border-gray-700 border-l-4 border-l-red-500">
+                                <span className="text-xs text-gray-400 uppercase font-bold tracking-wider">Empty Pages</span>
+                                <p className="text-2xl font-mono text-red-400">{result.totals.empty_pages}</p>
+                            </div>
+                        )}
                     </div>
 
                     <h3 className="text-sm font-bold text-gray-300 uppercase tracking-wider mt-4 flex-shrink-0">Detailed Report</h3>
@@ -88,15 +108,25 @@ export const ValidationSummaryModal: React.FC<ValidationSummaryModalProps> = ({ 
                                             <div key={idx} className="flex items-center justify-between bg-[#252525] p-2 rounded border border-gray-800 hover:border-gray-700 transition-colors">
                                                 <p className="text-sm text-gray-300">{item.page_title}</p>
                                                 <div className="flex items-center space-x-4 text-xs font-mono">
-                                                    <div className="flex items-center space-x-1 text-green-500/80">
-                                                        <CheckCircleIcon className="w-3 h-3" />
-                                                        <span>{item.valid_count} OK</span>
-                                                    </div>
-                                                    {item.missing_count > 0 && (
+
+                                                    {item.error ? (
                                                         <div className="flex items-center space-x-1 text-red-500">
-                                                            <ExclamationTriangleIcon className="w-3 h-3" />
-                                                            <span>{item.missing_count} MISSING</span>
+                                                            <XMarkIcon className="w-4 h-4" />
+                                                            <span className="font-semibold">{item.error}</span>
                                                         </div>
+                                                    ) : (
+                                                        <>
+                                                            <div className="flex items-center space-x-1 text-green-500/80">
+                                                                <CheckCircleIcon className="w-3 h-3" />
+                                                                <span>{item.valid_count} OK</span>
+                                                            </div>
+                                                            {item.missing_count > 0 && (
+                                                                <div className="flex items-center space-x-1 text-red-500">
+                                                                    <ExclamationTriangleIcon className="w-3 h-3" />
+                                                                    <span>{item.missing_count} MISSING</span>
+                                                                </div>
+                                                            )}
+                                                        </>
                                                     )}
                                                 </div>
                                             </div>
