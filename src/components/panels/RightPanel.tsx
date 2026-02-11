@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { CommonData, FileInfo, LanguageResult, PermissionCheck, DatabaseImage, CurriculumImage, Book, Chapter, Page, OrgObject, UserContext } from '../../types';
+import { CommonData, FileInfo, LanguageResult, PermissionCheck, DatabaseImage, CurriculumImage, Book, CartItem, Chapter, Page, OrgObject, UserContext } from '../../types';
 import { StatusWorkflow } from '../common/StatusWorkflow';
 import { ContestRightPanel } from './contest/ContestRightPanel';
 import { useContest } from '../../hooks/useContest';
 import { useMyContent } from '../../hooks/useMyContent';
-import { PencilIcon, CheckIcon, XMarkIcon, IdentificationIcon, AcademicCapIcon, BookOpenIcon, SparklesIcon, InformationCircleIcon, ShoppingCartIcon, ShoppingBagIcon, PhotoIcon } from '@heroicons/react/24/solid';
+import { PencilIcon, CheckIcon, CheckCircleIcon, XMarkIcon, IdentificationIcon, AcademicCapIcon, BookOpenIcon, SparklesIcon, InformationCircleIcon, ShoppingCartIcon, ShoppingBagIcon, PhotoIcon } from '@heroicons/react/24/solid';
 import { ArrowPathIcon } from '@heroicons/react/24/outline';
 
 // Define the new spinner component locally
@@ -39,6 +39,7 @@ const StoryLoadingSpinner: React.FC = () => {
 
 interface RightPanelProps {
   leftPanelView: 'upload' | 'database' | 'curriculum' | 'contest' | 'my_content';
+  curriculumTab?: 'my_books' | 'purchase_books';
   selectedCurriculumNode: Book | Chapter | Page | null;
   currentCommonData: CommonData;
   currentFileInfo: FileInfo;
@@ -48,14 +49,27 @@ interface RightPanelProps {
   commonDataMode: 'shared' | 'per-tab';
   permissions: {
     canSwitchToEditMode: PermissionCheck;
+    canSaveToDatabase: PermissionCheck;
+    canReleaseToDatabase: PermissionCheck;
+    canVerifyData: PermissionCheck;
+    canApproveData: PermissionCheck;
+    canRejectData: PermissionCheck;
+    canSkiptData: PermissionCheck;
+    canUploadPicture: PermissionCheck;
+    canIdentifyImage: PermissionCheck;
   };
   onUpdateCommonData: (key: keyof CommonData, value: any) => void;
   className?: string;
   showContent: boolean;
   isDirty?: boolean;
   onSaveBook?: () => void;
-  isStoryLoading?: boolean; // New prop
+  isStoryLoading?: boolean;
+  loadingStoryLanguages?: string[];
   onUpdateStory?: (newStory: string, newMoral?: string) => void;
+  onGenerateStory?: (pageId: string, userComments: string) => void; // New prop
+  selectedStoryLanguage?: string;
+  onSelectStoryLanguage?: (language: string) => void;
+  isPageDirty?: boolean; // New prop
   // Contest Props
   contestProps: ReturnType<typeof useContest>;
   userContext: UserContext | null;
@@ -66,11 +80,17 @@ interface RightPanelProps {
   onUpdateChapter?: (chapterId: string, updates: Partial<Chapter>) => void;
   onUpdatePage?: (pageId: string, updates: Partial<Page>) => void;
   activeBook?: Book | null;
+  activeMarketplaceBook?: Book | null;
+  onPurchaseBook?: (bookId: string) => void;
+  onAddToCart?: (book: Book, method: 'permanent' | 'subscription', languages: string[]) => void;
+  cart?: CartItem[];
+  isPurchasing?: boolean;
   languageOptions?: string[];
 }
 
 export const RightPanel: React.FC<RightPanelProps> = ({
   leftPanelView,
+  curriculumTab,
   selectedCurriculumNode,
   currentCommonData,
   currentFileInfo,
@@ -85,7 +105,12 @@ export const RightPanel: React.FC<RightPanelProps> = ({
   isDirty,
   onSaveBook,
   isStoryLoading,
+  loadingStoryLanguages,
   onUpdateStory,
+  onGenerateStory,
+  selectedStoryLanguage,
+  onSelectStoryLanguage,
+  isPageDirty,
   contestProps,
   userContext,
   myContentProps,
@@ -93,6 +118,11 @@ export const RightPanel: React.FC<RightPanelProps> = ({
   onUpdateChapter,
   onUpdatePage,
   activeBook,
+  activeMarketplaceBook,
+  onPurchaseBook,
+  onAddToCart,
+  cart,
+  isPurchasing,
   languageOptions = [],
 }) => {
   // Global check for purchased status
@@ -103,10 +133,35 @@ export const RightPanel: React.FC<RightPanelProps> = ({
   const [isStoryEditing, setIsStoryEditing] = useState(false);
   const [editedStory, setEditedStory] = useState('');
   const [editedMoral, setEditedMoral] = useState('');
+  const [userComments, setUserComments] = useState<Record<string, string>>({});
+
+  const selectedLanguage = selectedStoryLanguage || activeBook?.language || '';
 
   // Curriculum node editing state
   const [isDetailsEditing, setIsDetailsEditing] = useState(false);
   const [detailsFormData, setDetailsFormData] = useState<any>(null);
+
+  // Purchase selection state
+  const [selectedPurchaseMethod, setSelectedPurchaseMethod] = useState<'permanent' | 'subscription'>('permanent');
+  const [selectedAdditionalLanguages, setSelectedAdditionalLanguages] = useState<string[]>([]);
+
+  // Initialize purchase selections
+  useEffect(() => {
+    if (activeMarketplaceBook) {
+      const defaultMethod: 'permanent' | 'subscription' =
+        (activeMarketplaceBook.base_pricing?.subscription_price && activeMarketplaceBook.base_pricing.subscription_price > 0)
+          ? 'subscription'
+          : 'permanent';
+      setSelectedPurchaseMethod(defaultMethod);
+      setSelectedAdditionalLanguages([]);
+    }
+  }, [activeMarketplaceBook]);
+
+  const toggleAdditionalLanguage = (lang: string) => {
+    setSelectedAdditionalLanguages(prev =>
+      prev.includes(lang) ? prev.filter(l => l !== lang) : [...prev, lang]
+    );
+  };
 
   // Update local edit state when selected node changes
   useEffect(() => {
@@ -117,12 +172,37 @@ export const RightPanel: React.FC<RightPanelProps> = ({
       }
       // Shallow clone for editing
       setDetailsFormData({ ...selectedCurriculumNode });
+
+      // Initialize selected language to book's base language if not set
+      if (activeBook && !selectedStoryLanguage) {
+        onSelectStoryLanguage?.(activeBook.language);
+      }
     } else {
       setDetailsFormData(null);
     }
     setIsStoryEditing(false);
     setIsDetailsEditing(false);
-  }, [selectedCurriculumNode]);
+  }, [selectedCurriculumNode, activeBook]);
+
+  // Update edited story/moral when selected language changes
+  useEffect(() => {
+    if (selectedCurriculumNode && 'stories' in selectedCurriculumNode && selectedLanguage) {
+      const page = selectedCurriculumNode as Page;
+      const storyEntry = page.stories?.find(s => s.language === selectedLanguage);
+
+      if (storyEntry) {
+        setEditedStory(storyEntry.story);
+        setEditedMoral(storyEntry.moral || '');
+      } else if (selectedLanguage === activeBook?.language) {
+        // Fallback to top-level story if it's the base language and no entry in stories list
+        setEditedStory(page.story || '');
+        setEditedMoral(page.moral || '');
+      } else {
+        setEditedStory('');
+        setEditedMoral('');
+      }
+    }
+  }, [selectedLanguage, selectedCurriculumNode, activeBook]);
 
   // Reset editing states if read-only becomes true
   useEffect(() => {
@@ -255,16 +335,7 @@ export const RightPanel: React.FC<RightPanelProps> = ({
     let details;
     const isPage = 'images' in selectedCurriculumNode && !('pages' in selectedCurriculumNode);
 
-    if (isPage && isStoryLoading) {
-      return (
-        <div className="h-full flex flex-col">
-          <h2 className="text-lg font-semibold mb-4 flex-shrink-0">{getCurriculumNodeTitle()}</h2>
-          <div className="flex-1 overflow-y-auto">
-            <StoryLoadingSpinner />
-          </div>
-        </div>
-      );
-    }
+    // Unified loading handled inside content areas to keep panel title and buttons interactive
 
     const handleCancelDetails = () => {
       setDetailsFormData({ ...selectedCurriculumNode });
@@ -665,7 +736,7 @@ export const RightPanel: React.FC<RightPanelProps> = ({
                 {isDetailsEditing ? (
                   <input type="text" name="title" value={detailsFormData?.title || ''} onChange={handleDetailsChange} className="w-full mt-1 p-2 text-sm border border-[var(--border-main)] rounded bg-[var(--bg-panel)] text-[var(--text-main)]" />
                 ) : (
-                  <p className="text-sm text-[var(--text-main)] font-medium">{page.title}</p>
+                  <p className="text-sm font-bold text-[var(--text-main)]">{page.title}</p>
                 )}
               </div>
               <div className="text-right ml-4">
@@ -673,46 +744,77 @@ export const RightPanel: React.FC<RightPanelProps> = ({
                 {isDetailsEditing ? (
                   <input type="number" name="page_number" value={detailsFormData?.page_number || ''} onChange={handleDetailsChange} className="w-20 mt-1 p-2 text-sm border border-[var(--border-main)] rounded bg-[var(--bg-panel)] text-[var(--text-main)] text-right" />
                 ) : (
-                  <p className="text-sm text-[var(--text-main)]">{page.page_number}</p>
+                  <p className="text-sm font-bold text-[var(--text-main)] italic">Page {page.page_number}</p>
                 )}
               </div>
             </div>
           </div>
 
-          {page.story && (
+          {/* Story Section with Multilingual Support */}
+          {(page.story || (page.stories && page.stories.length > 0) || !isReadOnly) && (
             <div className="bg-[var(--bg-input)]/50 backdrop-blur-sm border border-[var(--color-primary-light)] p-4 rounded-2xl shadow-sm relative group/story overflow-hidden">
               <div className="absolute top-0 right-0 w-24 h-24 -mr-8 -mt-8 bg-[var(--color-primary)] opacity-5 rounded-full pointer-events-none"></div>
 
-              <div className="flex justify-between items-center mb-3">
-                <h3 className="font-bold text-[var(--text-main)] flex items-center text-sm">
-                  <SparklesIcon className="w-4 h-4 text-amber-500 mr-1.5" />
-                  Generated Story
-                </h3>
-                {!isStoryEditing && onUpdateStory && !isReadOnly && (
-                  <button
-                    onClick={() => setIsStoryEditing(true)}
-                    className="p-1.5 bg-[var(--bg-panel)] text-[var(--text-muted)] hover:text-[var(--color-primary)] rounded-lg shadow-sm border border-[var(--border-main)] transition-all hover:shadow-md"
-                    title="Edit Story"
-                  >
-                    <PencilIcon className="w-4 h-4" />
-                  </button>
+              <div className="flex flex-col mb-4">
+                <div className="flex justify-between items-center mb-2">
+                  <h3 className="font-bold text-[var(--text-main)] flex items-center text-sm">
+                    <SparklesIcon className="w-4 h-4 text-amber-500 mr-1.5" />
+                    Story & Moral
+                  </h3>
+                  {!isStoryEditing && onUpdateStory && !isReadOnly && (
+                    <button
+                      onClick={() => setIsStoryEditing(true)}
+                      className="p-1.5 bg-[var(--bg-panel)] text-[var(--text-muted)] hover:text-[var(--color-primary)] rounded-lg shadow-sm border border-[var(--border-main)] transition-all hover:shadow-md"
+                      title="Edit Story"
+                    >
+                      <PencilIcon className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Language Selector Tabs */}
+                {activeBook && (
+                  <div className="flex flex-wrap gap-1 border-b border-[var(--border-main)] pb-2">
+                    {[activeBook.language, ...(activeBook.additional_languages || [])].map(lang => (
+                      <button
+                        key={lang}
+                        onClick={() => {
+                          onSelectStoryLanguage?.(lang);
+                          setIsStoryEditing(false);
+                        }}
+                        className={`px-3 py-1 text-[10px] font-bold rounded-t-lg transition-all ${selectedLanguage === lang
+                          ? 'bg-[var(--color-primary)] text-white'
+                          : 'bg-[var(--bg-panel)] text-[var(--text-muted)] hover:bg-[var(--bg-input)] hover:text-[var(--text-main)]'
+                          }`}
+                      >
+                        {lang}
+                        {lang === activeBook.language && <span className="ml-1 opacity-70">(Base)</span>}
+                        {page.stories?.some(s => s.language === lang) && (
+                          <span className="ml-1 w-1.5 h-1.5 bg-green-400 rounded-full inline-block"></span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
                 )}
               </div>
 
               {isStoryEditing ? (
                 <div className="space-y-4">
                   <div className="relative">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-[10px] font-bold text-[var(--text-muted)] uppercase">Editing: {selectedLanguage}</span>
+                    </div>
                     <textarea
                       value={editedStory}
                       onChange={(e) => setEditedStory(e.target.value)}
                       className="w-full p-3 text-sm border border-[var(--color-primary-light)] rounded-xl focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none min-h-[300px] bg-[var(--bg-panel)] text-[var(--text-main)] transition-all shadow-inner"
-                      placeholder="Enter story text..."
+                      placeholder={`Enter story text in ${selectedLanguage}...`}
                     />
                   </div>
                   <div className="bg-[var(--bg-panel)] p-3 rounded-xl border border-[var(--border-main)] shadow-sm">
                     <h4 className="font-bold text-[var(--text-muted)] text-xs mb-2 flex items-center">
                       <InformationCircleIcon className="w-3.5 h-3.5 text-[var(--color-primary)] mr-1" />
-                      Moral of the Story
+                      Moral of the Story ({selectedLanguage})
                     </h4>
                     <input
                       type="text"
@@ -724,34 +826,127 @@ export const RightPanel: React.FC<RightPanelProps> = ({
                   </div>
                   <div className="flex justify-end space-x-2 pt-2">
                     <button
-                      onClick={() => setIsStoryEditing(false)}
+                      onClick={() => {
+                        // Reset to original for this language
+                        const storyEntry = page.stories?.find(s => s.language === selectedLanguage);
+                        if (storyEntry) {
+                          setEditedStory(storyEntry.story);
+                          setEditedMoral(storyEntry.moral || '');
+                        } else if (selectedLanguage === activeBook?.language) {
+                          setEditedStory(page.story || '');
+                          setEditedMoral(page.moral || '');
+                        } else {
+                          setEditedStory('');
+                          setEditedMoral('');
+                        }
+                        setIsStoryEditing(false);
+                      }}
                       className="px-3 py-1.5 text-xs font-semibold text-[var(--text-muted)] hover:text-[var(--text-main)] bg-[var(--bg-panel)] border border-[var(--border-main)] rounded-lg hover:bg-[var(--bg-input)] transition-colors"
                     >
                       Cancel
                     </button>
                     <button
                       onClick={() => {
-                        onUpdateStory?.(editedStory, editedMoral);
+                        // Pass the language to onUpdateStory if it supports it, 
+                        // or handle it via a new prop/logic.
+                        // Assuming onUpdateStory is updated to handle language or we update it here.
+                        onUpdateStory?.(editedStory, editedMoral); // We need to ensure logic elsewhere handles selectedLanguage
                         setIsStoryEditing(false);
                       }}
                       className="px-4 py-1.5 text-xs font-bold bg-[var(--color-primary)] text-white rounded-lg hover:opacity-90 shadow-md transition-all active:scale-95"
                     >
-                      Save Story
+                      Save {selectedLanguage} Story
                     </button>
                   </div>
                 </div>
               ) : (
                 <div className="space-y-4">
-                  <p className="text-[var(--text-main)] whitespace-pre-wrap text-sm leading-relaxed font-medium">
-                    {page.story}
-                  </p>
-                  {page.moral && (
-                    <div className="bg-[var(--bg-panel)]/60 backdrop-blur-sm p-3 rounded-xl border border-[var(--border-main)] mt-2">
-                      <h4 className="font-bold text-[var(--text-main)] text-xs mb-1 flex items-center">
-                        <InformationCircleIcon className="w-3.5 h-3.5 text-[var(--color-primary)] mr-1" />
-                        The Moral
-                      </h4>
-                      <p className="text-[var(--text-muted)] italic text-sm">{page.moral}</p>
+                  {loadingStoryLanguages?.includes(selectedLanguage) ? (
+                    <div className="py-12 bg-[var(--bg-panel)]/30 rounded-xl border border-dashed border-[var(--border-main)] backdrop-blur-sm">
+                      <StoryLoadingSpinner />
+                    </div>
+                  ) : editedStory ? (
+                    <>
+                      <p className="text-[var(--text-main)] whitespace-pre-wrap text-sm leading-relaxed font-medium">
+                        {editedStory}
+                      </p>
+                      {editedMoral && (
+                        <div className="bg-[var(--bg-panel)]/60 backdrop-blur-sm p-3 rounded-xl border border-[var(--border-main)] mt-2">
+                          <h4 className="font-bold text-[var(--text-main)] text-xs mb-1 flex items-center">
+                            <InformationCircleIcon className="w-3.5 h-3.5 text-[var(--color-primary)] mr-1" />
+                            The Moral
+                          </h4>
+                          <p className="text-[var(--text-muted)] italic text-sm">{editedMoral}</p>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="py-8 text-center bg-[var(--bg-panel)]/30 rounded-xl border border-dashed border-[var(--border-main)]">
+                      <p className="text-[var(--text-muted)] text-sm italic">
+                        No story generated for {selectedLanguage} yet.
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Regeneration Instructions - ALWAYS visible at the bottom of the story tab */}
+                  {!isReadOnly && (
+                    <div className="mt-6 pt-6 border-t border-[var(--border-main)] flex-shrink-0">
+                      <div className="bg-gradient-to-br from-[var(--color-primary-light)]/30 via-[var(--bg-panel)] to-[var(--color-secondary-light)]/20 p-4 rounded-2xl border border-[var(--border-main)] shadow-sm relative overflow-hidden group/prompt">
+                        <div className="relative">
+                          <div className="flex items-center justify-between mb-3">
+                            <label htmlFor="userComments" className="flex items-center text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest">
+                              <SparklesIcon className="w-3.5 h-3.5 mr-1.5 text-amber-500" />
+                              Regeneration Instructions ({selectedLanguage})
+                            </label>
+                            {userComments[selectedLanguage] && (
+                              <button
+                                onClick={() => setUserComments(prev => ({ ...prev, [selectedLanguage]: '' }))}
+                                className="text-[10px] text-[var(--text-muted)] hover:text-[var(--text-main)] font-medium transition-colors"
+                              >
+                                Clear
+                              </button>
+                            )}
+                          </div>
+
+                          <div className="relative bg-[var(--bg-panel)] rounded-xl border border-[var(--border-main)] shadow-inner focus-within:ring-2 focus-within:ring-[var(--color-primary)]/10 focus-within:border-[var(--color-primary)] transition-all overflow-hidden">
+                            <textarea
+                              id="userComments"
+                              rows={2}
+                              value={userComments[selectedLanguage] || ''}
+                              onChange={(e) => setUserComments(prev => ({ ...prev, [selectedLanguage]: e.target.value }))}
+                              className="w-full p-4 pr-32 text-sm bg-transparent outline-none resize-none placeholder-[var(--text-muted)] opacity-60 leading-relaxed min-h-[80px]"
+                              placeholder={`e.g., Make the ${selectedLanguage} story more adventurous...`}
+                              disabled={isStoryLoading}
+                            />
+
+                            <div className="absolute top-3 right-3 flex items-center space-x-2">
+                              <button
+                                onClick={() => onGenerateStory?.(page.page_id!, userComments[selectedLanguage] || '')}
+                                disabled={isStoryLoading || !!isPageDirty || loadingStoryLanguages?.includes(selectedLanguage)}
+                                className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-xs font-bold transition-all active:scale-95 shadow-md shadow-blue-500/10 
+                                ${isPageDirty || loadingStoryLanguages?.includes(selectedLanguage)
+                                    ? 'bg-[var(--bg-input)] text-[var(--text-muted)] cursor-not-allowed bg-transparent border border-[var(--border-main)]'
+                                    : 'bg-[var(--color-primary)] text-white hover:opacity-90 shadow-lg'}`}
+                                title={isPageDirty ? "Save changes before regenerating" : "Regenerate story"}
+                              >
+                                {loadingStoryLanguages?.includes(selectedLanguage) ? (
+                                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-1" />
+                                ) : (
+                                  <ArrowPathIcon className="w-4 h-4" />
+                                )}
+                                <span>{loadingStoryLanguages?.includes(selectedLanguage) ? 'Regenerating...' : 'Regenerate'}</span>
+                              </button>
+                            </div>
+                          </div>
+
+                          {isPageDirty && (
+                            <p className="mt-2 text-[10px] text-amber-600 flex items-center font-medium animate-pulse">
+                              <InformationCircleIcon className="w-3 h-3 mr-1" />
+                              Please save your image sequence changes before regenerating.
+                            </p>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -795,13 +990,197 @@ export const RightPanel: React.FC<RightPanelProps> = ({
     );
   };
 
+  const renderMarketplaceBookDetails = () => {
+    if (!activeMarketplaceBook) {
+      return (
+        <div className="h-full flex flex-col items-center justify-center text-[var(--text-muted)] opacity-60">
+          <BookOpenIcon className="w-16 h-16 mb-4" />
+          <p className="text-lg font-medium">Select a book to view details</p>
+        </div>
+      );
+    }
+
+    const isInCart = cart?.some(item => item.book._id === activeMarketplaceBook._id);
+    const isOwned = activeMarketplaceBook.is_purchased || activeMarketplaceBook.ownership_type === 'purchased';
+
+    return (
+      <div className="h-full flex flex-col space-y-4 overflow-y-auto custom-scrollbar">
+        {/* Cover Image */}
+        <div className="w-full h-64 bg-gradient-to-br from-[var(--bg-panel)] to-[var(--bg-hover)] rounded-xl overflow-hidden relative shadow-lg flex-shrink-0">
+          {activeMarketplaceBook.front_cover_image ? (
+            <img
+              src={`data:image/jpeg;base64,${activeMarketplaceBook.front_cover_image}`}
+              alt={activeMarketplaceBook.title}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="w-full h-full flex flex-col items-center justify-center text-[var(--text-muted)] p-6 text-center">
+              <BookOpenIcon className="w-16 h-16 mb-2 opacity-50" />
+              <span className="text-sm font-bold uppercase tracking-wider opacity-60">No Cover</span>
+            </div>
+          )}
+
+          <div className="absolute top-4 right-4 bg-[var(--color-primary)] text-white px-3 py-1 rounded-full text-sm font-bold shadow-lg">
+            {activeMarketplaceBook.base_pricing?.is_free ? 'Free' : `$${activeMarketplaceBook.base_pricing?.one_time_purchase_price || 0}`}
+          </div>
+        </div>
+
+        {/* Title & Author */}
+        <div>
+          <h2 className="text-xl font-bold text-[var(--text-main)] leading-tight mb-1">{activeMarketplaceBook.title}</h2>
+          <p className="text-sm text-[var(--text-muted)]">by {activeMarketplaceBook.author || 'Unknown Author'}</p>
+        </div>
+
+        {/* Purchase Warning */}
+        {isOwned && (
+          <div className="bg-amber-100 border-l-4 border-amber-500 text-amber-900 p-3 mb-4 rounded-r shadow-sm flex items-start">
+            <CheckCircleIcon className="w-5 h-5 text-amber-600 mr-2 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="font-bold text-sm">Already Purchased</p>
+              <p className="text-xs mt-0.5 opacity-90">This book is already in your library.</p>
+            </div>
+          </div>
+        )}
+
+        {/* Purchase Configuration */}
+        {!isOwned && !activeMarketplaceBook.base_pricing?.is_free && (
+          <div className="space-y-4 py-2">
+            {/* Method Selection */}
+            {activeMarketplaceBook.base_pricing?.subscription_price && activeMarketplaceBook.base_pricing?.one_time_purchase_price && (
+              <div className="space-y-2">
+                <h3 className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">Purchase Model</h3>
+                <div className="flex bg-[var(--bg-panel)] rounded-xl p-1 border border-[var(--border-main)] shadow-sm">
+                  <button
+                    onClick={() => setSelectedPurchaseMethod('subscription')}
+                    className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${selectedPurchaseMethod === 'subscription'
+                      ? 'bg-amber-100 text-amber-700 shadow-sm'
+                      : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
+                      }`}
+                  >
+                    Subscription (${activeMarketplaceBook.base_pricing.subscription_price.toFixed(2)})
+                  </button>
+                  <button
+                    onClick={() => setSelectedPurchaseMethod('permanent')}
+                    className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${selectedPurchaseMethod === 'permanent'
+                      ? 'bg-emerald-100 text-emerald-700 shadow-sm'
+                      : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
+                      }`}
+                  >
+                    Permanent (${activeMarketplaceBook.base_pricing.one_time_purchase_price.toFixed(2)})
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Additional Languages */}
+            {activeMarketplaceBook.base_pricing?.additional_language_prices && Object.keys(activeMarketplaceBook.base_pricing.additional_language_prices).length > 0 && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">Additional Translations</h3>
+                  <span className="text-[10px] text-[var(--text-muted)]">(Select to bundle)</span>
+                </div>
+                <div className="grid grid-cols-1 gap-1.5">
+                  {Object.entries(activeMarketplaceBook.base_pricing.additional_language_prices).map(([lang, langPrice]) => (
+                    <label key={lang} className="flex items-center justify-between group cursor-pointer p-2 rounded-xl bg-[var(--bg-panel)] border border-[var(--border-main)] hover:border-[var(--color-primary)]/30 transition-all">
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="checkbox"
+                          checked={selectedAdditionalLanguages.includes(lang)}
+                          onChange={() => toggleAdditionalLanguage(lang)}
+                          className="w-4 h-4 rounded border-[var(--border-main)] text-[var(--color-primary)] focus:ring-[var(--color-primary)]"
+                        />
+                        <span className="text-sm text-[var(--text-muted)] group-hover:text-[var(--text-main)] transition-colors font-medium">{lang}</span>
+                      </div>
+                      <span className="text-sm font-bold text-[var(--color-primary)]/80">${langPrice.toFixed(2)}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Action Button */}
+        <div className="py-2">
+          <button
+            onClick={() => onAddToCart?.(activeMarketplaceBook, selectedPurchaseMethod, selectedAdditionalLanguages)}
+            disabled={isInCart || isOwned}
+            className={`w-full px-4 py-2.5 rounded-xl font-bold shadow-md transition-all active:scale-95 flex items-center justify-center gap-2
+               ${isInCart
+                ? 'bg-[var(--bg-input)] text-[var(--text-muted)] cursor-not-allowed'
+                : 'bg-[var(--color-primary)] text-white hover:opacity-90 shadow-lg shadow-[var(--color-primary)]/20'}`}
+          >
+            {isInCart ? (
+              <>
+                <CheckIcon className="w-5 h-5" />
+                <span>In Cart</span>
+              </>
+            ) : (
+              <>
+                <ShoppingCartIcon className="w-5 h-5" />
+                <span>Add to Cart</span>
+              </>
+            )}
+          </button>
+        </div>
+
+        {/* Details */}
+        <div className="bg-[var(--bg-input)]/50 rounded-xl p-4 border border-[var(--border-main)] space-y-3">
+          <div>
+            <h3 className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider mb-1">Description</h3>
+            <p className="text-sm text-[var(--text-main)] leading-relaxed opacity-90">
+              {activeMarketplaceBook.description || 'No description provided.'}
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4 pt-2 border-t border-[var(--border-main)]">
+            <div>
+              <h3 className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider mb-1">Subject</h3>
+              <p className="text-sm font-medium">{activeMarketplaceBook.subject || 'General'}</p>
+            </div>
+            <div>
+              <h3 className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider mb-1">Grade Level</h3>
+              <p className="text-sm font-medium">{activeMarketplaceBook.grade_level || 'All Levels'}</p>
+            </div>
+            <div>
+              <h3 className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider mb-1">Language</h3>
+              <p className="text-sm font-medium">{activeMarketplaceBook.language || 'English'}</p>
+            </div>
+            <div>
+              <h3 className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider mb-1">Pages</h3>
+              <p className="text-sm font-medium">{activeMarketplaceBook.page_count || 0}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Additional Languages */}
+        {activeMarketplaceBook.additional_languages && activeMarketplaceBook.additional_languages.length > 0 && (
+          <div className="bg-[var(--bg-input)]/50 rounded-xl p-4 border border-[var(--border-main)]">
+            <h3 className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider mb-2">Available Languages</h3>
+            <div className="flex flex-wrap gap-2">
+              {activeMarketplaceBook.additional_languages.map(lang => (
+                <span key={lang} className="px-2 py-1 bg-[var(--bg-panel)] border border-[var(--border-main)] rounded text-xs font-medium">
+                  {lang}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const renderContent = () => {
     if (leftPanelView === 'my_content') {
       // Repository view - show same metadata content as database view
       return renderMetadataContent();
     }
-    // If we are in curriculum view, show curriculum-related content.
+    // If we are in curriculum view, show curriculum-related content or marketplace content.
     if (leftPanelView === 'curriculum') {
+      if (curriculumTab === 'purchase_books') {
+        return renderMarketplaceBookDetails();
+      }
+
       if (selectedCurriculumNode) {
         return renderCurriculumNodeDetails();
       }
@@ -833,7 +1212,7 @@ export const RightPanel: React.FC<RightPanelProps> = ({
 
   return (
     <div className={`w-full bg-[var(--bg-panel)] bg-panel-texture text-[var(--text-main)] rounded-lg shadow-lg p-4 flex flex-col transition-all duration-300 ${className}`}>
-      {showContent ? renderContent() : (
+      {showContent || (curriculumTab === 'purchase_books') ? renderContent() : (
         <div className="flex-1 flex items-center justify-center">
           <p className="text-[var(--text-muted)] italic text-center">Details will be shown here.</p>
         </div>

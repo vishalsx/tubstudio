@@ -175,21 +175,30 @@ export interface CurriculumImage {
   image_hash: string;
   position?: number;
   object_name?: string;
+  translated_names?: Record<string, string>;
   // UI-only fields, populated on fetch, not for saving
   thumbnail?: string;
   image_base64?: string;
   isNew?: boolean;
   isLoading?: boolean;
+}
 
+export interface MultilingualStory {
+  language: string;
+  story: string;
+  moral?: string;
+  created_at?: string;
 }
 
 export interface Page {
   page_id?: string;
   page_number?: number;
   title?: string;
+  translated_titles?: Record<string, string>;
   images: CurriculumImage[];
   story?: string;
   moral?: string;
+  stories?: MultilingualStory[];
   isEditing?: boolean;
   isNew?: boolean;
   isModified?: boolean;
@@ -200,6 +209,7 @@ export interface Chapter {
   chapter_id?: string;
   chapter_number?: number;
   chapter_name: string;
+  translated_names?: Record<string, string>;
   description?: string;
   pages: Page[];
   isEditing?: boolean;
@@ -218,6 +228,7 @@ export interface BasePricing {
 export interface Book {
   _id: string; // From backend, will be local for new books
   title: string;
+  translated_titles?: Record<string, string>;
   language: string;
   additional_languages?: string[];
   author?: string;
@@ -227,6 +238,7 @@ export interface Book {
   tags?: string[];
   front_cover_image?: string;
   chapters: Chapter[];
+  description?: string;
   // New Count Fields
   chapter_count?: number;
   page_count?: number;
@@ -246,4 +258,11 @@ export interface Book {
   display_order?: number;
   org_id?: string;
   book_status?: 'Draft' | 'Published';
+  is_purchased?: boolean;
+}
+
+export interface CartItem {
+  book: Book;
+  purchaseMethod: 'permanent' | 'subscription';
+  selectedLanguages?: string[];
 }

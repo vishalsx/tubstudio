@@ -15,6 +15,7 @@ import { translationService } from '../services/translation.service';
 import { useMyContent } from '../hooks/useMyContent';
 import { canPerformUiAction } from '../utils/permissions/hasPermissions';
 import { PermissionCheck, UserContext, DatabaseImage, CurriculumImage, Book, Chapter, Page, OrgObject } from '../types';
+
 import { formatFileSize } from '../utils/imageUtils';
 import { UI_MESSAGES, DEFAULT_COMMON_DATA, DEFAULT_FILE_INFO } from '../utils/constants';
 
@@ -62,6 +63,7 @@ export const MainApp: React.FC<MainAppProps> = ({ authData }) => {
 
   // View management states
   const [leftPanelView, setLeftPanelView] = useState<'upload' | 'database' | 'curriculum' | 'contest' | 'my_content'>('upload');
+  const [curriculumTab, setCurriculumTab] = useState<'my_books' | 'purchase_books'>('my_books');
   const [languageForImageSearch, setLanguageForImageSearch] = useState<string>('');
   const [cameFromCurriculum, setCameFromCurriculum] = useState(false);
 
@@ -73,6 +75,9 @@ export const MainApp: React.FC<MainAppProps> = ({ authData }) => {
   const [pendingIdentify, setPendingIdentify] = useState<string[] | null>(null);
   const [searchAttempted, setSearchAttempted] = useState(false);
 
+  // Cart state
+
+
   // Gallery Pagination State
   const [galleryPage, setGalleryPage] = useState(1);
   const [galleryHasMore, setGalleryHasMore] = useState(false);
@@ -81,6 +86,7 @@ export const MainApp: React.FC<MainAppProps> = ({ authData }) => {
 
   // Curriculum State
   const [selectedCurriculumNode, setSelectedCurriculumNode] = useState<Book | Chapter | Page | null>(null);
+  const [selectedStoryLanguage, setSelectedStoryLanguage] = useState<string>('');
   const activeBookIdRef = useRef<string | null>(null);
 
   // Worklist callout state
@@ -97,6 +103,9 @@ export const MainApp: React.FC<MainAppProps> = ({ authData }) => {
       // Book ID changed (different book selected)
       setSelectedCurriculumNode(curriculum.activeBook);
       activeBookIdRef.current = newActiveBookId;
+      if (curriculum.activeBook) {
+        setSelectedStoryLanguage(curriculum.activeBook.language);
+      }
     } else if (selectedCurriculumNode && 'chapters' in selectedCurriculumNode && '_id' in selectedCurriculumNode && (selectedCurriculumNode as Book)._id === newActiveBookId) {
       // Same book ID, but valid content update for the root book node. 
       // Refresh selected node to ensure status/metadata is current.
@@ -776,8 +785,12 @@ export const MainApp: React.FC<MainAppProps> = ({ authData }) => {
   };
 
   const handleCreateStory = () => {
-    if (curriculum.selectedPageData?.page_id) {
-      curriculum.generateStoryForPage(curriculum.selectedPageData.page_id);
+    if (curriculum.selectedPageData?.page_id && curriculum.activeBook) {
+      const languages = [
+        curriculum.activeBook.language,
+        ...(curriculum.activeBook.additional_languages || [])
+      ];
+      curriculum.generateStoryForPage(curriculum.selectedPageData.page_id, languages);
     }
   };
 
@@ -871,7 +884,7 @@ export const MainApp: React.FC<MainAppProps> = ({ authData }) => {
   // NEW: Handle update story in curriculum view
   const handleUpdateStory = (newStory: string, newMoral?: string) => {
     if (curriculum.selectedPageData?.page_id) {
-      curriculum.updateStory(curriculum.selectedPageData.page_id, newStory, newMoral);
+      curriculum.updateStory(curriculum.selectedPageData.page_id, newStory, newMoral, selectedStoryLanguage);
     }
   };
 
@@ -892,6 +905,13 @@ export const MainApp: React.FC<MainAppProps> = ({ authData }) => {
       <main className="flex-1 flex flex-col md:flex-row md:items-stretch p-4 gap-4 h-[calc(100vh-80px)] max-h-[calc(100vh-80px)]">
         <LeftPanel
           leftPanelView={leftPanelView}
+          curriculumTab={curriculumTab}
+          onSetCurriculumTab={setCurriculumTab}
+          onBackToCurriculum={handleBackToCurriculum}
+          cart={curriculum.cart}
+          onRemoveFromCart={curriculum.removeFromCart}
+          onCheckout={curriculum.checkout}
+          isPurchasing={curriculum.isPurchasing}
           fileInputRef={imageUpload.fileInputRef}
           languageDropdownRef={languageDropdownRef}
           previewUrl={imageUpload.previewUrl}
@@ -910,6 +930,7 @@ export const MainApp: React.FC<MainAppProps> = ({ authData }) => {
           isRedirecting={isRedirecting}
           error={imageUpload.error || worklist.error}
           identifyProgress={identifyProgress}
+          notification={curriculum.notification}
           canUploadPicture={canUploadPicture}
           canIdentifyImage={canIdentifyImage}
           canViewWorkList={canViewWorkList}
@@ -943,7 +964,7 @@ export const MainApp: React.FC<MainAppProps> = ({ authData }) => {
           onSelectNode={setSelectedCurriculumNode}
           onCollapseAll={curriculum.collapseAll}
           languageForImageSearch={effectiveLanguageForImageSearch}
-          notification={curriculum.notification}
+
           showWorklistCallout={showWorklistCallout}
           onDismissCallout={() => {
             if (worklistCalloutTimerRef.current) {
@@ -959,6 +980,7 @@ export const MainApp: React.FC<MainAppProps> = ({ authData }) => {
 
         <MiddlePanel
           leftPanelView={leftPanelView}
+          curriculumTab={curriculumTab}
           className={`transition-all duration-300 ease-in-out h-full max-h-full overflow-y-auto ${isLeftPanelCollapsed ? 'md:flex-[3_0_0%] min-w-0' : 'md:flex-[5_0_0%] min-w-0'}`}
 
           // Upload view props
@@ -974,7 +996,8 @@ export const MainApp: React.FC<MainAppProps> = ({ authData }) => {
           isEditing={languageResults.isEditing}
           isSaving={languageResults.isSaving}
           isWorklistLoading={worklist.isLoading}
-          permissions={{ canSwitchToEditMode, canSaveToDatabase, canReleaseToDatabase, canVerifyData, canApproveData, canRejectData, canSkiptData }}
+          isLoading={curriculum.isLoading}
+          permissions={{ canSwitchToEditMode, canSaveToDatabase, canReleaseToDatabase, canVerifyData, canApproveData, canRejectData, canSkiptData, canUploadPicture, canIdentifyImage }}
           onTabChange={languageResults.setActiveTab}
           onRemoveTab={languageResults.removeLanguageTab}
           onUpdateLanguageResult={languageResults.updateLanguageResult}
@@ -1001,9 +1024,24 @@ export const MainApp: React.FC<MainAppProps> = ({ authData }) => {
           onSelectChapter={curriculum.selectChapter}
           onSelectPage={curriculum.selectPage}
           onSelectNode={setSelectedCurriculumNode}
-          onNodeExpansion={curriculum.handleNodeExpansion}
-          isLoading={curriculum.isLoading}
           selectedPageData={curriculum.selectedPageData}
+
+          imageLoadingProgress={curriculum.imageLoadingProgress}
+          onReorderImagesOnPage={curriculum.reorderImagesOnPage}
+          onUpdateImageName={(imageHash, newName) => curriculum.updateImageName(curriculum.selectedPageData?.page_id || '', imageHash, newName)}
+          isStoryLoading={curriculum.isStoryLoading}
+          loadingStoryLanguages={curriculum.loadingStoryLanguages}
+
+          onGenerateStory={(pageId, languages, userComments) => curriculum.generateStoryForPage(pageId, languages, userComments)}
+          onCheckTranslation={curriculum.checkTranslation}
+          selectedStoryLanguage={selectedStoryLanguage}
+          onSelectStoryLanguage={setSelectedStoryLanguage}
+          // Contest Props
+          contestProps={contest}
+          // My Content Props
+          myContentProps={myContent}
+
+          userContext={userContext}
           onCurriculumImageDoubleClick={handleCurriculumImageDoubleClick}
           languageForImageSearch={effectiveLanguageForImageSearch}
           onAddImageToCurriculumPage={curriculum.addImageToPage}
@@ -1011,43 +1049,55 @@ export const MainApp: React.FC<MainAppProps> = ({ authData }) => {
           onAddNewImageFromSearch={handleAddNewImageFromSearch}
           onAddChapter={curriculum.addChapter}
           onAddPage={curriculum.addPage}
-          isStoryLoading={curriculum.isStoryLoading}
           onCreateStory={handleCreateStory}
-          onGenerateStory={curriculum.generateStoryForPage}
-          onReorderImagesOnPage={curriculum.reorderImagesOnPage}
-          imageLoadingProgress={curriculum.imageLoadingProgress}
-          onUpdateImageName={handleUpdateImageName}
           onReIdentify={handleReIdentify}
           isDirty={curriculum.isDirty}
           onSaveBook={curriculum.saveBook}
-          onCheckTranslation={curriculum.checkTranslation}
+          isPublishing={curriculum.isPublishing}
           validationResult={curriculum.validationResult}
-
-          contestProps={contest}
-          userContext={userContext}
           cameFromCurriculum={cameFromCurriculum}
           onBackToCurriculum={handleBackToCurriculum}
-          myContentProps={myContent}
+          marketplaceBooks={curriculum.marketplaceBooks}
+          activeMarketplaceBook={curriculum.activeMarketplaceBook}
+          onSelectMarketplaceBook={curriculum.selectMarketplaceBook}
+          isMarketplaceLoading={curriculum.isLoading}
         />
 
         <RightPanel
           activeBook={curriculum.activeBook}
+          activeMarketplaceBook={curriculum.activeMarketplaceBook}
+          onPurchaseBook={curriculum.purchaseBook}
+          onAddToCart={curriculum.addToCart}
+          cart={curriculum.cart}
+          isPurchasing={curriculum.isPurchasing}
           leftPanelView={leftPanelView}
+          curriculumTab={curriculumTab}
           selectedCurriculumNode={nodeForRightPanel}
+          permissions={{ canSwitchToEditMode, canSaveToDatabase, canReleaseToDatabase, canVerifyData, canApproveData, canRejectData, canSkiptData, canUploadPicture, canIdentifyImage }}
+          onUpdateCommonData={languageResults.updateCommonData}
           currentCommonData={currentDataForPanels}
           currentFileInfo={getCurrentFileInfo(languageResults.activeTab)}
           activeTab={languageResults.activeTab}
           isEditing={languageResults.isEditing}
           languageResults={languageResults.languageResults}
           commonDataMode={commonDataMode}
-          permissions={{ canSwitchToEditMode }}
-          onUpdateCommonData={languageResults.updateCommonData}
+          // Add specific permissions if needed for RightPanel logic
+          // (RightPanel uses activeBook, etc. mainly for display)
+          showContent={!!nodeForRightPanel || (leftPanelView === 'curriculum' && curriculumTab === 'purchase_books')}
           className={`transition-all duration-300 ease-in-out h-full max-h-full overflow-y-auto ${isLeftPanelCollapsed ? 'md:flex-[2_0_0%] min-w-0' : 'md:flex-[3_0_0%] min-w-0'}`}
-          showContent={leftPanelView === 'contest' || Object.keys(languageResults.languageResults).length > 0 || !!selectedCurriculumNode}
           isDirty={curriculum.isDirty}
-          onSaveBook={curriculum.saveBook}
+          onUpdateStory={(newStory, newMoral) =>
+            curriculum.updateStory(curriculum.selectedPageData?.page_id || '', newStory, newMoral, selectedStoryLanguage)
+          }
+          onGenerateStory={(pageId, userComments) =>
+            curriculum.generateStoryForPage(pageId, [selectedStoryLanguage], userComments)
+          }
+          selectedStoryLanguage={selectedStoryLanguage}
+          onSelectStoryLanguage={setSelectedStoryLanguage}
+          isPageDirty={curriculum.isPageDirty}
           isStoryLoading={curriculum.isStoryLoading}
-          onUpdateStory={handleUpdateStory}
+          loadingStoryLanguages={curriculum.loadingStoryLanguages}
+          onSaveBook={() => curriculum.saveBook()}
 
           // Contest props
           contestProps={contest}

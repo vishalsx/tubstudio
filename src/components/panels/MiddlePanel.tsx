@@ -14,6 +14,7 @@ import { useContest } from '../../hooks/useContest';
 import { useMyContent } from '../../hooks/useMyContent';
 
 import { ValidationSummaryModal } from '../modals/ValidationSummaryModal';
+import { MarketplaceGrid } from '../marketplace/MarketplaceGrid';
 
 interface MiddlePanelProps {
   leftPanelView: 'upload' | 'database' | 'curriculum' | 'contest' | 'my_content';
@@ -41,6 +42,8 @@ interface MiddlePanelProps {
     canApproveData: PermissionCheck;
     canRejectData: PermissionCheck;
     canSkiptData: PermissionCheck;
+    canUploadPicture?: PermissionCheck;
+    canIdentifyImage?: PermissionCheck;
   };
   onTabChange: (tab: string) => void;
   onRemoveTab: (language: string) => void;
@@ -73,14 +76,17 @@ interface MiddlePanelProps {
   onAddChapter?: (bookId: string) => void;
   onAddPage?: (bookId: string, chapterId: string) => void;
   isStoryLoading: boolean;
+  loadingStoryLanguages?: string[];
   onCreateStory: () => void;
-  onGenerateStory?: (pageId: string, userComments?: string) => void;
+  onGenerateStory?: (pageId: string, languages?: string[], userComments?: string) => void;
+  selectedStoryLanguage?: string;
+  onSelectStoryLanguage?: (language: string) => void;
   onReorderImagesOnPage: (draggedImageHash: string, targetImageHash: string) => void;
   imageLoadingProgress: { loaded: number, total: number } | null;
   onUpdateImageName?: (imageHash: string, newName: string) => void;
   onReIdentify?: (language: string, context: string) => void;
   isDirty?: boolean;
-  onSaveBook?: (action?: 'SaveDraft' | 'Publish') => void;
+  onSaveBook?: (action?: 'SaveDraft' | 'Publish' | 'Validate') => void;
   onCheckTranslation?: (pageId: string, imageHash: string) => void;
   validationResult?: {
     isValid: boolean;
@@ -95,7 +101,15 @@ interface MiddlePanelProps {
   onBackToCurriculum?: () => void;
 
   // My Content props
+  // My Content props
   myContentProps: ReturnType<typeof useMyContent>;
+
+  isPublishing?: boolean;
+  curriculumTab: 'my_books' | 'purchase_books';
+  marketplaceBooks: Book[];
+  activeMarketplaceBook: Book | null;
+  onSelectMarketplaceBook: (book: Book) => void;
+  isMarketplaceLoading: boolean;
 }
 
 export const MiddlePanel: React.FC<MiddlePanelProps> = (props) => {
@@ -134,14 +148,18 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = (props) => {
     selectedPageData,
     onCurriculumImageDoubleClick,
     languageForImageSearch,
+    isPublishing = false,
     onAddImageToCurriculumPage,
     onRemoveImageFromCurriculumPage,
     onAddNewImageFromSearch,
     onAddChapter,
     onAddPage,
     isStoryLoading,
+    loadingStoryLanguages,
     onCreateStory,
     onGenerateStory,
+    selectedStoryLanguage,
+    onSelectStoryLanguage,
     onReorderImagesOnPage,
     imageLoadingProgress,
     onUpdateImageName,
@@ -157,6 +175,11 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = (props) => {
     onBackToCurriculum,
     onSetError,
     myContentProps,
+    curriculumTab,
+    marketplaceBooks,
+    activeMarketplaceBook,
+    onSelectMarketplaceBook,
+    isMarketplaceLoading,
   } = props;
 
   const [isImageSearchModalOpen, setIsImageSearchModalOpen] = useState(false);
@@ -845,7 +868,7 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = (props) => {
                 {!isReadOnly && onSaveBook && (
                   <div className="ml-auto">
                     <button
-                      onClick={(e) => { e.stopPropagation(); onSaveBook('Publish'); }}
+                      onClick={(e) => { e.stopPropagation(); onSaveBook('Validate'); }}
                       className="flex items-center space-x-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-md transition-all active:scale-95"
                     >
                       <PaperAirplaneIcon className="w-4 h-4" />
@@ -1284,76 +1307,24 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = (props) => {
             )}
           </div>
         </div>
-        {!!selectedPageData?.story && (
-          <div className="mt-6 pt-6 border-t border-gray-100 flex-shrink-0">
-            <div className="bg-gradient-to-br from-[var(--color-primary-light)] via-[var(--bg-panel)] to-[var(--color-secondary-light)]/30 p-4 rounded-2xl border border-[var(--border-main)] shadow-sm relative overflow-hidden group/prompt">
-              <div className="absolute top-0 right-0 w-32 h-32 -mr-16 -mt-16 bg-[var(--color-primary)] opacity-[0.05] rounded-full pointer-events-none transition-transform duration-700 group-hover/prompt:scale-110"></div>
-
-              <div className="relative">
-                <div className="flex items-center justify-between mb-3">
-                  <label htmlFor="userComments" className="flex items-center text-xs font-bold text-[var(--text-muted)] uppercase tracking-widest">
-                    <SparklesIcon className="w-3.5 h-3.5 mr-1.5 text-amber-500" />
-                    Regeneration Instructions
-                  </label>
-                  {!isReadOnly && userComments && (
-                    <button
-                      onClick={() => setUserComments('')}
-                      className="text-[10px] text-[var(--text-muted)] hover:text-[var(--text-main)] font-medium transition-colors"
-                    >
-                      Clear
-                    </button>
-                  )}
-                </div>
-
-                <div className="relative bg-[var(--bg-panel)] rounded-xl border border-[var(--border-main)] shadow-inner focus-within:ring-2 focus-within:ring-[var(--color-primary)]/10 focus-within:border-[var(--color-primary)] transition-all overflow-hidden">
-                  <textarea
-                    id="userComments"
-                    rows={2}
-                    value={userComments}
-                    onChange={(e) => setUserComments(e.target.value)}
-                    className="w-full p-4 pr-32 text-sm bg-transparent outline-none resize-none placeholder-[var(--text-muted)] opacity-60 leading-relaxed min-h-[80px]"
-                    placeholder={isReadOnly ? "Story regeneration is disabled for read-only books." : "e.g., Make the story more adventurous, mention the blue bird..."}
-                    disabled={isStoryLoading || isReadOnly}
-                  />
-
-                  {!isReadOnly && (
-                    <div className="absolute top-3 right-3 flex items-center space-x-2">
-                      <button
-                        onClick={() => onGenerateStory?.(selectedPageData!.page_id!, userComments)}
-                        disabled={isStoryLoading || !!isPageDirty}
-                        className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-xs font-bold transition-all active:scale-95 shadow-md shadow-blue-500/10 
-                      ${isPageDirty
-                            ? 'bg-[var(--bg-input)] text-[var(--text-muted)] cursor-not-allowed bg-transparent border border-[var(--border-main)]'
-                            : 'bg-[var(--color-primary)] text-white hover:opacity-90 shadow-lg'}`}
-                        title={isPageDirty ? "Save changes before regenerating" : "Regenerate story"}
-                      >
-                        {isStoryLoading ? (
-                          <LoadingSpinner size="sm" color="white" className="mr-1" />
-                        ) : (
-                          <ArrowPathIcon className="w-4 h-4" />
-                        )}
-                        <span>{isStoryLoading ? 'Regenerating...' : 'Regenerate'}</span>
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-                {isPageDirty && (
-                  <p className="mt-2 text-[10px] text-amber-600 flex items-center font-medium animate-pulse">
-                    <InformationCircleIcon className="w-3 h-3 mr-1" />
-                    Please save your image sequence changes before regenerating.
-                  </p>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     );
   };
 
   const renderContent = () => {
     if (leftPanelView === 'curriculum') {
+      if (curriculumTab === 'purchase_books') {
+        return (
+          <div className="h-full flex flex-col min-h-0 bg-[var(--bg-input)] rounded-lg shadow-inner overflow-hidden relative">
+            <MarketplaceGrid
+              books={marketplaceBooks}
+              activeBook={activeMarketplaceBook}
+              onSelectBook={onSelectMarketplaceBook}
+              isLoading={isMarketplaceLoading}
+            />
+          </div>
+        );
+      }
       return renderCurriculumView();
     }
 
@@ -1435,6 +1406,8 @@ export const MiddlePanel: React.FC<MiddlePanelProps> = (props) => {
         isOpen={isValidationModalOpen}
         onClose={() => setIsValidationModalOpen(false)}
         result={validationResult ?? null}
+        onPublish={() => onSaveBook?.('Publish')}
+        isPublishing={isPublishing}
       />
     </div>
   );

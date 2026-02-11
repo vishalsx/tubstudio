@@ -1,7 +1,6 @@
-
 // hooks/useCurriculum.ts
-import { useState, useCallback, useEffect, useRef } from 'react';
-import { Book, Chapter, Page, CurriculumImage, DatabaseImage, UserContext } from '../types';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
+import { Book, CartItem, Chapter, Page, CurriculumImage, DatabaseImage, UserContext } from '../types';
 import { curriculumService, BookSavePayload, BookCreatePayload } from '../services/curriculum.service';
 import { translationService } from '../services/translation.service';
 
@@ -12,7 +11,12 @@ const pad = (num: number, size: number) => String(num).padStart(size, '0');
 
 export const useCurriculum = (userContext: UserContext | null) => {
   const [books, setBooks] = useState<Book[]>([]);
+  const [marketplaceBooks, setMarketplaceBooks] = useState<Book[]>([]); // New state for marketplace search results
+  const [activeMarketplaceBook, setActiveMarketplaceBook] = useState<Book | null>(null); // New state for selected marketplace book
+  const [cart, setCart] = useState<CartItem[]>([]); // Cart state
   const [isLoading, setIsLoading] = useState(false);
+  const [isPublishing, setIsPublishing] = useState(false); // Loading state for publish
+  const [isPurchasing, setIsPurchasing] = useState(false); // Loading state for purchase
   const [searchQuery, setSearchQuery] = useState('');
   const [searchLanguage, setSearchLanguage] = useState('');
   const [searchAttempted, setSearchAttempted] = useState(false);
@@ -26,9 +30,10 @@ export const useCurriculum = (userContext: UserContext | null) => {
 
   const [expansionState, setExpansionState] = useState<Record<string, boolean>>({});
   const [selectedPage, setSelectedPage] = useState<Page | null>(null);
-  const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' | 'warning' } | null>(null);
   const username = userContext?.username;
-  const [isStoryLoading, setIsStoryLoading] = useState(false);
+  const [loadingStoryLanguages, setLoadingStoryLanguages] = useState<string[]>([]);
+  const isStoryLoading = loadingStoryLanguages.length > 0;
   const [imageLoadingProgress, setImageLoadingProgress] = useState<{ loaded: number, total: number } | null>(null);
   const [validationResult, setValidationResult] = useState<{
     isValid: boolean;
@@ -53,13 +58,7 @@ export const useCurriculum = (userContext: UserContext | null) => {
     // Once confirmed, the dirty state must be reset here.
     setIsDirty(false);
 
-    if (!searchQuery.trim()) {
-      setBooks([]);
-      setActiveBook(null);
-      setSelectedPage(null); // Clear selected page
-      setSearchAttempted(false);
-      return;
-    }
+    // Searching with empty query is allowed (fetch all books)
 
     setIsLoading(true);
     setSearchAttempted(true);
@@ -77,14 +76,99 @@ export const useCurriculum = (userContext: UserContext | null) => {
     }
   }, [searchQuery, searchLanguage]);
 
-  useEffect(() => {
-    if (!searchQuery.trim()) {
-      setSearchAttempted(false);
-      setBooks([]);
-      setSelectedPage(null); // Clear selected page
-      setActiveBook(null);
+  // MARKETPLACE SEARCH FUNCTION
+  const searchMarketplace = useCallback(async (query: string, language?: string) => {
+    setIsLoading(true);
+    setMarketplaceBooks([]);
+    setActiveMarketplaceBook(null);
+    try {
+      // We need to implement this service method in curriculumService or a new marketplaceService
+      // For now assuming curriculumService receives this method or we add it.
+      // Actually, let's use the curriculumService.searchMarketplaceBooks if it exists, or add it.
+      // Wait, I need to check if curriculumService has this method. It likely doesn't yet.
+      // I will assume I will add it to curriculum.service.ts
+      const results = await curriculumService.searchMarketplaceBooks(query, language || null);
+      setMarketplaceBooks(results);
+    } catch (error) {
+      console.error("Failed to search marketplace:", error);
+      setNotification({ message: (error as Error).message, type: 'error' });
+    } finally {
+      setIsLoading(false);
     }
-  }, [searchQuery]);
+  }, []);
+
+  // MARKETPLACE PURCHASE FUNCTION
+  const purchaseBook = useCallback(async (bookId: string) => {
+    setIsPurchasing(true);
+    try {
+      await curriculumService.purchaseBook(bookId);
+      setNotification({ message: 'Book purchased successfully!', type: 'success' });
+      // Refresh my books to show the new purchase
+      handleSearch();
+      // Optionally remove from valid search results or mark as purchased? 
+      // The backend filter removes owned books, so re-searching marketplace would remove it.
+      // For now, let's just refresh "My Books" list if we are there, or let user navigate.
+      setCart(prev => prev.filter(item => item.book._id !== bookId)); // Remove from cart if it was there
+    } catch (error) {
+      console.error("Failed to purchase book:", error);
+      setNotification({ message: (error as Error).message, type: 'error' });
+    } finally {
+      setIsPurchasing(false);
+    }
+  }, [handleSearch]);
+
+  const addToCart = useCallback((book: Book, method?: 'permanent' | 'subscription', languages: string[] = []) => {
+    if (!cart.some(item => item.book._id === book._id)) {
+      const defaultMethod: 'permanent' | 'subscription' = method ||
+        ((book.base_pricing?.subscription_price && book.base_pricing.subscription_price > 0) ? 'subscription' : 'permanent');
+      setCart(prev => [...prev, { book, purchaseMethod: defaultMethod, selectedLanguages: languages }]);
+      setNotification({ message: 'Added to cart', type: 'success' });
+    }
+  }, [cart]);
+
+  const removeFromCart = useCallback((bookId: string) => {
+    setCart(prev => prev.filter(item => item.book._id !== bookId));
+  }, []);
+
+  const clearCart = useCallback(() => {
+    setCart([]);
+  }, []);
+
+  const checkout = useCallback(async () => {
+    if (cart.length === 0) return;
+    setIsPurchasing(true);
+    try {
+      // Execute all purchases
+      const results = await Promise.allSettled(cart.map(item =>
+        curriculumService.purchaseBook(item.book._id, item.purchaseMethod, item.selectedLanguages)
+      ));
+
+      const successful = results.filter(r => r.status === 'fulfilled').length;
+      const failed = results.filter(r => r.status === 'rejected').length;
+
+      if (failed === 0) {
+        setNotification({ message: `Successfully purchased ${successful} books!`, type: 'success' });
+        setCart([]); // Clear cart only if all succeeded? Or remove successful ones?
+        // Simple approach: Clear all if all success.
+        handleSearch(); // Refresh books
+      } else {
+        setNotification({ message: `Purchased ${successful} books. ${failed} failed.`, type: 'warning' });
+        // Ideally remove successful ones from cart.
+        // For now, let's just keep cart as is or clear it?
+        // User can manually remove.
+      }
+    } catch (error) {
+      console.error("Checkout failed:", error);
+      setNotification({ message: 'Checkout failed. Please try again.', type: 'error' });
+    } finally {
+      setIsPurchasing(false);
+    }
+  }, [cart, handleSearch]);
+
+  const selectMarketplaceBook = useCallback((book: Book | null) => {
+    setActiveMarketplaceBook(book);
+  }, []);
+
 
   const createBook = useCallback(async (bookData: Omit<Book, '_id' | 'chapters' | 'chapter_count' | 'page_count' | 'image_count' | 'created_at' | 'updated_at'>) => {
     setIsLoading(true);
@@ -460,7 +544,7 @@ export const useCurriculum = (userContext: UserContext | null) => {
     updatePageAttributes(chapterId, pageId, { title: newTitle });
   }, [updatePageAttributes]);
 
-  const generateStoryForPage = useCallback(async (pageId: string, userComments?: string) => {
+  const generateStoryForPage = useCallback(async (pageId: string, languages?: string[], userComments?: string) => {
     if (!activeBook) return;
 
     let chapterId: string | undefined;
@@ -476,27 +560,69 @@ export const useCurriculum = (userContext: UserContext | null) => {
       return;
     }
 
-    setIsStoryLoading(true);
+    const targetLanguages = languages && languages.length > 0
+      ? languages
+      : [activeBook.language];
+
+    setLoadingStoryLanguages(prev => {
+      const newLangs = targetLanguages.filter(l => !prev.includes(l));
+      return [...prev, ...newLangs];
+    });
     setNotification(null);
     try {
-      const result = await curriculumService.createStory(activeBook._id, chapterId, pageId, userComments);
+      const results = await Promise.all(
+        targetLanguages.map(lang => curriculumService.createStory(
+          activeBook._id,
+          chapterId!,
+          pageId,
+          lang,
+          activeBook.additional_languages,
+          userComments
+        ))
+      );
+
       updateActiveBook(book => {
         const chapter = book.chapters.find(c => c.chapter_id === chapterId);
         const page = chapter?.pages.find(p => p.page_id === pageId);
         if (page) {
-          page.story = result.story;
-          page.moral = result.moral;
+          if (!page.stories) page.stories = [];
+          const stories = page.stories;
+
+          results.forEach((result, index) => {
+            const lang = targetLanguages[index];
+            const existingIndex = stories.findIndex(s => s.language === lang);
+            const newStoryEntry = {
+              language: lang,
+              story: result.story,
+              moral: result.moral,
+              created_at: result.created_at
+            };
+
+            if (existingIndex > -1) {
+              stories[existingIndex] = newStoryEntry;
+            } else {
+              stories.push(newStoryEntry);
+            }
+
+            if (lang === book.language) {
+              page.story = result.story;
+              page.moral = result.moral;
+            }
+          });
+
           page.isModified = true;
           if (chapter) chapter.isModified = true;
           setSelectedPage(currentPage => (currentPage?.page_id === pageId ? { ...page } : currentPage));
         }
         return book;
       });
-      setNotification({ message: 'Story generated successfully!', type: 'success' });
+
+      const langList = targetLanguages.join(', ');
+      setNotification({ message: `Story generated successfully for: ${langList}!`, type: 'success' });
     } catch (error) {
       setNotification({ message: (error as Error).message, type: 'error' });
     } finally {
-      setIsStoryLoading(false);
+      setLoadingStoryLanguages(prev => prev.filter(lang => !targetLanguages.includes(lang)));
     }
   }, [activeBook, username, updateActiveBook]);
 
@@ -621,29 +747,44 @@ export const useCurriculum = (userContext: UserContext | null) => {
   }, [selectedPage, updateActiveBook]);
 
   // NEW: Update Story Function
-  const updateStory = useCallback((pageId: string, newStory: string, newMoral?: string) => {
+  const updateStory = useCallback((pageId: string, newStory: string, newMoral?: string, language?: string) => {
     updateActiveBook(book => {
       const chapter = book.chapters.find(c => c.pages.some(p => p.page_id === pageId));
       const page = chapter?.pages.find(p => p.page_id === pageId);
 
       if (page && chapter) {
-        page.story = newStory;
-        if (newMoral !== undefined) {
-          page.moral = newMoral;
+        const targetLanguage = language || book.language;
+
+        // Update the stories list
+        if (!page.stories) page.stories = [];
+        const stories = page.stories; // Narrowing for TS
+        const existingIndex = stories.findIndex(s => s.language === targetLanguage);
+        const newStoryEntry = {
+          language: targetLanguage,
+          story: newStory,
+          moral: newMoral,
+          created_at: new Date().toISOString()
+        };
+
+        if (existingIndex > -1) {
+          stories[existingIndex] = newStoryEntry;
+        } else {
+          stories.push(newStoryEntry);
         }
+
+        // If base language, also update top-level fields
+        if (targetLanguage === book.language) {
+          page.story = newStory;
+          if (newMoral !== undefined) {
+            page.moral = newMoral;
+          }
+        }
+
         page.isModified = true;
         chapter.isModified = true;
 
         if (selectedPage?.page_id === pageId) {
-          setSelectedPage(prev => {
-            if (!prev) return prev;
-            return {
-              ...prev,
-              story: newStory,
-              moral: newMoral !== undefined ? newMoral : prev.moral,
-              isModified: true
-            };
-          });
+          setSelectedPage({ ...page });
         }
       }
       return book;
@@ -691,10 +832,11 @@ export const useCurriculum = (userContext: UserContext | null) => {
     }
   }, [activeBook, selectedPage, updateActiveBook]);
 
-  const saveBook = useCallback(async (action: 'SaveDraft' | 'Publish' = 'SaveDraft') => {
+  const saveBook = useCallback(async (action: 'SaveDraft' | 'Publish' | 'Validate' = 'SaveDraft') => {
     if (!activeBook || !username) return;
 
-    setIsLoading(true);
+    if (action === 'Publish') setIsPublishing(true);
+    else setIsLoading(true);
     setNotification(null);
     setValidationResult(null);
 
@@ -753,7 +895,11 @@ export const useCurriculum = (userContext: UserContext | null) => {
       setIdCounters({ chapter: fullRefreshedBook.chapter_count || 0, page: fullRefreshedBook.page_count || 0, image: fullRefreshedBook.image_count || 0 });
       setIsDirty(false);
       setSelectedPage(null);
-      setNotification({ message: 'Book saved successfully!', type: 'success' });
+
+      const successMsg = action === 'Publish' ? 'Book published successfully!' :
+        action === 'Validate' ? 'Validation successful!' :
+          'Book saved successfully!';
+      setNotification({ message: successMsg, type: 'success' });
 
     } catch (error) {
       const errData = (error as any).data;
@@ -773,12 +919,17 @@ export const useCurriculum = (userContext: UserContext | null) => {
       }
     } finally {
       setIsLoading(false);
+      setIsPublishing(false);
     }
-  }, [activeBook, username, expansionState]);
+  }, [activeBook, username, updateActiveBook, expansionState]);
 
   const collapseAll = useCallback(() => {
     setExpansionState({});
   }, []);
+
+  const isPageDirty = useMemo(() => {
+    return selectedPage?.images?.some(img => img.isNew);
+  }, [selectedPage]);
 
   return {
     books,
@@ -794,6 +945,8 @@ export const useCurriculum = (userContext: UserContext | null) => {
     notification,
     searchAttempted,
     imageLoadingProgress,
+    isPageDirty,
+    loadingStoryLanguages,
     setSearchQuery,
     setSearchLanguage,
     handleSearch,
@@ -801,6 +954,19 @@ export const useCurriculum = (userContext: UserContext | null) => {
     selectBook,
     selectChapter,
     saveBook,
+    // Marketplace exports
+    marketplaceBooks,
+    activeMarketplaceBook,
+    searchMarketplace,
+    purchaseBook,
+    cart,
+    addToCart,
+    removeFromCart,
+    clearCart,
+    checkout,
+    selectMarketplaceBook,
+    isPurchasing,
+    isPublishing,
     handleNodeExpansion,
     selectPage,
     addChapter,

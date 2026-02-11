@@ -23,9 +23,11 @@ interface ValidationSummaryModalProps {
             empty_pages?: number;
         };
     } | null;
+    onPublish?: () => void;
+    isPublishing?: boolean;
 }
 
-export const ValidationSummaryModal: React.FC<ValidationSummaryModalProps> = ({ isOpen, onClose, result }) => {
+export const ValidationSummaryModal: React.FC<ValidationSummaryModalProps> = ({ isOpen, onClose, result, onPublish, isPublishing }) => {
     if (!isOpen || !result) return null;
 
     // Group items by chapter
@@ -139,13 +141,42 @@ export const ValidationSummaryModal: React.FC<ValidationSummaryModalProps> = ({ 
                 </div>
 
                 {/* Footer */}
-                <div className="p-4 border-t border-gray-800 flex justify-end flex-shrink-0">
-                    <button
-                        onClick={onClose}
-                        className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-sm font-medium transition-colors"
-                    >
-                        Close
-                    </button>
+                <div className="p-4 border-t border-gray-800 flex justify-end items-center space-x-3 flex-shrink-0 bg-[#1e1e1e]">
+                    {result.isValid && onPublish ? (
+                        <>
+                            <button
+                                onClick={onClose}
+                                disabled={isPublishing}
+                                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={onPublish}
+                                disabled={isPublishing}
+                                className="px-6 py-2 bg-green-600 hover:bg-green-500 text-white rounded-lg text-sm font-bold shadow-lg shadow-green-900/20 transition-all flex items-center space-x-2 disabled:opacity-50"
+                            >
+                                {isPublishing ? (
+                                    <>
+                                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                        <span>Publishing...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <CheckCircleIcon className="w-5 h-5" />
+                                        <span>Confirm & Publish Now</span>
+                                    </>
+                                )}
+                            </button>
+                        </>
+                    ) : (
+                        <button
+                            onClick={onClose}
+                            className="px-6 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-sm font-bold transition-colors"
+                        >
+                            Close
+                        </button>
+                    )}
                 </div>
 
             </div>

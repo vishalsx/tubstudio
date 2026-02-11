@@ -1,19 +1,19 @@
 // components/panels/LeftPanel.tsx
 import React, { useState } from 'react';
-import { Bars3Icon, ChevronDownIcon, XMarkIcon, SparklesIcon, ListBulletIcon, ArrowUpTrayIcon, PhotoIcon, MagnifyingGlassIcon, BookOpenIcon, StarIcon, StopIcon, CloudArrowUpIcon, CircleStackIcon, TrophyIcon, CheckCircleIcon, ShoppingCartIcon } from '@heroicons/react/24/solid';
-import { CommonData, RecentTranslation, PermissionCheck, DatabaseImage, Book, Chapter, Page, OrgObject, RepositoryItem } from '../../types';
+import { Bars3Icon, ChevronDownIcon, XMarkIcon, SparklesIcon, ListBulletIcon, ArrowUpTrayIcon, PhotoIcon, MagnifyingGlassIcon, BookOpenIcon, StarIcon, StopIcon, CloudArrowUpIcon, CircleStackIcon, TrophyIcon, CheckCircleIcon, ShoppingCartIcon, TrashIcon, CreditCardIcon } from '@heroicons/react/24/solid';
+import { CommonData, RecentTranslation, PermissionCheck, DatabaseImage, Book, CartItem, Chapter, Page, OrgObject, RepositoryItem } from '../../types';
 import { CurriculumPanel } from './CurriculumPanel';
 import { useCurriculum } from '../../hooks/useCurriculum';
 import { CreateBookModal } from '../curriculum/CreateBookModal';
 import { ContestListPanel } from './contest/ContestListPanel';
+import { PaymentGatewayModal } from '../modals/PaymentGatewayModal';
 import { LoadingSpinner } from '../common/LoadingSpinner';
 import { ErrorMessage } from '../common/ErrorMessage';
 import { useConfirmation } from '../../contexts/ConfirmationContext';
-
-type CurriculumHookProps = ReturnType<typeof useCurriculum>;
 import { useContest } from '../../hooks/useContest';
 import { useMyContent } from '../../hooks/useMyContent';
 
+type CurriculumHookProps = ReturnType<typeof useCurriculum>;
 type MyContentHookProps = ReturnType<typeof useMyContent>;
 
 interface LeftPanelProps {
@@ -85,7 +85,7 @@ interface LeftPanelProps {
   languageForImageSearch: string;
 
   // Notifications
-  notification: { message: string; type: 'success' | 'error' } | null;
+  notification: { message: string; type: 'success' | 'error' | 'warning' } | null;
 
   // Worklist callout
   showWorklistCallout?: boolean;
@@ -102,6 +102,14 @@ interface LeftPanelProps {
   galleryHasMore?: boolean;
   onGalleryNext?: () => void;
   onGalleryPrevious?: () => void;
+
+  onBackToCurriculum: () => void;
+  curriculumTab: 'my_books' | 'purchase_books';
+  onSetCurriculumTab: (tab: 'my_books' | 'purchase_books') => void;
+  cart?: CartItem[];
+  onRemoveFromCart?: (bookId: string) => void;
+  onCheckout?: () => Promise<void>;
+  isPurchasing?: boolean;
 }
 
 export const LeftPanel: React.FC<LeftPanelProps> = ({
@@ -161,10 +169,23 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
   onDismissCallout,
   contestProps,
   myContentProps,
+  curriculumTab,
+  onSetCurriculumTab,
+  onBackToCurriculum,
+  cart = [],
+  onRemoveFromCart,
+  onCheckout,
+  isPurchasing = false,
 }) => {
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [isCreateBookModalOpen, setIsCreateBookModalOpen] = useState(false);
-  const [curriculumTab, setCurriculumTab] = useState<'my_books' | 'purchase_books'>('my_books');
   const confirm = useConfirmation();
+
+  // Handlers for Marketplace Search
+  const handleMarketplaceSearch = async (query: string) => {
+    // Marketplace search logic
+    curriculumProps.searchMarketplace(query, curriculumProps.searchLanguage);
+  };
 
   const handleCurriculumSearch = async () => {
     if (curriculumProps.isDirty) {
@@ -439,105 +460,275 @@ export const LeftPanel: React.FC<LeftPanelProps> = ({
     } else if (leftPanelView === 'curriculum') {
       return (
         <>
-          {/* Curriculum Tab Selector: My Books / Purchase Books */}
-          <div className="flex bg-[var(--bg-input)]/50 backdrop-blur-sm p-1 rounded-xl mb-3 border border-[var(--border-main)] transition-colors duration-300">
-            <button
-              onClick={() => setCurriculumTab('my_books')}
-              title="View and manage your own books"
-              className={`flex-1 flex items-center justify-center space-x-2 py-1.5 rounded-lg text-xs font-bold transition-all ${curriculumTab === 'my_books' ? 'bg-[var(--bg-panel)] text-[var(--color-primary)] shadow-sm' : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'}`}
-            >
-              <BookOpenIcon className="w-4 h-4" />
-              <span>My Books</span>
-            </button>
-            <button
-              onClick={() => setCurriculumTab('purchase_books')}
-              title="Browse and purchase books from marketplace"
-              className={`flex-1 flex items-center justify-center space-x-2 py-1.5 rounded-lg text-xs font-bold transition-all ${curriculumTab === 'purchase_books' ? 'bg-[var(--bg-panel)] text-[var(--color-primary)] shadow-sm' : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'}`}
-            >
-              <ShoppingCartIcon className="w-4 h-4" />
-              <span>Purchase Books</span>
-            </button>
-          </div>
-
-          <div className="border border-[var(--border-main)] rounded-lg p-3 mb-3 flex flex-col gap-2 bg-[var(--bg-input)] shadow-sm">
-            <div className="flex items-center gap-2 w-full">
-              <select
-                id="curriculum-language-select"
-                value={curriculumProps.searchLanguage}
-                onChange={(e) => curriculumProps.setSearchLanguage(e.target.value)}
-                className="w-32 flex-shrink-0 p-1.5 border border-[var(--border-main)] rounded-lg text-sm focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent bg-[var(--bg-input)] text-[var(--text-main)] transition-all font-medium shadow-sm"
-                disabled={languageOptions.length === 0}
-                aria-label="Language for Book Search"
-              >
-                <option value="">All Languages</option>
-                {languageOptions.map(lang => <option key={lang} value={lang}>{lang}</option>)}
-              </select>
-              <input
-                type="text"
-                placeholder="Search books..."
-                value={curriculumProps.searchQuery}
-                onChange={(e) => curriculumProps.setSearchQuery(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') handleCurriculumSearch(); }}
-                className="flex-1 min-w-0 p-1.5 border border-[var(--border-main)] rounded-lg text-sm focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent bg-[var(--bg-input)] text-[var(--text-main)] transition-all font-medium shadow-sm"
-              />
-            </div>
-            <button
-              onClick={handleCurriculumSearch}
-              disabled={curriculumProps.isLoading}
-              className="w-full py-2 bg-[var(--color-primary)] text-white rounded-lg font-bold hover:opacity-90 shadow-md shadow-[var(--color-primary)]/20 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
-              aria-label="Search curriculum"
-            >
-              {curriculumProps.isLoading ? (
-                <>
-                  <LoadingSpinner size="sm" color="white" />
-                  <span>Searching...</span>
-                </>
-              ) : (
-                <>
-                  <MagnifyingGlassIcon className="w-4 h-4" />
-                  <span>Search</span>
-                </>
-              )}
-            </button>
-          </div>
-
-          {curriculumProps.isDirty && (
-            <div className="border border-[var(--border-main)] rounded-lg p-3 mb-3 flex flex-col gap-2 bg-[var(--bg-input)] shadow-sm">
+          {/* Tab and Search Container */}
+          <div className="border border-[var(--border-main)] rounded-xl p-3 bg-[var(--bg-panel)] shadow-sm mb-4 space-y-4">
+            {/* Curriculum Tab Selector: My Books / Purchase Books */}
+            <div className="flex gap-1 bg-[var(--bg-input)] p-1 rounded-lg border border-[var(--border-main)]/50">
               <button
-                onClick={curriculumProps.saveBook}
-                disabled={curriculumProps.isLoading}
-                className="w-full py-2 bg-[var(--color-primary)] text-white rounded-lg font-bold shadow-md shadow-[var(--color-primary)]/20 hover:opacity-90 transition-all active:scale-95 disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center gap-2"
+                onClick={() => onSetCurriculumTab('my_books')}
+                className={`flex-1 py-1.5 px-3 rounded-md text-xs font-black transition-all ${curriculumTab === 'my_books'
+                  ? 'bg-[var(--bg-panel)] text-[var(--color-primary)] shadow-md border border-[var(--border-main)]/30'
+                  : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
+                  }`}
               >
-                <CloudArrowUpIcon className="w-5 h-5" />
-                <span>Save Book Changes</span>
+                My Books
+              </button>
+              <button
+                onClick={() => onSetCurriculumTab('purchase_books')}
+                className={`flex-1 py-1.5 px-3 rounded-md text-xs font-black transition-all ${curriculumTab === 'purchase_books'
+                  ? 'bg-[var(--bg-panel)] text-[var(--color-primary)] shadow-md border border-[var(--border-main)]/30'
+                  : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
+                  }`}
+              >
+                Purchase
+              </button>
+              {cart.length > 0 && (
+                <div className="flex items-center px-2">
+                  <div className="py-1 px-2 rounded-md text-[10px] font-black text-white bg-[var(--color-primary)] shadow-sm animate-pulse-subtle">
+                    {cart.length}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Search Bar - conditionally rendered based on tab */}
+            <div className="space-y-3">
+              {curriculumTab === 'my_books' ? (
+                <div className="flex items-center gap-2">
+                  <div className="relative w-32 flex-shrink-0">
+                    <select
+                      id="curriculum-language-select"
+                      value={curriculumProps.searchLanguage}
+                      onChange={(e) => curriculumProps.setSearchLanguage(e.target.value)}
+                      className="w-full p-2 pl-3 pr-8 border border-[var(--border-main)] rounded-lg text-xs focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent bg-[var(--bg-input)] text-[var(--text-main)] transition-all font-bold shadow-sm appearance-none"
+                      disabled={languageOptions.length === 0}
+                      aria-label="Language for Book Search"
+                    >
+                      <option value="">All Languages</option>
+                      {languageOptions.map(lang => <option key={lang} value={lang}>{lang}</option>)}
+                    </select>
+                    <ChevronDownIcon className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-muted)] pointer-events-none" />
+                  </div>
+                  <div className="relative flex-1">
+                    <input
+                      type="text"
+                      placeholder="Search my books..."
+                      value={curriculumProps.searchQuery}
+                      onChange={(e) => curriculumProps.setSearchQuery(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') handleCurriculumSearch(); }}
+                      className="w-full p-2 pl-9 border border-[var(--border-main)] rounded-lg text-xs focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent bg-[var(--bg-input)] text-[var(--text-main)] transition-all font-medium shadow-sm"
+                    />
+                    <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-muted)]" />
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <div className="relative w-32 flex-shrink-0">
+                    <select
+                      id="marketplace-language-select"
+                      value={curriculumProps.searchLanguage}
+                      onChange={(e) => curriculumProps.setSearchLanguage(e.target.value)}
+                      className="w-full p-2 pl-3 pr-8 border border-[var(--border-main)] rounded-lg text-xs focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent bg-[var(--bg-input)] text-[var(--text-main)] transition-all font-bold shadow-sm appearance-none"
+                      disabled={languageOptions.length === 0}
+                      aria-label="Language for Marketplace Search"
+                    >
+                      <option value="">All Languages</option>
+                      {languageOptions.map(lang => <option key={lang} value={lang}>{lang}</option>)}
+                    </select>
+                    <ChevronDownIcon className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-muted)] pointer-events-none" />
+                  </div>
+                  <div className="relative flex-1">
+                    <input
+                      type="text"
+                      placeholder="Search marketplace..."
+                      value={curriculumProps.searchQuery}
+                      onChange={(e) => curriculumProps.setSearchQuery(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') handleMarketplaceSearch(curriculumProps.searchQuery); }}
+                      className="w-full p-2 pl-9 border border-[var(--border-main)] rounded-lg text-xs focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent bg-[var(--bg-input)] text-[var(--text-main)] transition-all font-medium shadow-sm"
+                    />
+                    <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-muted)]" />
+                  </div>
+                </div>
+              )}
+
+              <button
+                onClick={curriculumTab === 'my_books' ? handleCurriculumSearch : () => handleMarketplaceSearch(curriculumProps.searchQuery)}
+                disabled={curriculumProps.isLoading}
+                className="w-full py-2 bg-[var(--color-primary)] text-white rounded-lg font-black shadow-lg shadow-[var(--color-primary)]/20 hover:opacity-90 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2 text-xs uppercase tracking-wider"
+                aria-label="Search curriculum"
+              >
+                {curriculumProps.isLoading ? (
+                  <LoadingSpinner size="sm" color="white" />
+                ) : (
+                  <>
+                    <MagnifyingGlassIcon className="w-4 h-4" />
+                    <span>Run Search</span>
+                  </>
+                )}
               </button>
             </div>
+          </div>
+
+          {/* Cart Section — visible when purchase_books tab and cart has items */}
+          {curriculumTab === 'purchase_books' && cart.length > 0 && (
+            <div className="border border-[var(--border-main)] rounded-lg bg-[var(--bg-input)] shadow-sm overflow-hidden mb-3">
+              {/* Cart Header */}
+              <div className="flex items-center justify-between px-3 py-2 bg-[var(--color-primary)]/10 border-b border-[var(--border-main)]">
+                <div className="flex items-center gap-1.5">
+                  <ShoppingCartIcon className="w-4 h-4 text-[var(--color-primary)]" />
+                  <span className="text-xs font-bold text-[var(--text-main)]">
+                    Cart ({cart.length} {cart.length === 1 ? 'item' : 'items'})
+                  </span>
+                </div>
+                <span className="text-xs font-black text-[var(--color-primary)]">
+                  ${cart.reduce((sum, item) => {
+                    const price = item.book.base_pricing?.is_free ? 0 :
+                      (item.purchaseMethod === 'subscription' ? item.book.base_pricing?.subscription_price : item.book.base_pricing?.one_time_purchase_price) || 0;
+
+                    const additionalLangsPrice = (item.selectedLanguages || []).reduce((langSum, lang) => {
+                      return langSum + (item.book.base_pricing?.additional_language_prices?.[lang] || 0);
+                    }, 0);
+
+                    return sum + price + additionalLangsPrice;
+                  }, 0).toFixed(2)}
+                </span>
+              </div>
+
+              {/* Cart Items */}
+              <div className="max-h-60 overflow-y-auto custom-scrollbar">
+                {cart.map(item => {
+                  const book = item.book;
+                  const method = item.purchaseMethod;
+                  const hasSubscription = book.base_pricing?.subscription_price && book.base_pricing.subscription_price > 0;
+                  const hasPermanent = book.base_pricing?.one_time_purchase_price && book.base_pricing.one_time_purchase_price > 0;
+
+                  const price = book.base_pricing?.is_free ? 0 :
+                    (method === 'subscription' ? book.base_pricing?.subscription_price : book.base_pricing?.one_time_purchase_price) || 0;
+
+                  const additionalLangsPrice = (item.selectedLanguages || []).reduce((langSum, lang) => {
+                    return langSum + (book.base_pricing?.additional_language_prices?.[lang] || 0);
+                  }, 0);
+
+                  const totalPrice = price + additionalLangsPrice;
+
+                  const modelLabel = book.base_pricing?.is_free
+                    ? 'Free'
+                    : method === 'subscription'
+                      ? `Sub ${book.base_pricing?.subscription_period_days || 30}d`
+                      : 'Permanent';
+
+                  return (
+                    <div key={book._id} className="px-3 py-2 border-b border-[var(--border-main)] last:border-b-0 hover:bg-[var(--bg-hover)] transition-colors group">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-semibold text-[var(--text-main)] truncate leading-tight">{book.title}</p>
+                          <div className="flex items-center gap-1.5 mt-0.5">
+                            <span className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-full
+                              ${modelLabel.startsWith('Permanent')
+                                ? 'bg-emerald-100 text-emerald-700'
+                                : modelLabel === 'Free'
+                                  ? 'bg-blue-100 text-blue-700'
+                                  : 'bg-amber-100 text-amber-700'
+                              }`}>{modelLabel}</span>
+                            <span className="text-[10px] font-bold text-[var(--text-muted)]">
+                              {totalPrice === 0 ? 'Free' : `$${totalPrice.toFixed(2)}`}
+                            </span>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => onRemoveFromCart?.(book._id)}
+                          className="p-1 rounded-md text-[var(--text-muted)] hover:text-red-500 hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100"
+                          title="Remove from cart"
+                        >
+                          <XMarkIcon className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+
+                      {/* Purchased Additional Languages Summary */}
+                      {item.selectedLanguages && item.selectedLanguages.length > 0 && (
+                        <div className="mt-1.5 flex flex-wrap gap-1">
+                          {item.selectedLanguages.map(lang => (
+                            <span key={lang} className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-[var(--color-primary)]/10 text-[var(--color-primary)] border border-[var(--color-primary)]/20">
+                              + {lang}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div >
+
+              {/* Proceed to Payment */}
+              < div className="px-3 py-2 border-t border-[var(--border-main)]" >
+                <button
+                  onClick={() => setIsPaymentModalOpen(true)}
+                  disabled={isPurchasing}
+                  className="w-full py-2 bg-[var(--color-primary)] text-white rounded-lg font-bold text-xs shadow-md shadow-[var(--color-primary)]/20 hover:opacity-95 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  <CreditCardIcon className="w-4 h-4" />
+                  <span>Proceed to Payment</span>
+                </button>
+              </div >
+            </div >
           )}
 
-          <div className="border border-[var(--border-main)] rounded-lg p-3 flex-1 min-h-0 bg-[var(--bg-input)] shadow-inner overflow-hidden">
-            <CurriculumPanel
-              books={curriculumProps.books}
-              activeBook={curriculumProps.activeBook}
-              isDirty={curriculumProps.isDirty}
-              isLoading={curriculumProps.isLoading}
-              expansionState={curriculumProps.expansionState}
-              searchAttempted={curriculumProps.searchAttempted}
-              onSelectBook={onSelectBook}
-              onSelectPage={onSelectPage}
-              onSelectNode={onSelectNode}
-              onOpenCreateBookModal={() => setIsCreateBookModalOpen(true)}
-              onSaveBook={curriculumProps.saveBook}
-              onNodeExpansion={curriculumProps.handleNodeExpansion}
-              onAddChapter={curriculumProps.addChapter}
-              onDeleteChapter={curriculumProps.deleteChapter}
-              onUpdateChapterName={curriculumProps.updateChapterName}
-              onAddPage={curriculumProps.addPage}
-              onDeletePage={curriculumProps.deletePage}
-              onUpdatePageTitle={curriculumProps.updatePageTitle}
-              onSelectChapter={onSelectChapter}
-              onCollapseAll={onCollapseAll}
-            />
-          </div>
+          {
+            curriculumProps.isDirty && curriculumTab === 'my_books' && (
+              <div className="border border-[var(--border-main)] rounded-lg p-3 mb-3 flex flex-col gap-2 bg-[var(--bg-input)] shadow-sm">
+                <button
+                  onClick={() => curriculumProps.saveBook()}
+                  disabled={curriculumProps.isLoading}
+                  className="w-full py-2 bg-[var(--color-primary)] text-white rounded-lg font-bold shadow-md shadow-[var(--color-primary)]/20 hover:opacity-90 transition-all active:scale-95 disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center gap-2"
+                >
+                  <CloudArrowUpIcon className="w-5 h-5" />
+                  <span>Save Book Changes</span>
+                </button>
+              </div>
+            )
+          }
+
+          {/* Payment Gateway Modal */}
+          <PaymentGatewayModal
+            isOpen={isPaymentModalOpen}
+            onClose={() => {
+              setIsPaymentModalOpen(false);
+              handleMarketplaceSearch(curriculumProps.searchQuery);
+            }}
+            cart={cart}
+            onConfirmPayment={async () => {
+              await onCheckout?.();
+            }}
+          />
+
+          {
+            curriculumTab === 'my_books' && (
+              <div className="border border-[var(--border-main)] rounded-lg p-3 flex-1 min-h-0 bg-[var(--bg-input)] shadow-inner overflow-hidden">
+                <CurriculumPanel
+                  books={curriculumProps.books}
+                  activeBook={curriculumProps.activeBook}
+                  isDirty={curriculumProps.isDirty}
+                  isLoading={curriculumProps.isLoading}
+                  expansionState={curriculumProps.expansionState}
+                  searchAttempted={curriculumProps.searchAttempted}
+                  onSelectBook={onSelectBook}
+                  onSelectPage={onSelectPage}
+                  onSelectNode={onSelectNode}
+                  onOpenCreateBookModal={() => setIsCreateBookModalOpen(true)}
+                  onSaveBook={curriculumProps.saveBook}
+                  onNodeExpansion={curriculumProps.handleNodeExpansion}
+                  onAddChapter={curriculumProps.addChapter}
+                  onDeleteChapter={curriculumProps.deleteChapter}
+                  onUpdateChapterName={curriculumProps.updateChapterName}
+                  onAddPage={curriculumProps.addPage}
+                  onDeletePage={curriculumProps.deletePage}
+                  onUpdatePageTitle={curriculumProps.updatePageTitle}
+                  onSelectChapter={onSelectChapter}
+                  onCollapseAll={onCollapseAll}
+                />
+              </div>
+            )
+          }
         </>
       );
     } else if (leftPanelView === 'contest') {

@@ -113,6 +113,8 @@ export interface PageStoryRequest {
     book_id: string;
     chapter_id: string;
     page_id: string;
+    language?: string;
+    additional_languages?: string[];
     user_comments?: string;
 }
 
@@ -155,7 +157,7 @@ class CurriculumService {
     /**
      * Creates or updates a book. The same endpoint handles both.
      */
-    async saveBook(bookData: BookSavePayload | BookCreatePayload, username: string, action: 'SaveDraft' | 'Publish' = 'SaveDraft'): Promise<Book> {
+    async saveBook(bookData: BookSavePayload | BookCreatePayload, username: string, action: 'SaveDraft' | 'Publish' | 'Validate' = 'SaveDraft'): Promise<Book> {
         console.log("Saving book data for user:", username, action, bookData);
         // Add user information to the payload for auditing/attribution on the backend.
         const payload = {
@@ -210,17 +212,42 @@ class CurriculumService {
     /**
      * Generates a story for a given page based on its images.
      */
-    async createStory(bookId: string, chapterId: string, pageId: string, userComments?: string): Promise<StoryResponse> {
+    async createStory(bookId: string, chapterId: string, pageId: string, language?: string, additionalLanguages?: string[], userComments?: string): Promise<StoryResponse> {
         const endpoint = 'curriculum/story/create_story';
         const payload: PageStoryRequest = {
             book_id: bookId,
             chapter_id: chapterId,
             page_id: pageId,
+            language: language,
+            additional_languages: additionalLanguages
         };
         if (userComments) {
             payload.user_comments = userComments;
         }
         return apiClient.post(endpoint, payload);
+    }
+    /**
+     * Searches for books in the marketplace.
+     */
+    async searchMarketplaceBooks(searchText: string, language: string | null): Promise<Book[]> {
+        const params = new URLSearchParams();
+        if (searchText) params.append('search_text', searchText);
+        if (language) params.append('language', language);
+
+        const endpoint = `marketplace/books?${params.toString()}`;
+        return apiClient.get(endpoint);
+    }
+
+    /**
+     * Purchases a book from the marketplace.
+     */
+    async purchaseBook(bookId: string, purchaseMethod?: string, additionalLanguages?: string[]): Promise<any> {
+        const endpoint = 'marketplace/purchase';
+        return apiClient.post(endpoint, {
+            book_id: bookId,
+            purchase_method: purchaseMethod,
+            additional_languages: additionalLanguages
+        });
     }
 }
 
