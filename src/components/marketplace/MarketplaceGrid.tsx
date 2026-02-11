@@ -73,12 +73,7 @@ export const MarketplaceGrid: React.FC<MarketplaceGridProps> = ({
                             </div>
                         )}
 
-                        {/* Language Badge */}
-                        {book.language && (
-                            <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-md text-white px-2 py-0.5 rounded text-xs font-medium uppercase tracking-wide border border-white/10">
-                                {book.language}
-                            </div>
-                        )}
+                        {/* Language Badge removed as requested */}
                     </div>
 
                     {/* Details */}

@@ -1057,7 +1057,7 @@ export const RightPanel: React.FC<RightPanelProps> = ({
                       : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
                       }`}
                   >
-                    Subscription (${activeMarketplaceBook.base_pricing.subscription_price.toFixed(2)})
+                    Subscription ({activeMarketplaceBook.base_pricing.subscription_period_days || 30} days) - ${activeMarketplaceBook.base_pricing.subscription_price.toFixed(2)}
                   </button>
                   <button
                     onClick={() => setSelectedPurchaseMethod('permanent')}
