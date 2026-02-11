@@ -134,6 +134,15 @@ export const useCurriculum = (userContext: UserContext | null) => {
     setCart([]);
   }, []);
 
+  const updateCartItem = useCallback((bookId: string, method: 'permanent' | 'subscription', languages: string[]) => {
+    setCart(prev => prev.map(item =>
+      item.book._id === bookId
+        ? { ...item, purchaseMethod: method, selectedLanguages: languages }
+        : item
+    ));
+    setNotification({ message: 'Cart updated', type: 'success' });
+  }, []);
+
   const checkout = useCallback(async () => {
     if (cart.length === 0) return;
     setIsPurchasing(true);
@@ -146,16 +155,22 @@ export const useCurriculum = (userContext: UserContext | null) => {
       const successful = results.filter(r => r.status === 'fulfilled').length;
       const failed = results.filter(r => r.status === 'rejected').length;
 
+      // Remove only successfully purchased items from the cart
+      const failedBookIds = new Set(
+        cart.filter((_, i) => results[i].status === 'rejected').map(item => item.book._id)
+      );
+      setCart(prev => prev.filter(item => failedBookIds.has(item.book._id)));
+
       if (failed === 0) {
         setNotification({ message: `Successfully purchased ${successful} books!`, type: 'success' });
-        setCart([]); // Clear cart only if all succeeded? Or remove successful ones?
-        // Simple approach: Clear all if all success.
-        handleSearch(); // Refresh books
       } else {
         setNotification({ message: `Purchased ${successful} books. ${failed} failed.`, type: 'warning' });
-        // Ideally remove successful ones from cart.
-        // For now, let's just keep cart as is or clear it?
-        // User can manually remove.
+      }
+
+      // Refresh both "My Books" and "Marketplace" lists
+      if (successful > 0) {
+        handleSearch(); // Refresh "My Books"
+        searchMarketplace(searchQuery, searchLanguage); // Refresh marketplace to show "Purchased" ribbons
       }
     } catch (error) {
       console.error("Checkout failed:", error);
@@ -163,7 +178,7 @@ export const useCurriculum = (userContext: UserContext | null) => {
     } finally {
       setIsPurchasing(false);
     }
-  }, [cart, handleSearch]);
+  }, [cart, handleSearch, searchMarketplace, searchQuery, searchLanguage]);
 
   const selectMarketplaceBook = useCallback((book: Book | null) => {
     setActiveMarketplaceBook(book);
@@ -963,6 +978,7 @@ export const useCurriculum = (userContext: UserContext | null) => {
     addToCart,
     removeFromCart,
     clearCart,
+    updateCartItem,
     checkout,
     selectMarketplaceBook,
     isPurchasing,

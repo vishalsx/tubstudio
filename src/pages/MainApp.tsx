@@ -1068,6 +1068,7 @@ export const MainApp: React.FC<MainAppProps> = ({ authData }) => {
           activeMarketplaceBook={curriculum.activeMarketplaceBook}
           onPurchaseBook={curriculum.purchaseBook}
           onAddToCart={curriculum.addToCart}
+          onUpdateCartItem={curriculum.updateCartItem}
           cart={curriculum.cart}
           isPurchasing={curriculum.isPurchasing}
           leftPanelView={leftPanelView}

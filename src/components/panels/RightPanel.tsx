@@ -83,6 +83,7 @@ interface RightPanelProps {
   activeMarketplaceBook?: Book | null;
   onPurchaseBook?: (bookId: string) => void;
   onAddToCart?: (book: Book, method: 'permanent' | 'subscription', languages: string[]) => void;
+  onUpdateCartItem?: (bookId: string, method: 'permanent' | 'subscription', languages: string[]) => void;
   cart?: CartItem[];
   isPurchasing?: boolean;
   languageOptions?: string[];
@@ -121,6 +122,7 @@ export const RightPanel: React.FC<RightPanelProps> = ({
   activeMarketplaceBook,
   onPurchaseBook,
   onAddToCart,
+  onUpdateCartItem,
   cart,
   isPurchasing,
   languageOptions = [],
@@ -145,17 +147,25 @@ export const RightPanel: React.FC<RightPanelProps> = ({
   const [selectedPurchaseMethod, setSelectedPurchaseMethod] = useState<'permanent' | 'subscription'>('permanent');
   const [selectedAdditionalLanguages, setSelectedAdditionalLanguages] = useState<string[]>([]);
 
-  // Initialize purchase selections
+  // Initialize purchase selections (from cart if already added, else defaults)
   useEffect(() => {
     if (activeMarketplaceBook) {
-      const defaultMethod: 'permanent' | 'subscription' =
-        (activeMarketplaceBook.base_pricing?.subscription_price && activeMarketplaceBook.base_pricing.subscription_price > 0)
-          ? 'subscription'
-          : 'permanent';
-      setSelectedPurchaseMethod(defaultMethod);
-      setSelectedAdditionalLanguages([]);
+      const existingCartItem = cart?.find(item => item.book._id === activeMarketplaceBook._id);
+      if (existingCartItem) {
+        // Restore from cart
+        setSelectedPurchaseMethod(existingCartItem.purchaseMethod);
+        setSelectedAdditionalLanguages(existingCartItem.selectedLanguages || []);
+      } else {
+        // Set defaults
+        const defaultMethod: 'permanent' | 'subscription' =
+          (activeMarketplaceBook.base_pricing?.subscription_price && activeMarketplaceBook.base_pricing.subscription_price > 0)
+            ? 'subscription'
+            : 'permanent';
+        setSelectedPurchaseMethod(defaultMethod);
+        setSelectedAdditionalLanguages([]);
+      }
     }
-  }, [activeMarketplaceBook]);
+  }, [activeMarketplaceBook, cart]);
 
   const toggleAdditionalLanguage = (lang: string) => {
     setSelectedAdditionalLanguages(prev =>
@@ -1000,8 +1010,15 @@ export const RightPanel: React.FC<RightPanelProps> = ({
       );
     }
 
-    const isInCart = cart?.some(item => item.book._id === activeMarketplaceBook._id);
+    const cartItem = cart?.find(item => item.book._id === activeMarketplaceBook._id);
+    const isInCart = !!cartItem;
     const isOwned = activeMarketplaceBook.is_purchased || activeMarketplaceBook.ownership_type === 'purchased';
+
+    // Detect if the user changed config vs what's in the cart
+    const hasCartChanges = isInCart && cartItem && (
+      cartItem.purchaseMethod !== selectedPurchaseMethod ||
+      JSON.stringify([...(cartItem.selectedLanguages || [])].sort()) !== JSON.stringify([...selectedAdditionalLanguages].sort())
+    );
 
     return (
       <div className="h-full flex flex-col space-y-4 overflow-y-auto custom-scrollbar">
@@ -1066,7 +1083,7 @@ export const RightPanel: React.FC<RightPanelProps> = ({
                       : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
                       }`}
                   >
-                    Permanent (${activeMarketplaceBook.base_pricing.one_time_purchase_price.toFixed(2)})
+                    One Time (${activeMarketplaceBook.base_pricing.one_time_purchase_price.toFixed(2)})
                   </button>
                 </div>
               </div>
@@ -1076,7 +1093,7 @@ export const RightPanel: React.FC<RightPanelProps> = ({
             {activeMarketplaceBook.base_pricing?.additional_language_prices && Object.keys(activeMarketplaceBook.base_pricing.additional_language_prices).length > 0 && (
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">Additional Translations</h3>
+                  <h3 className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">Additional Languages</h3>
                   <span className="text-[10px] text-[var(--text-muted)]">(Select to bundle)</span>
                 </div>
                 <div className="grid grid-cols-1 gap-1.5">
@@ -1102,26 +1119,36 @@ export const RightPanel: React.FC<RightPanelProps> = ({
 
         {/* Action Button */}
         <div className="py-2">
-          <button
-            onClick={() => onAddToCart?.(activeMarketplaceBook, selectedPurchaseMethod, selectedAdditionalLanguages)}
-            disabled={isInCart || isOwned}
-            className={`w-full px-4 py-2.5 rounded-xl font-bold shadow-md transition-all active:scale-95 flex items-center justify-center gap-2
-               ${isInCart
-                ? 'bg-[var(--bg-input)] text-[var(--text-muted)] cursor-not-allowed'
-                : 'bg-[var(--color-primary)] text-white hover:opacity-90 shadow-lg shadow-[var(--color-primary)]/20'}`}
-          >
-            {isInCart ? (
-              <>
-                <CheckIcon className="w-5 h-5" />
-                <span>In Cart</span>
-              </>
-            ) : (
-              <>
-                <ShoppingCartIcon className="w-5 h-5" />
-                <span>Add to Cart</span>
-              </>
-            )}
-          </button>
+          {isInCart && hasCartChanges ? (
+            <button
+              onClick={() => onUpdateCartItem?.(activeMarketplaceBook._id, selectedPurchaseMethod, selectedAdditionalLanguages)}
+              className="w-full px-4 py-2.5 rounded-xl font-bold shadow-md transition-all active:scale-95 flex items-center justify-center gap-2 bg-amber-500 text-white hover:bg-amber-600 shadow-lg shadow-amber-500/20"
+            >
+              <ArrowPathIcon className="w-5 h-5" />
+              <span>Update Cart</span>
+            </button>
+          ) : (
+            <button
+              onClick={() => onAddToCart?.(activeMarketplaceBook, selectedPurchaseMethod, selectedAdditionalLanguages)}
+              disabled={isInCart || isOwned}
+              className={`w-full px-4 py-2.5 rounded-xl font-bold shadow-md transition-all active:scale-95 flex items-center justify-center gap-2
+                 ${isInCart
+                  ? 'bg-[var(--bg-input)] text-[var(--text-muted)] cursor-not-allowed'
+                  : 'bg-[var(--color-primary)] text-white hover:opacity-90 shadow-lg shadow-[var(--color-primary)]/20'}`}
+            >
+              {isInCart ? (
+                <>
+                  <CheckIcon className="w-5 h-5" />
+                  <span>In Cart</span>
+                </>
+              ) : (
+                <>
+                  <ShoppingCartIcon className="w-5 h-5" />
+                  <span>Add to Cart</span>
+                </>
+              )}
+            </button>
+          )}
         </div>
 
         {/* Details */}
