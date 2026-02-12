@@ -1084,7 +1084,7 @@ export const MainApp: React.FC<MainAppProps> = ({ authData }) => {
           commonDataMode={commonDataMode}
           // Add specific permissions if needed for RightPanel logic
           // (RightPanel uses activeBook, etc. mainly for display)
-          showContent={!!nodeForRightPanel || (leftPanelView === 'curriculum' && curriculumTab === 'purchase_books')}
+          showContent={!!nodeForRightPanel || (leftPanelView === 'curriculum' && curriculumTab === 'purchase_books') || leftPanelView === 'contest'}
           className={`transition-all duration-300 ease-in-out h-full max-h-full overflow-y-auto ${isLeftPanelCollapsed ? 'md:flex-[2_0_0%] min-w-0' : 'md:flex-[3_0_0%] min-w-0'}`}
           isDirty={curriculum.isDirty}
           onUpdateStory={(newStory, newMoral) =>
